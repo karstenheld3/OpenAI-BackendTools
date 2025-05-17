@@ -48,7 +48,7 @@ def get_files_used_by_assistants(client):
   all_assistant_vector_stores = [get_assistant_vector_store(a) for a in all_assistants]
   
   # Dictionary to store unique files to avoid duplicates
-  all_assistant_files = []
+  all_files = []
   processed_file_ids = set()
   
   # For each vector store used by assistants
@@ -69,10 +69,36 @@ def get_files_used_by_assistants(client):
       if (getattr(file, 'id', None) and 
           getattr(file, 'status', '') not in ['failed', 'cancelled'] and
           file.id not in processed_file_ids):
-        all_assistant_files.append(file)
+        all_files.append(file)
         processed_file_ids.add(file.id)
   
-  return all_assistant_files
+  return all_files
+
+def get_files_used_by_vector_stores(client):
+  # Get all vector stores
+  all_vector_stores = get_all_vector_stores(client)
+  
+  # Dictionary to store unique files to avoid duplicates
+  all_files = []
+  processed_file_ids = set()
+  
+  # For each vector store used by assistants
+  for vector_store in all_vector_stores:
+    if not vector_store:
+      continue
+      
+    # Get all files in this vector store
+    vector_store_files = get_vector_store_files(client, vector_store)
+    
+    # Filter out failed and cancelled files, and add new ones to our collection
+    for file in vector_store_files:
+      if (getattr(file, 'id', None) and 
+          getattr(file, 'status', '') not in ['failed', 'cancelled'] and
+          file.id not in processed_file_ids):
+        all_files.append(file)
+        processed_file_ids.add(file.id)
+  
+  return all_files
 
 # ----------------------------------------------------- END: Utilities ---------------------------------------------------------------
 
@@ -121,7 +147,7 @@ def format_files_table(file_list_page):
   
   # Define headers and max column widths
   headers = ['Index', 'ID', 'Filename', 'Size', 'Created', 'Status', 'Purpose']
-  max_widths = [6, 36, 40, 10, 19, 12, 15]  # Maximum width for each column
+  max_widths = [6, 40, 40, 10, 19, 12, 15]  # Maximum width for each column
   
   # Initialize column widths with header lengths, but respect max widths
   col_widths = [min(len(h), max_widths[i]) for i, h in enumerate(headers)]
@@ -447,14 +473,40 @@ if __name__ == '__main__':
   all_assistants = get_all_assistants(client)
   print(f"Total assistants: {len(all_assistants)}.")
   print(format_assistants_table(all_assistants))
-  
+
+  print("\n")
+  # Display the files used by vector stores
+  files_used_by_vector_stores = get_files_used_by_vector_stores(client)
+  print(f"Total files in vector stores: {len(files_used_by_vector_stores)}.")
+
+  print("\n")
+  # filter out all files that do not have purpose = 'assistants'
+  unused_vector_store_files = [f for f in all_files if getattr(f, 'purpose', None) == 'assistants']
+  # filter out all files not used by 
+  unused_vector_store_files = [f for f in all_files if f.id not in [file.id for file in unused_vector_store_files]]
+  # Since console out will trim the output due to max char limit, we will only show the first 25 and last 25 files
+  if len(unused_vector_store_files) > 50:
+    # Create new collection with only the first 25 and the last 25 files, with empty row in the middle
+    class EmptyRow: pass
+    unused_vector_store_files_trimmed = unused_vector_store_files[:25] + [EmptyRow()] + unused_vector_store_files[-25:]
+  else:
+    unused_vector_store_files_trimmed = unused_vector_store_files
+  print(f"Total files not used in vector stores: {len(unused_vector_store_files)}.")
+  print("-"*80)
+  print(format_files_table(unused_vector_store_files_trimmed))
+
+
   print("\n")
   # Display the files used by assistants
   files_used_by_assistants = get_files_used_by_assistants(client)
   print(f"Total files used by assistants: {len(files_used_by_assistants)}.")
 
   print("\n")
+  # filter out all files that do not have purpose = 'assistants'
+  unused_assistant_files = [f for f in all_files if getattr(f, 'purpose', None) == 'assistants']
+  # filter out all files not used by 
   unused_assistant_files = [f for f in all_files if f.id not in [file.id for file in files_used_by_assistants]]
+
   # Since console out will trim the output due to max char limit, we will only show the first 25 and last 25 files
   if len(unused_assistant_files) > 50:
     # Create new collection with only the first 25 and the last 25 files, with empty row in the middle
@@ -462,7 +514,7 @@ if __name__ == '__main__':
     unused_assistant_files_trimmed = unused_assistant_files[:25] + [EmptyRow()] + unused_assistant_files[-25:]
   else:
     unused_assistant_files_trimmed = unused_assistant_files
-  print(f"Total unused files: {len(unused_assistant_files)}.")
+  print(f"Total files not used by assistants: {len(unused_assistant_files)}.")
   print("-"*80)
   print(format_files_table(unused_assistant_files_trimmed))
   
