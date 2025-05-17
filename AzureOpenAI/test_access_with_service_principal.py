@@ -2,6 +2,8 @@ import os
 import logging
 from openai import AzureOpenAI
 from azure.identity import DefaultAzureCredential, get_bearer_token_provider
+from dotenv import load_dotenv
+load_dotenv()
 
 ###
 # This script will test if the service principal configured in the .env file can access the Azure OpenAI service in the .env file.

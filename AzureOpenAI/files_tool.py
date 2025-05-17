@@ -2,6 +2,8 @@ import os
 import openai
 import datetime
 from azure.identity import DefaultAzureCredential, get_bearer_token_provider
+from dotenv import load_dotenv
+load_dotenv()
 
 # ----------------------------------------------------- START: Utilities ---------------------------------------------------------------
 # Create an Azure OpenAI client using either managed identity or API key authentication.
@@ -450,7 +452,19 @@ if __name__ == '__main__':
   # Display the files used by assistants
   files_used_by_assistants = get_files_used_by_assistants(client)
   print(f"Total files used by assistants: {len(files_used_by_assistants)}.")
-  print(format_files_table(files_used_by_assistants))
+
+  print("\n")
+  unused_assistant_files = [f for f in all_files if f.id not in [file.id for file in files_used_by_assistants]]
+  # Since console out will trim the output due to max char limit, we will only show the first 25 and last 25 files
+  if len(unused_assistant_files) > 50:
+    # Create new collection with only the first 25 and the last 25 files, with empty row in the middle
+    class EmptyRow: pass
+    unused_assistant_files_trimmed = unused_assistant_files[:25] + [EmptyRow()] + unused_assistant_files[-25:]
+  else:
+    unused_assistant_files_trimmed = unused_assistant_files
+  print(f"Total unused files: {len(unused_assistant_files)}.")
+  print("-"*80)
+  print(format_files_table(unused_assistant_files_trimmed))
   
   print("\n")
   

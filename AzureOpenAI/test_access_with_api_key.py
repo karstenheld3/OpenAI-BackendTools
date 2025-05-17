@@ -1,6 +1,8 @@
 import os
 import logging
 from openai import AzureOpenAI
+from dotenv import load_dotenv
+load_dotenv()
 
 ###
 # This script will test if the endpoint and api_key in the .env file can access the Azure OpenAI service in the .env file.
