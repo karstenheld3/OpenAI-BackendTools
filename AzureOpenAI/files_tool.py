@@ -202,6 +202,21 @@ def format_files_table(file_list_page):
     lines.append(' | '.join(str(cell).ljust(col_widths[i]) for i, cell in enumerate(row)))
   
   return '\n'.join(lines)
+
+# Deletes a list of files
+def delete_files(client, files):
+  for file in files:
+    file_id = getattr(file, 'id', None)
+    if not id: continue
+    filename = getattr(file, 'filename', None)
+    print(f"Deleting file ID={file_id} '{filename}'...")
+    client.files.delete(file_id)
+
+# Deletes a list of file IDs
+def delete_file_ids(client, file_ids):
+  for file_id in file_ids:
+    print(f"Deleting file ID={file_id}...")
+    client.files.delete(file_id)
 # ----------------------------------------------------- END: Files -----------------------------------------------------------------
 
 # ----------------------------------------------------- START: Assistants ----------------------------------------------------------
@@ -434,6 +449,25 @@ def format_vector_stores_table(vector_store_list):
   
   return '\n'.join(lines)
 
+# Delete expired vector stores
+def delete_expired_vector_stores(client):
+  start_time = datetime.datetime.now()
+  print(f"[{start_time.strftime('%Y-%m-%d %H:%M:%S')}] START: Delete expired vector stores...")
+
+  vector_stores = get_all_vector_stores(client)
+  vector_stores_expired = [v for v in vector_stores if getattr(v, 'status', None) == 'expired']
+  if len(vector_stores_expired) == 0: print(" Nothing to delete.")
+  
+  for vs in vector_stores_expired:
+    print(f"  Deleting expired vector store ID={vs.id} '{vs.name}'...")
+    client.beta.vector_stores.delete(vs.id)
+  
+  end_time = datetime.datetime.now(); secs = (end_time - start_time).total_seconds()
+  parts = [(int(secs // 3600), 'hour'), (int((secs % 3600) // 60), 'min'), (int(secs % 60), 'sec')]
+  total_time = ', '.join(f"{val} {unit}{'s' if val != 1 else ''}" for val, unit in parts if val > 0)
+  print(f"[{end_time.strftime('%Y-%m-%d %H:%M:%S')}] END: Delete expired vector stores ({total_time}).")
+
+
 # ----------------------------------------------------- END: Vector stores -----------------------------------------------------
 
 # ----------------------------------------------------- START: Main -----------------------------------------------------
@@ -460,7 +494,8 @@ if __name__ == '__main__':
   print("\n")
   # Display the assistants total count and the formatted table
   all_vector_stores = get_all_vector_stores(client)
-  print(f"Total vector stores: {len(all_vector_stores)}.")
+  all_vector_stores_expired = [v for v in all_vector_stores if getattr(v, 'status', None) == 'expired']
+  print(f"Total vector stores: {len(all_vector_stores)} ({len(all_vector_stores_expired)} expired)")
   print(format_vector_stores_table(all_vector_stores))
 
   print("\n")
@@ -520,3 +555,4 @@ if __name__ == '__main__':
   
   print("\n")
   
+  # delete_expired_vector_stores(client)
