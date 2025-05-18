@@ -14,8 +14,11 @@ load_dotenv()
 # What is a client secret? The password of the service principal (AZURE_CLIENT_SECRET).
 #
 # There is two types of Azure Open AI endpoints. The difference is in the URL ('cognitiveservices' vs. 'openai'):
-#    1) Azure AI Services (OpenAI + other ML services): https://<your_open_ai_service_name>.cognitiveservices.azure.com/
-#    2) Azure OpenAI Service (OpenAI only): https://<your_open_ai_service_name>.openai.azure.com/
+#    1) Azure AI Services (OpenAI + other ML services):
+#       - https://<your_open_ai_service_name>.cognitiveservices.azure.com/
+#       - or https://<your_azure_ai_fondry_open_ai_service>.openai.azure.com/
+#    2) Azure OpenAI Service (OpenAI only):
+#       - https://<your_open_ai_service_name>.openai.azure.com/
 #
 # You will have to set the following environment variables in the .env file:
 #    AZURE_OPENAI_ENDPOINT=https://<your_open_ai_service_name>.openai.azure.com/
