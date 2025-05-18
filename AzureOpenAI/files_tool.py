@@ -37,7 +37,7 @@ def format_filesize(num_bytes):
     num_bytes /= 1024
   return f"{num_bytes:.2f} PB"
 
-# Format a timestamp into a human-readable string (RFC3339 with ' ' instead of 'T')
+# Format timestamp into a human-readable string (RFC3339 with ' ' instead of 'T')
 def format_timestamp(ts):
   return ('' if not ts else datetime.datetime.fromtimestamp(ts).strftime('%Y-%m-%d %H:%M:%S'))
 
@@ -467,6 +467,52 @@ def delete_expired_vector_stores(client):
   total_time = ', '.join(f"{val} {unit}{'s' if val != 1 else ''}" for val, unit in parts if val > 0)
   print(f"[{end_time.strftime('%Y-%m-%d %H:%M:%S')}] END: Delete expired vector stores ({total_time}).")
 
+# Delete duplicate files in vector stores
+# This will delete all duplicate filenames in vector stores, keeping only the file with the latest upload time
+def delete_duplicate_files_in_vector_stores(client):
+  start_time = datetime.datetime.now()
+  print(f"[{start_time.strftime('%Y-%m-%d %H:%M:%S')}] START: Delete duplicate files in vector stores...")
+
+  print(f"  Loading all files...")
+  all_files_list = get_all_files(client)
+  # Convert to hashmap by using id as key
+  all_files = {f.id: f for f in all_files_list}
+
+  print(f"  Loading all vector stores...")
+  vector_stores = get_all_vector_stores(client)
+  for vs in vector_stores:
+    print(f"  Loading files for vector store '{vs.name}'...")
+    files = get_vector_store_files(client, vs)
+    # Aort files so newest files are on top
+    files.sort(key=lambda f: f.created_at, reverse=True)
+    # Add filenames from all_files to files
+    for f in files:
+      # If error, use datetime timestamp as filename. Can happen if vector store got new file just after all_files was loaded.
+      try: f.filename = all_files[f.id].filename
+      except: f.filename = str(datetime.datetime.now().timestamp())
+
+    # create dictionary with filename as key and list of files as value
+    files_by_filename = {}
+    for f in files:
+      if f.filename not in files_by_filename:
+        files_by_filename[f.filename] = []
+      files_by_filename[f.filename].append(f)
+    
+    # find files with duplicate filenames
+    duplicate_files = []
+    for filename, files in files_by_filename.items():
+      if len(files) > 1:
+        # Omit first file (the newest), keep all others
+        duplicate_files.extend(files[1:])
+
+    for file in duplicate_files:
+      print(f"    Deleting duplicate file ID={file.id} '{file.filename}' ({format_timestamp(file.created_at)})...")
+      client.vector_stores.files.delete(file_id=file.id, vector_store_id=vs.id)
+
+  end_time = datetime.datetime.now(); secs = (end_time - start_time).total_seconds()
+  parts = [(int(secs // 3600), 'hour'), (int((secs % 3600) // 60), 'min'), (int(secs % 60), 'sec')]
+  total_time = ', '.join(f"{val} {unit}{'s' if val != 1 else ''}" for val, unit in parts if val > 0)
+  print(f"[{end_time.strftime('%Y-%m-%d %H:%M:%S')}] END: Delete duplicate files in vector stores ({total_time}).")
 
 # ----------------------------------------------------- END: Vector stores -----------------------------------------------------
 
@@ -476,6 +522,9 @@ if __name__ == '__main__':
   client = create_openai_client(use_managed_identity)
 
   # delete_expired_vector_stores(client)
+  
+  # delete_duplicate_files_in_vector_stores(client)
+  
   
   # Get all files with pagination handling
   all_files = get_all_files(client)
