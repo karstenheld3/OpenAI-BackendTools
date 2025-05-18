@@ -328,7 +328,7 @@ def format_assistants_table(assistant_list):
 # Gets all vector stores from Azure OpenAI with pagination handling.
 # Adds a zero-based 'index' attribute to each vector store.
 def get_all_vector_stores(client):
-  first_page = client.beta.vector_stores.list()
+  first_page = client.vector_stores.list()
   has_more = hasattr(first_page, 'has_more') and first_page.has_more
   
   # If only one page, add 'index' and return
@@ -347,7 +347,7 @@ def get_all_vector_stores(client):
   while has_more:
     last_id = current_page.data[-1].id if current_page.data else None    
     if not last_id: break
-    next_page = client.beta.vector_stores.list(after=last_id)
+    next_page = client.vector_stores.list(after=last_id)
     page_count += 1
     all_vector_stores.extend(next_page.data)
     total_vector_stores += len(next_page.data)
@@ -366,7 +366,7 @@ def get_vector_store_files(client, vector_store):
   if not vector_store_id:
     return []
     
-  files_page = client.beta.vector_stores.files.list(vector_store_id=vector_store_id)
+  files_page = client.vector_stores.files.list(vector_store_id=vector_store_id)
   all_files = list(files_page.data)
   
   # Get additional pages if they exist
@@ -377,7 +377,7 @@ def get_vector_store_files(client, vector_store):
     last_id = current_page.data[-1].id if current_page.data else None
     if not last_id: break
     
-    next_page = client.beta.vector_stores.files.list(vector_store_id=vector_store_id, after=last_id)
+    next_page = client.vector_stores.files.list(vector_store_id=vector_store_id, after=last_id)
     all_files.extend(next_page.data)
     current_page = next_page
     has_more = hasattr(next_page, 'has_more') and next_page.has_more
@@ -460,7 +460,7 @@ def delete_expired_vector_stores(client):
   
   for vs in vector_stores_expired:
     print(f"  Deleting expired vector store ID={vs.id} '{vs.name}'...")
-    client.beta.vector_stores.delete(vs.id)
+    client.vector_stores.delete(vs.id)
   
   end_time = datetime.datetime.now(); secs = (end_time - start_time).total_seconds()
   parts = [(int(secs // 3600), 'hour'), (int((secs % 3600) // 60), 'min'), (int(secs % 60), 'sec')]
@@ -472,7 +472,7 @@ def delete_expired_vector_stores(client):
 
 # ----------------------------------------------------- START: Main -----------------------------------------------------
 if __name__ == '__main__':
-  use_managed_identity = False
+  use_managed_identity = True
   client = create_openai_client(use_managed_identity)
 
   # delete_expired_vector_stores(client)
