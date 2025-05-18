@@ -474,6 +474,8 @@ def delete_expired_vector_stores(client):
 if __name__ == '__main__':
   use_managed_identity = False
   client = create_openai_client(use_managed_identity)
+
+  # delete_expired_vector_stores(client)
   
   # Get all files with pagination handling
   all_files = get_all_files(client)
@@ -555,4 +557,3 @@ if __name__ == '__main__':
   
   print("\n")
   
-  # delete_expired_vector_stores(client)
