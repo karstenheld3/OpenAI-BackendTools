@@ -6,8 +6,12 @@ from dotenv import load_dotenv
 load_dotenv()
 
 # ----------------------------------------------------- START: Utilities ------------------------------------------------------
+def create_openai_client():
+  api_key = os.environ.get('OPENAI_API_KEY')
+  return openai.OpenAI(api_key=api_key)
+
 # Create an Azure OpenAI client using either managed identity or API key authentication.
-def create_openai_client(use_managed_identity=False):
+def create_azure_openai_client(use_managed_identity=False):
   endpoint = os.environ.get('AZURE_OPENAI_ENDPOINT')
   api_version = os.environ.get('AZURE_OPENAI_API_VERSION')
   
@@ -60,17 +64,21 @@ def get_files_used_by_assistant_vector_stores(client):
   processed_file_ids = set()
   
   # For each vector store used by assistants
-  for vector_store_id in all_assistant_vector_store_ids:      
+  for vector_store_id in all_assistant_vector_store_ids:
     # Find the vector store object
     vector_store = next((vs for vs in all_vector_stores if vs.id == vector_store_id), None)
+    vector_store_name = getattr(vector_store, 'name', None)
       
     # Get all files in this vector store
     vector_store_files = get_vector_store_files(client, vector_store)
     
-    # Filter out failed and cancelled files, and add new ones to our collection
+    # Filter out failed and cancelled files, and add  new ones to our collection
     for file in vector_store_files:
-      if (getattr(file, 'id', None) and getattr(file, 'status', '') not in ['failed', 'cancelled'] and file.id not in processed_file_ids):
+      file_status = getattr(file, 'status', None)
+      if file_status in ['failed', 'cancelled']: continue
+      if (getattr(file, 'id', None) and file.id not in processed_file_ids):
         setattr(file, 'vector_store_id', vector_store_id)
+        setattr(file, 'vector_store_name', vector_store_name)
         all_files.append(file)
         processed_file_ids.add(file.id)
   
@@ -89,25 +97,29 @@ def get_files_used_by_vector_stores(client):
   processed_file_ids = set()
   
   # For each vector store used by assistants
-  for vector_store in all_vector_stores:     
+  for vector_store in all_vector_stores:
     # Get all files in this vector store
     vector_store_files = get_vector_store_files(client, vector_store)
     vector_store_name = getattr(vector_store, 'name', None)
     vector_store_id = getattr(vector_store, 'id', None)
     
-    # Filter out failed and cancelled files, and add new ones to our collection
+    # Filter out failed and cancelled files, and add others to our collection
     for file in vector_store_files:
-      if (getattr(file, 'id', None) and getattr(file, 'status', '') not in ['failed', 'cancelled'] and file.id not in processed_file_ids):
+      file_status = getattr(file, 'status', None)
+      if file_status in ['failed', 'cancelled']: continue
+      if file.id not in processed_file_ids:
         setattr(file, 'vector_store_id', vector_store_id)
         setattr(file, 'vector_store_name', vector_store_name)
         all_files.append(file)
         processed_file_ids.add(file.id)
       else:
+        # Here we add the vector store ID and name to the existing file's attributes. These files are used in multiple vector stores.
         existing_file = next((f for f in all_files if f.id == file.id), None)
+        if not existing_file: continue
         existing_vector_store_id = getattr(existing_file, 'vector_store_id', None)
         existing_vector_store_name = getattr(existing_file, 'vector_store_name', None)
-        existing_vector_store_id += f", {vector_store_id}"
-        existing_vector_store_name += f", {vector_store_name}"
+        existing_vector_store_id = (existing_vector_store_id + f", {vector_store_id}") if existing_vector_store_id else vector_store_id
+        existing_vector_store_name = (existing_vector_store_name + f", {vector_store_name}") if existing_vector_store_name else vector_store_name
         setattr(existing_file, 'vector_store_id', existing_vector_store_id)
         setattr(existing_file, 'vector_store_name', existing_vector_store_name)
   
@@ -171,20 +183,20 @@ def format_files_table(file_list_page):
   col_widths = [min(len(h), max_widths[i]) for i, h in enumerate(headers)]
   
   rows = []
-  for idx, f in enumerate(files):
+  for idx, item in enumerate(files):
     # Prepare row data
     row_data = [
-      "..." if not hasattr(f, 'index') else f"{f.index:05d}",
-      getattr(f, 'id', '...'),
-      getattr(f, 'filename', '...'), 
-      format_filesize(getattr(f, 'bytes', None)),
-      format_timestamp(getattr(f, 'created_at', None)), 
-      getattr(f, 'status', '...'), 
-      getattr(f, 'purpose', '...'),
+      "..." if not hasattr(item, 'index') else f"{item.index:05d}",
+      getattr(item, 'id', '...'),
+      getattr(item, 'filename', '...'), 
+      format_filesize(getattr(item, 'bytes', None)),
+      format_timestamp(getattr(item, 'created_at', None)), 
+      getattr(item, 'status', '...'), 
+      getattr(item, 'purpose', '...'),
     ]
 
     if append_vector_store_column:
-      row_data.append(getattr(f, 'vector_store_name', ''))
+      row_data.append(getattr(item, 'vector_store_name', ''))
     
     # Truncate cells if they exceed max width
     for i, cell in enumerate(row_data):
@@ -238,6 +250,22 @@ def delete_file_ids(client, file_ids):
   for file_id in file_ids:
     print(f"Deleting file ID={file_id}...")
     client.files.delete(file_id)
+
+# returns dictionary with metrics for a list of files
+def get_filelist_metrics(files):
+  metrics = ["processed","failed","cancelled","frozen","in_progress","completed"]
+  
+  # Initialize counts for each metric
+  counts = {metric: 0 for metric in metrics}
+  
+  # Count files in each state
+  for file in files:
+    status = getattr(file, 'status', None)
+    if status in counts:
+      counts[status] += 1
+  
+  return counts
+
 # ----------------------------------------------------- END: Files ------------------------------------------------------------
 
 # ----------------------------------------------------- START: Assistants -----------------------------------------------------
@@ -249,7 +277,6 @@ def get_assistant_vector_store(assistant):
       vector_store_ids = getattr(file_search, 'vector_store_ids', [])
       if vector_store_ids and len(vector_store_ids) > 0:
         return vector_store_ids[0]
-  
   return None
 
 # Adds a zero-based 'index' attribute to each file.
@@ -301,21 +328,21 @@ def format_assistants_table(assistant_list):
   
   # Define headers and max column widths
   headers = ['Index', 'ID', 'Name', 'Model', 'Created', 'Vector Store']
-  max_widths = [6, 31, 25, 11, 19, 36]  # Maximum width for each column
+  max_widths = [6, 31, 40, 11, 19, 36]  # Maximum width for each column
   
   # Initialize column widths with header lengths, but respect max widths
   col_widths = [min(len(h), max_widths[i]) for i, h in enumerate(headers)]
   
   rows = []
-  for idx, a in enumerate(assistants):
+  for idx, item in enumerate(assistants):
     # Prepare row data
     row_data = [
-      "..." if not hasattr(a, 'index') else f"{a.index:04d}",
-      getattr(a, 'id', '...'),
-      getattr(a, 'name', '...'), 
-      getattr(a, 'model', '...'),
-      format_timestamp(getattr(a, 'created_at', None)), 
-      getattr(a, 'vector_store_id', '')
+      "..." if not hasattr(item, 'index') else f"{item.index:04d}",
+      getattr(item, 'id', '...'),
+      "" if not getattr(item, 'name') else getattr(item, 'name'), 
+      getattr(item, 'model', '...'),
+      format_timestamp(getattr(item, 'created_at', "")), 
+      "" if not getattr(item, 'vector_store_id') else getattr(item, 'vector_store_id', "")
     ]
     
     # Truncate cells if they exceed max width
@@ -438,18 +465,18 @@ def format_vector_stores_table(vector_store_list):
   col_widths = [min(len(h), max_widths[i]) for i, h in enumerate(headers)]
   
   rows = []
-  for idx, vs in enumerate(vector_stores):
+  for idx, item in enumerate(vector_stores):
     # Prepare row data
     # Get file metrics
-    metrics = get_vector_store_file_metrics(vs)
-    files_str = f"Total: {metrics['total']} (✓ {metrics['completed']}, ⌛ {metrics['in_progress']}, ❌ {metrics['failed']}, ⏹ {metrics['cancelled']})" if metrics['total'] > 0 else '...' 
+    metrics = get_vector_store_file_metrics(item)
+    files_str = f"Total: {metrics['total']} (✓ {metrics['completed']}, ⌛ {metrics['in_progress']}, ❌ {metrics['failed']}, ⏹ {metrics['cancelled']})" if metrics['total'] > 0 else '' 
     
     row_data = [
-      "..." if not hasattr(vs, 'index') else f"{vs.index:05d}",
-      getattr(vs, 'id', '...'),
-      getattr(vs, 'name', '...'), 
-      format_timestamp(getattr(vs, 'created_at', None)), 
-      getattr(vs, 'status', '...'),
+      "..." if not hasattr(item, 'index') else f"{item.index:05d}",
+      getattr(item, 'id', '...'),
+      "" if not getattr(item, 'name') else getattr(item, 'name'), 
+      format_timestamp(getattr(item, 'created_at', None)), 
+      getattr(item, 'status', '...'),
       files_str
     ]
     
@@ -651,8 +678,16 @@ def test_file_functionalities(client):
 
 # ----------------------------------------------------- START: Main -----------------------------------------------------------
 if __name__ == '__main__':
+
+### START: Configuration
+  use_openai_instead_of_azure_open_ai = False
   use_managed_identity = True
-  client = create_openai_client(use_managed_identity)
+### END: Configuration
+
+  if use_openai_instead_of_azure_open_ai:
+    client = create_openai_client()
+  else:
+    client = create_azure_openai_client(use_managed_identity)
 
   # test_file_functionalities(client)
 
@@ -667,7 +702,9 @@ if __name__ == '__main__':
   
   # Get all files with pagination handling
   all_files = get_all_files(client)
-
+  metrics = get_filelist_metrics(all_files)
+  metrics_str = ", ".join([f"{v} {k}" for k, v in metrics.items()])
+  
   # Since console out will trim the output due to max char limit, we will only show the first 25 and last 25 files
   if len(all_files) > 50:
     # Create new collection with only the first 25 and the last 25 files, with empty row in the middle
@@ -677,8 +714,8 @@ if __name__ == '__main__':
     all_files_trimmed = all_files
 
   # Display the total files count and the formatted table
-  print(f"Total files: {len(all_files)}. Showing first 25 and last 25 files.")
-  print("-"*80)
+  print(f"Total files: {len(all_files)} ({metrics_str}). Showing first 25 and last 25 files.")
+  print("-"*140)
   print(format_files_table(all_files_trimmed))
 
   print("\n")
@@ -686,24 +723,24 @@ if __name__ == '__main__':
   all_vector_stores = get_all_vector_stores(client)
   all_vector_stores_expired = [v for v in all_vector_stores if getattr(v, 'status', None) == 'expired']
   print(f"Total vector stores: {len(all_vector_stores)} ({len(all_vector_stores_expired)} expired)")
-  print("-"*80)
+  print("-"*140)
   print(format_vector_stores_table(all_vector_stores))
 
   print("\n")
   # Display the files used by vector stores
   files_used_by_vector_stores = get_files_used_by_vector_stores(client)
-  print(f"Total files in vector stores: {len(files_used_by_vector_stores)}.")
+  metrics = get_filelist_metrics(files_used_by_vector_stores)
+  metrics_str = ", ".join([f"{v} {k}" for k, v in metrics.items()])
 
-  print("\n")
-  # Display the files in the first vector store
-  vector_store_files = get_vector_store_files(client, all_vector_stores[0])
-  print(f"Total files in first vector store '{all_vector_stores[0].name}': {len(vector_store_files)}.")
+  print(f"Total files in vector stores: {len(files_used_by_vector_stores)} ({metrics_str})")
+  print("-"*140)
+  print(format_files_table(all_files_trimmed))
 
   print("\n")
   # Display the assistants total count and the formatted table
   all_assistants = get_all_assistants(client)
   print(f"Total assistants: {len(all_assistants)}")
-  print("-"*80)
+  print("-"*140)
   print(format_assistants_table(all_assistants))
 
   print("\n")
@@ -711,7 +748,7 @@ if __name__ == '__main__':
   all_assistant_vector_store_ids = get_all_assistant_vector_store_ids(client)
   vector_stores_not_used_by_assistants = [vs for vs in all_vector_stores if vs.id not in all_assistant_vector_store_ids]
   print(f"Total vector stores NOT used by assistants: {len(vector_stores_not_used_by_assistants)}")
-  print("-"*80)
+  print("-"*140)
   print(format_vector_stores_table(vector_stores_not_used_by_assistants))
 
 
@@ -727,27 +764,32 @@ if __name__ == '__main__':
     unused_vector_store_files_trimmed = unused_vector_store_files[:25] + [EmptyRow()] + unused_vector_store_files[-25:]
   else:
     unused_vector_store_files_trimmed = unused_vector_store_files
-  print(f"Total files not used in vector stores: {len(unused_vector_store_files)}.")
-  print("-"*80)
+  print(f"Total files not used in vector stores: {len(unused_vector_store_files)}")
+  print("-"*140)
   print(format_files_table(unused_vector_store_files_trimmed))
 
   print("\n")
   # Display the files used by assistants
   files_used_by_assistant_vector_stores = get_files_used_by_assistant_vector_stores(client)
+  metrics = get_filelist_metrics(files_used_by_assistant_vector_stores)
+  metrics_str = ", ".join([f"{v} {k}" for k, v in metrics.items()])
+
   if len(files_used_by_assistant_vector_stores) > 50:
     # Create new collection with only the first 25 and the last 25 files, with empty row in the middle
     class EmptyRow: pass
     files_used_by_assistant_vector_stores_trimmed = files_used_by_assistant_vector_stores[:25] + [EmptyRow()] + files_used_by_assistant_vector_stores[-25:]
   else:
     files_used_by_assistant_vector_stores_trimmed = files_used_by_assistant_vector_stores
-  print(f"Total files used by assistants: {len(files_used_by_assistant_vector_stores)}")
-  print("-"*80)
+  print(f"Total files used by assistants: {len(files_used_by_assistant_vector_stores)} ({metrics_str})")
+  print("-"*140)
   print(format_files_table(files_used_by_assistant_vector_stores_trimmed))
 
   print("\n")
   files_used_by_assistant_vector_stores_dict = {f.id: f for f in files_used_by_assistant_vector_stores}
   # Find files that are not used by any vector store
   files_not_used_by_assistants = [f for f in all_files if f.id not in files_used_by_vector_stores]
+  metrics = get_filelist_metrics(files_not_used_by_assistants)
+  metrics_str = ", ".join([f"{v} {k}" for k, v in metrics.items()])
 
   # Since console out will trim the output due to max char limit, we will only show the first 25 and last 25 files
   if len(files_not_used_by_assistants) > 50:
@@ -756,8 +798,8 @@ if __name__ == '__main__':
     files_not_used_by_assistants_trimmed = files_not_used_by_assistants[:25] + [EmptyRow()] + files_not_used_by_assistants[-25:]
   else:
     files_not_used_by_assistants_trimmed = files_not_used_by_assistants
-  print(f"Total files NOT used by assistants: {len(files_not_used_by_assistants)}")
-  print("-"*80)
+  print(f"Total files NOT used by assistants: {len(files_not_used_by_assistants)} ({metrics_str})")
+  print("-"*140)
   print(format_files_table(files_not_used_by_assistants_trimmed))
   
   print("\n")
