@@ -628,7 +628,7 @@ def test_file_functionalities(client):
   print(f"[{start_time.strftime('%Y-%m-%d %H:%M:%S')}] START: File functionalities (upload, vector stores, delete)...")
 
   # Upload a file  
-  file_path = "../RAGFiles/Batch01/Publications1.md"
+  file_path = "./RAGFiles/Batch01/Publications1.md"
   if not os.path.exists(file_path):
     # remove part to move one folder up
     file_path_split = file_path.split("/")
