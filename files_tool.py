@@ -11,27 +11,25 @@ def create_openai_client():
   return openai.OpenAI(api_key=api_key)
 
 # Create an Azure OpenAI client using either managed identity or API key authentication.
-def create_azure_openai_client(use_managed_identity=False):
+def create_azure_openai_client(use_key_authentication=False):
   endpoint = os.environ.get('AZURE_OPENAI_ENDPOINT')
   api_version = os.environ.get('AZURE_OPENAI_API_VERSION')
   
-  if use_managed_identity:
-    # Use managed identity (service principal) authentication
-    cred = DefaultAzureCredential()
-    token_provider = get_bearer_token_provider(cred, "https://cognitiveservices.azure.com/.default")
-    
-    # Create client with token provider
-    return openai.AzureOpenAI( api_version=api_version, azure_endpoint=endpoint, azure_ad_token_provider=token_provider )
-  else:
+  if use_key_authentication:
     # Use API key authentication
     api_key = os.environ.get('AZURE_OPENAI_API_KEY')
-    
     # Create client with API key
     return openai.AzureOpenAI(
       api_version=api_version,
       azure_endpoint=endpoint,
       api_key=api_key
     )
+  else:
+    # Use managed identity or service principal authentication (whatever is configured in the environment variables)
+    cred = DefaultAzureCredential()
+    token_provider = get_bearer_token_provider(cred, "https://cognitiveservices.azure.com/.default")
+    # Create client with token provider
+    return openai.AzureOpenAI( api_version=api_version, azure_endpoint=endpoint, azure_ad_token_provider=token_provider )
 
 # Format a file size in bytes into a human-readable string
 def format_filesize(num_bytes):
@@ -681,13 +679,16 @@ if __name__ == '__main__':
 
 ### START: Configuration
   use_openai_instead_of_azure_open_ai = False
-  use_managed_identity = True
+  use_managed_identity = False
 ### END: Configuration
 
-  if use_openai_instead_of_azure_open_ai:
+  openai_service_type = os.getenv("OPENAI_SERVICE_TYPE", "openai")
+  azure_openai_use_key_authentication = os.getenv("AZURE_OPENAI_USE_KEY_AUTHENTICATION", "false").lower() in ['true']
+
+  if openai_service_type == "openai":
     client = create_openai_client()
-  else:
-    client = create_azure_openai_client(use_managed_identity)
+  elif openai_service_type == "azure_openai":
+    client = create_azure_openai_client(azure_openai_use_key_authentication)
 
   # test_file_functionalities(client)
 
