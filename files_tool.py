@@ -1,6 +1,8 @@
 import os
+import re
 import openai
 import datetime
+import time
 from azure.identity import DefaultAzureCredential, get_bearer_token_provider
 from dotenv import load_dotenv
 load_dotenv()
@@ -456,8 +458,8 @@ def format_vector_stores_table(vector_store_list):
   if not vector_stores: return '(No vector stores found)'
   
   # Define headers and max column widths
-  headers = ['Index', 'ID', 'Name','Created', 'Status', 'Files (completed, in_progress, failed, cancelled)']
-  max_widths = [6, 36, 40, 19, 12, 50]  # Maximum width for each column
+  headers = ['Index', 'ID', 'Name','Created', 'Status', 'Size', 'Files (completed, in_progress, failed, cancelled)']
+  max_widths = [6, 36, 40, 19, 12, 10, 50]  # Maximum width for each column
   
   # Initialize column widths with header lengths, but respect max widths
   col_widths = [min(len(h), max_widths[i]) for i, h in enumerate(headers)]
@@ -475,6 +477,7 @@ def format_vector_stores_table(vector_store_list):
       "" if not getattr(item, 'name') else getattr(item, 'name'), 
       format_timestamp(getattr(item, 'created_at', None)), 
       getattr(item, 'status', '...'),
+      format_filesize(getattr(item, 'usage_bytes', None)),
       files_str
     ]
     
@@ -618,10 +621,25 @@ def delete_vector_stores_not_used_by_assistants(client, until_date_created):
   total_time = ', '.join(f"{val} {unit}{'s' if val != 1 else ''}" for val, unit in parts if val > 0)
   print(f"[{end_time.strftime('%Y-%m-%d %H:%M:%S')}] END: Delete vector stores not used by assistants ({total_time}).")
 
+def delete_vector_store_by_name(client, name, delete_files=False):
+  vector_stores = get_all_vector_stores(client)
+  vs = [vs for vs in vector_stores if vs.name == name]
+  if vs:
+    vs = vs[0]
+    print(f"  Deleting vector store ID={vs.id} '{vs.name}' ({format_timestamp(vs.created_at)})...")
+    client.vector_stores.delete(vs.id)
+    if delete_files:
+      files = get_vector_store_files(client, vs.id)
+      for file in files:
+        print(f"    Deleting file ID={file.id} '{file.filename}' ({format_timestamp(file.created_at)})...")
+        client.vector_stores.files.delete(file_id=file.id, vector_store_id=vs.id)
+  else:
+    print(f"  Vector store '{name}' not found.")
+
 # ----------------------------------------------------- END: Cleanup ----------------------------------------------------------
 
 # ----------------------------------------------------- START: Tests ----------------------------------------------------------
-def test_file_functionalities(client):
+def test_basic_file_functionalities(client):
   start_time = datetime.datetime.now()
   print(f"[{start_time.strftime('%Y-%m-%d %H:%M:%S')}] START: File functionalities (upload, vector stores, delete)...")
 
@@ -669,8 +687,213 @@ def test_file_functionalities(client):
   parts = [(int(secs // 3600), 'hour'), (int((secs % 3600) // 60), 'min'), (int(secs % 60), 'sec')]
   total_time = ', '.join(f"{val} {unit}{'s' if val != 1 else ''}" for val, unit in parts if val > 0)
   print(f"[{end_time.strftime('%Y-%m-%d %H:%M:%S')}] END: File functionalities (upload, vector stores, delete) ({total_time}).")
+
+
+# 
+def test_file_search_functinalities(client):
+  start_time = datetime.datetime.now()
+  print(f"[{start_time.strftime('%Y-%m-%d %H:%M:%S')}] START: File functionalities (upload, vector stores, delete)...")
+
+  # Load RAG files and store metadata in dict (filename, file_year, file_type)
+  files = []; files_metadata = {}; files_data = {}; 
+  folder_path = "./RAGFiles/Batch01"
+  if not os.path.exists(folder_path):
+    raise Exception(f"File '{folder_path}' does not exist.")
+  else:
+    for filename in os.listdir(folder_path):
+      file_path = os.path.join(folder_path, filename)
+      if os.path.isfile(file_path):
+        # Extract year from file's last modification date
+        mod_timestamp = os.path.getmtime(file_path)
+        file_year = str(datetime.datetime.fromtimestamp(mod_timestamp).year)
+        file_last_modified_date = datetime.datetime.fromtimestamp(mod_timestamp).strftime('%Y-%m-%d')
+        # Get file type from extension (handles multiple dots in filename)
+        file_type = filename.split('.')[-1] if '.' in filename else ''
+        file_size = os.path.getsize(file_path)
+        # Store file source path and metadata
+        files.append(file_path)
+        files_metadata[file_path] = { 'source': file_path, 'filename': filename, 'file_year': file_year, 'file_type': file_type }
+        files_data[file_path] = { 'file_size': file_size, 'file_last_modified_date': file_last_modified_date }
+  
+  # Upload RAG files
+  total_files = len(files)
+  print(f"Uploading {total_files} files...")
+  for idx, file_path in enumerate(files, 1):
+    with open(file_path, 'rb') as f:
+      file = client.files.create(file=f, purpose="assistants")
+    status = "OK" if file.id else "FAIL"
+    print(f"  [ {idx} / {total_files} ] {status}: ID={file.id} '{file_path}'")
+    files_data[file_path]['file_id'] = file.id
+
+  # Create vector store
+  vs_name = "test_vector_store"
+  print(f"Creating vector store '{vs_name}'...")
+  vs = client.vector_stores.create(name=vs_name)
+  print(f"  OK. ID={vs.id}") if vs.id else print("  FAIL.")
+
+  # Add files to vector store
+  failed_files = []
+  print(f"Adding files to vector store '{vs_name}'...")
+  for idx, file_path in enumerate(files, 1):
+    file_id = files_data[file_path]['file_id']
+    try:
+      client.vector_stores.files.create(vector_store_id=vs.id, file_id=file_id)
+      print(f"  [ {idx} / {total_files} ] OK: ID={file_id} '{file_path}'")
+    except Exception as e:
+      print(f"  [ {idx} / {total_files} ] FAIL: '{file_path}' - {str(e)}")
+      # add this file to failed files
+      failed_files.append(file_path)
+  
+  # Remove failed files from files data
+  for file_path in failed_files:
+    del files_data[file_path]
+    del files_metadata[file_path]
+    del files[files.index(file_path)]
+    total_files -= 1
   
 
+  prompt_template = """
+  ## Task
+  Extract the following tags for the uploaded document and return them as JSON.
+
+  Example answer format:
+  ```json
+  {
+    "title": "<document_title>"
+    ,"description": "<document_description>"
+    ,"doc_type": "<document_type>"
+    ,"doc_language": "<document_language>"
+    ,"doc_author": "<document_author>"
+    ,"doc_year": "<document_doc_year>"
+    ,"doc_start_date": "<document_doc_start_date>"
+    ,"doc_end_date": "<document_doc_end_date>"
+  }
+  ```
+
+  Here is some information about the file:
+  - filename: <filename>
+  - file_last_modified_date: <file_last_modified_date>
+  - source: <source>
+
+  **Rules**:
+  - Return the requested value as plain text. No additional explanantion, description, or thoughts. No surrounding quotes. No markdown formatting.
+  - If the information cannot be extracted or the information type is not applicable, use an empty value.
+  - Supress citations in the returned text (Incorrect: 'ABC 【29:0†source】', correct: 'ABC').
+  - Translate all non-english texts to english. **IMPORTANT:** Use only latin characters (Incorrect: 'ČEZ', Correct 'CEZ'). Avoid all-caps texts (convert them to standard spelling).
+
+  ### title
+  What is the document's title?
+  Return an answer with less than 256 characters.
+  If the document is a about an organization, company, or person, insert the name at the start if it's not explicitly mentioned in the title.
+  For companies, spell the names without the legal form suffix ('Siemens' instead of 'Siemens AG', 'Edison' instead of 'Edison S.p.A.').
+  If the document does not have a title, try to extract the title from the filename.
+
+  ### description
+  What is the document's description?
+  Return an answer with less than 256 characters. Don't replicate the documents title.
+  Example: 'Insights on world demographics since the 1950s. Focus on Africa and Asia.'
+
+  ### doc_type
+  What is the document's type?
+  Return an answer with less than 30 characters.
+
+  ### doc_language
+  What is the document's language? Return only one language.
+  Examples: 'German', 'English', 'Arabic', 'Chinese'
+
+  ### doc_author
+  Who is the author of the document? Search on the first few pages. If there are many authors, return a comma-separated list (see examples).
+  Return an answer with less than 256 characters.
+  Examples: 'Microsoft', 'Greenpeace', 'John Doe', 'M. Zhang, F. Xi'.
+
+  ### doc_year
+  What is the year that the document covers? If the document covers multiple years, return the most recent year.
+  If the date can't be extracted, use the year from the file_last_modified_date.
+  Return an answer in exactly 4 characters.
+  Examples: '1981', '2022', '2022'
+
+  ### doc_start_date
+  What is the document's data or reporting start date? If the date can't be extracted, return an empty string.
+  Return an answer in exactly 10 characters as ISO-Date or an empty string.
+  Examples: '1981-01-01', '2022-09-01', '2022-12-31', ''
+
+  ### doc_end_date
+  What is the document's data or reporting end date? If the date can't be extracted, use the file_last_modified_date.
+  Return an answer in exactly 10 characters as ISO-Date.
+  Examples: '1981-01-01', '2022-09-01', '2022-12-31'
+  """
+  
+  # Create assistant for metadata extraction
+  assistant = client.beta.assistants.create(
+    name="Test Metadata Extractor",
+    instructions="You are a metadata extraction assistant, returning extracted tags from documents as JSON.",
+    model="gpt-4o-mini"
+  )
+  
+  # Create a thread for metadata extraction
+  thread = client.beta.threads.create()
+
+  # Extract metadata for each file
+  total_files = len(files)
+  print(f"Extracting metadata for {total_files} files...")
+  for idx, file_path in enumerate(files, 1):
+    file_id = files_data[file_path]['file_id']
+    file_last_modified_date = files_data[file_path]['file_last_modified_date']
+    source = files_metadata[file_path]['source']
+    filename = files_metadata[file_path]['filename']
+
+    prompt = prompt_template.replace("<filename>", filename).replace("<file_last_modified_date>", file_last_modified_date).replace("<source>", source)
+    
+    # Create message with file content and metadata
+    message = client.beta.threads.messages.create(
+      thread_id=thread.id,
+      role="user",
+      content=prompt
+    )
+    
+    # Run the assistant on the thread
+    run = client.beta.threads.runs.create( thread_id=thread.id, assistant_id=assistant.id )
+    
+    # Wait for the run to complete
+    while True:
+      run_status = client.beta.threads.runs.retrieve( thread_id=thread.id, run_id=run.id )
+      if run_status.status == 'completed':
+        break
+      time.sleep(1)
+    
+    # Get the assistant's response
+    messages = client.beta.threads.messages.list(
+      thread_id=thread.id
+    )
+    
+    # Get the latest assistant message
+    assistant_message = next(msg for msg in messages if msg.role == 'assistant')
+    extracted_metadata = assistant_message.content[0].text.value
+
+    prompt = user_prompt_template.format(
+      filename=filename,
+      file_last_modified_date=file_last_modified_date,
+      source=source,
+      content=content
+    )
+
+    metadata = response.choices[0].message.content
+    print(f"  [ {idx} / {total_files} ] OK: '{file_path}'")
+    files_metadata[file_path].update(metadata)
+
+  # Delete assistant
+
+
+
+  # Add extracted metadata to files in vector store
+  # Search for files using query
+  # Search for files using filter
+  # Search for files using rewrite-query
+
+  end_time = datetime.datetime.now(); secs = (end_time - start_time).total_seconds()
+  parts = [(int(secs // 3600), 'hour'), (int((secs % 3600) // 60), 'min'), (int(secs % 60), 'sec')]
+  total_time = ', '.join(f"{val} {unit}{'s' if val != 1 else ''}" for val, unit in parts if val > 0)
+  print(f"[{end_time.strftime('%Y-%m-%d %H:%M:%S')}] END: File functionalities (upload, vector stores, delete) ({total_time}).")
 
 # ----------------------------------------------------- END: Tests ------------------------------------------------------------
 
@@ -689,6 +912,9 @@ if __name__ == '__main__':
     client = create_openai_client()
   elif openai_service_type == "azure_openai":
     client = create_azure_openai_client(azure_openai_use_key_authentication)
+
+  # delete_vector_store_by_name(client, "test_vector_store", delete_files=True)
+  # test_file_search_functinalities(client)
 
   # test_file_functionalities(client)
 
