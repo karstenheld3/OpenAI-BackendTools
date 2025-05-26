@@ -2,3 +2,5 @@
 .env.local
 .env.*
 Set-*-Env.bat
+__pycache__
+__pycache__/*
