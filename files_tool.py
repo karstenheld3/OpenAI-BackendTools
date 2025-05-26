@@ -546,6 +546,9 @@ def format_search_results_table(search_results):
     if content and len(content) > 0:
       content = content[0].text.replace('\n', ' ').replace('\r', ' ').replace('\t', ' ').replace('  ', ' ')
     attributes = getattr(item, 'attributes', {})
+    # calculate metadata tags - count total fields that are not empty
+    non_empty_values = [value for value in attributes.values() if value]
+    attributes_string = f"{len(non_empty_values)} of {len(attributes)}"
     # Prepare row data
     row_data = [
       f"{idx:05d}",
@@ -553,7 +556,7 @@ def format_search_results_table(search_results):
       getattr(item, 'filename', '...'),
       f"{getattr(item, 'score', 0):.2f}",
       content,
-      str(len(attributes))
+      attributes_string
     ]
     
     # Truncate cells if they exceed max width
@@ -988,9 +991,11 @@ def test_file_search_functionalities(client, folder_path, logExtractedMetadata=F
     try:
       metadata = json.loads(extracted_metadata)
       files_metadata[file_path].update(metadata)
+      # Get non-empty values from metadata
+      non_empty_values = [value for value in metadata.values() if value]
       # calculate metadata tags - count total fields
-      metadata_tags_returned = len(metadata.keys())
-      print(f"      OK: {metadata_tags_returned} metadata tags extracted for file '{file_path}'")
+      metadata_tags_returned = len(non_empty_values)
+      print(f"      OK: {non_empty_values} of {metadata_tags_returned} values extracted for file '{file_path}'")
     except:
       print(f"      FAIL: Metadata extraction returned invalid JSON for file '{file_path}'")
       continue
@@ -1030,6 +1035,8 @@ def test_file_search_functionalities(client, folder_path, logExtractedMetadata=F
     ranking_options={"ranker": "auto", "score_threshold": score_threshold},
     max_num_results=max_num_results
   )
+  # sort by score
+  search_results.data.sort(key=lambda x: x.score, reverse=True)
   print(f"    {len(search_results.data)} search results")
   table = ("    " + format_search_results_table(search_results.data)).replace("\n","\n    ")
   print(table)
@@ -1092,10 +1099,9 @@ if __name__ == '__main__':
   elif openai_service_type == "azure_openai":
     client = create_azure_openai_client(azure_openai_use_key_authentication)
 
+  # test_basic_file_functionalities(client, "./RAGFiles/Batch01/Publications1.md")
 
-  test_basic_file_functionalities(client, "./RAGFiles/Batch01/Publications1.md")
-
-  test_file_search_functionalities(client, "./RAGFiles/Batch02")
+  test_file_search_functionalities(client, "./RAGFiles/Batch01")
   exit()
 
   # delete_expired_vector_stores(client)
