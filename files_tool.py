@@ -526,6 +526,64 @@ def format_vector_stores_table(vector_store_list):
   
   return '\n'.join(lines)
 
+# formats a list of vector store search results 
+def format_search_results_table(search_results):
+  # search_results: list of search results
+  if not search_results: return '(No search results found)'
+  
+  # Define headers and max column widths
+  headers = ['Index', 'File ID', 'Filename', 'Score', 'Content', 'Attributes']
+  max_widths = [6, 36, 40, 8, 40, 10]  # Maximum width for each column
+  
+  # Initialize column widths with header lengths, but respect max widths
+  col_widths = [min(len(h), max_widths[i]) for i, h in enumerate(headers)]
+  
+  # Process each row
+  rows = []
+  for idx, item in enumerate(search_results):
+    content = getattr(item, 'content', '...')
+    # Clean content for better readability
+    if content and len(content) > 0:
+      content = content[0].text.replace('\n', ' ').replace('\r', ' ').replace('\t', ' ').replace('  ', ' ')
+    attributes = getattr(item, 'attributes', {})
+    # Prepare row data
+    row_data = [
+      f"{idx:05d}",
+      getattr(item, 'file_id', '...'),
+      getattr(item, 'filename', '...'),
+      f"{getattr(item, 'score', 0):.2f}",
+      content,
+      str(len(attributes))
+    ]
+    
+    # Truncate cells if they exceed max width
+    for i, cell in enumerate(row_data):
+      cell_str = str(cell)
+      if len(cell_str) > max_widths[i] and i > 1:  # Don't truncate row numbers or index
+        if i == 4:  # Content column - special handling to preserve useful info
+          cell_str = cell_str[:max_widths[i]-3] + '...'
+        else:
+          cell_str = cell_str[:max_widths[i]-3] + '...'
+      
+      # Update column width if needed, but respect max width
+      col_widths[i] = min(max(col_widths[i], len(cell_str)), max_widths[i])
+      row_data[i] = cell_str
+    
+    rows.append(row_data)
+  
+  # Build table as string
+  lines = []
+  header_line = ' | '.join(h.ljust(col_widths[i]) for i, h in enumerate(headers))
+  sep_line = '-+-'.join('-'*col_widths[i] for i in range(len(headers)))
+  lines.append(header_line)
+  lines.append(sep_line)
+  
+  for row in rows:
+    lines.append(' | '.join(str(cell).ljust(col_widths[i]) for i, cell in enumerate(row)))
+  
+  return '\n'.join(lines)
+  
+
 # ----------------------------------------------------- END: Vector stores ----------------------------------------------------
 
 # ----------------------------------------------------- START: Assistants ----------------------------------------------------
@@ -930,9 +988,9 @@ def test_file_search_functionalities(client, logExtractedMetadata=False):
     # remove ```json and ```
     extracted_metadata = extracted_metadata.replace("```json", "").replace("```", "")
     if logExtractedMetadata:
-      print(f"-------------------------------------------------")
+      print("-"*140)
       print(f"{extracted_metadata}")
-      print(f"-------------------------------------------------")
+      print("-"*140)
     try:
       metadata = json.loads(extracted_metadata)
       files_metadata[file_path].update(metadata)
@@ -967,9 +1025,40 @@ def test_file_search_functionalities(client, logExtractedMetadata=False):
       print(f"    [ {idx} / {total_files} ] FAIL: '{file_path}' - {str(e)}")
 
   # Search for files using query
-  
+  # https://cookbook.openai.com/examples/file_search_responses#standalone-vector-search
+
+  query = "Who is Arilena Drovik?"; score_threshold = 0.3; max_num_results = 10
+  print("-"*140)
+  print(f"  Testing query search (score_threshold={str(score_threshold)}, max_num_results={max_num_results}): {query}")
+  search_results = client.vector_stores.search(
+    vector_store_id=vs.id,
+    query=query,
+    ranking_options={"ranker": "auto", "score_threshold": score_threshold},
+    max_num_results=max_num_results
+  )
+  print(f"    {len(search_results.data)} search results")
+  table = ("    " + format_search_results_table(search_results.data)).replace("\n","\n    ")
+  print(table)
+
   # Search for files using filter
-  # Search for files using rewrite-query
+  query = "Who is Arilena Drovik?"; score_threshold = 0.3; max_num_results = 10
+  filters = { "key": "file_type", "type": "eq", "value": "md" }
+  print("-"*140)
+  print(f"  Testing filtered query search (filter: {filters['key']}='{filters['value']}', score_threshold={str(score_threshold)}, max_num_results={max_num_results}): {query}")
+  search_results = client.vector_stores.search(
+    vector_store_id=vs.id,
+    query=query,
+    ranking_options={"ranker": "auto", "score_threshold": score_threshold},
+    max_num_results=max_num_results,
+    filters=filters
+  )
+  print(f"    {len(search_results.data)} search results")
+  table = ("    " + format_search_results_table(search_results.data)).replace("\n","\n    ")
+  print(table)
+  print("-"*140)
+
+
+    # Search for files using rewrite-query
 
   end_time = datetime.datetime.now(); secs = (end_time - start_time).total_seconds()
   parts = [(int(secs // 3600), 'hour'), (int((secs % 3600) // 60), 'min'), (int(secs % 60), 'sec')]
