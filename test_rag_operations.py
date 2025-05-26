@@ -156,14 +156,19 @@ def extract_and_add_metadata_to_vector_store(client, test_vector_store_with_file
   Return an answer in exactly 10 characters as ISO-Date.
   Examples: '1981-01-01', '2022-09-01', '2022-12-31'
   """
-  
+
+  # We use a temporary vector store that ónly contains 1 file at a time to avoid the automatic creation of unnecessary vector stores 
+
+  # Create temporary vector store for metadata extraction
+  temp_vector_store = client.vector_stores.create(name="temp_vector_store")
+ 
   # Create assistant for metadata extraction
   assistant = client.beta.assistants.create(
     name="test_assistant",
     instructions="You are a metadata extraction assistant, returning extracted tags from documents as JSON.",
     model="gpt-4o-mini",
     tools=[{"type": "file_search"}],
-    tool_resources={"file_search": {"vector_store_ids": [test_vector_store_with_files.vector_store.id]}},
+    tool_resources={"file_search": {"vector_store_ids": [temp_vector_store.id]}},
   )
   
   # Extract metadata for each file
@@ -173,9 +178,13 @@ def extract_and_add_metadata_to_vector_store(client, test_vector_store_with_file
     file_id = test_vector_store_with_files.files_data[file_path]['file_id']
     file_last_modified_date = test_vector_store_with_files.files_data[file_path]['file_last_modified_date']
     source = test_vector_store_with_files.files_metadata[file_path]['source']
+    attributes = test_vector_store_with_files.files_metadata[file_path]
     filename = test_vector_store_with_files.files_metadata[file_path]['filename']
 
     print(f"    [ {idx} / {total_files} ] Extracting metadata for '{file_path}'...")
+
+    # Add file to temporary vector store
+    client.vector_stores.files.create(vector_store_id=temp_vector_store.id, file_id=file_id) 
 
     prompt = prompt_template.replace("<filename>", filename).replace("<file_last_modified_date>", file_last_modified_date).replace("<source>", source)
     
@@ -188,11 +197,12 @@ def extract_and_add_metadata_to_vector_store(client, test_vector_store_with_file
         thread = client.beta.threads.create()
         
         # Create message with file content and metadata
+        # We don't use attachments as shown below because that would create a new vector store with an empty name for each file processed.
+        # ,attachments=[{ "file_id": file_id, "tools": [{"type": "file_search"}] }]
         client.beta.threads.messages.create(
-          thread_id=thread.id,
-          role="user",
-          content=prompt,
-          attachments=[{ "file_id": file_id, "tools": [{"type": "file_search"}] }]
+          thread_id=thread.id
+          ,role="user"
+          ,content=prompt
         )
         run = client.beta.threads.runs.create(thread_id=thread.id, assistant_id=assistant.id)
         
@@ -239,11 +249,17 @@ def extract_and_add_metadata_to_vector_store(client, test_vector_store_with_file
       print(f"      FAIL: Metadata extraction returned invalid JSON for file '{file_path}'")
       continue
 
+    # Remove file from temporary vector store
+    client.vector_stores.files.delete(file_id=file_id, vector_store_id=temp_vector_store.id)
+
     # delete thread
     client.beta.threads.delete(thread.id)
 
   # Delete assistant
   client.beta.assistants.delete(assistant.id)
+
+  # Delete temporary vector store
+  client.vector_stores.delete(temp_vector_store.id)
 
   # Add extracted metadata to files in vector store
   print(f"  Re-adding files to vector store with metadata...")
@@ -345,7 +361,6 @@ test_vector_store_name = "test_vector_store"
 test_vector_store_with_files = create_test_vector_store_with_files(client,test_vector_store_name, "./RAGFiles/Batch01")
 
 # Part 2: Extract metadata from files and re-add files with more metadata to the vector store
-# This creates a new vector store with empty name for each file processed (each thread with file_search tool call)
 extract_and_add_metadata_to_vector_store(client, test_vector_store_with_files, False)
 
 # Part 3: Test file search functionalities

@@ -740,7 +740,7 @@ def delete_vector_store_by_name(client, name, delete_files=False):
       files = get_vector_store_files(client, vs)
       for file in files:
         print(f"    Deleting file ID={file.id} ({format_timestamp(file.created_at)})...")
-        client.vector_stores.files.delete(file_id=file.id, vector_store_id=vs.id)
+        client.files.delete(file_id=file.id)
     client.vector_stores.delete(vs.id)
   else:
     print(f"  Vector store '{name}' not found.")
