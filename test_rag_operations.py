@@ -345,6 +345,7 @@ test_vector_store_name = "test_vector_store"
 test_vector_store_with_files = create_test_vector_store_with_files(client,test_vector_store_name, "./RAGFiles/Batch01")
 
 # Part 2: Extract metadata from files and re-add files with more metadata to the vector store
+# This creates a new vector store with empty name for each file processed (each thread with file_search tool call)
 extract_and_add_metadata_to_vector_store(client, test_vector_store_with_files, False)
 
 # Part 3: Test file search functionalities
