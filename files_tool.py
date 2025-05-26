@@ -3,6 +3,7 @@ import re
 import openai
 import datetime
 import time
+import json
 from azure.identity import DefaultAzureCredential, get_bearer_token_provider
 from dotenv import load_dotenv
 load_dotenv()
@@ -507,6 +508,25 @@ def format_vector_stores_table(vector_store_list):
 
 # ----------------------------------------------------- END: Vector stores ----------------------------------------------------
 
+# ----------------------------------------------------- START: Assistants ----------------------------------------------------
+
+# Get all assistants
+def get_all_assistants(client):
+  return client.beta.assistants.list()
+
+# Delete an assistant by name
+def delete_assistant_by_name(client, name):
+  assistants = get_all_assistants(client)
+  assistant = next((a for a in assistants if a.name == name), None)
+  if not assistant:
+    print(f"  Assistant '{name}' not found.")
+    return
+
+  print(f"  Deleting assistant '{name}'...")
+  client.beta.assistants.delete(assistant.id)
+
+# ----------------------------------------------------- END: Assistants ------------------------------------------------------
+
 
 # ----------------------------------------------------- START: Cleanup --------------------------------------------------------
 # Delete expired vector stores
@@ -627,12 +647,12 @@ def delete_vector_store_by_name(client, name, delete_files=False):
   if vs:
     vs = vs[0]
     print(f"  Deleting vector store ID={vs.id} '{vs.name}' ({format_timestamp(vs.created_at)})...")
-    client.vector_stores.delete(vs.id)
     if delete_files:
-      files = get_vector_store_files(client, vs.id)
+      files = get_vector_store_files(client, vs)
       for file in files:
-        print(f"    Deleting file ID={file.id} '{file.filename}' ({format_timestamp(file.created_at)})...")
+        print(f"    Deleting file ID={file.id} ({format_timestamp(file.created_at)})...")
         client.vector_stores.files.delete(file_id=file.id, vector_store_id=vs.id)
+    client.vector_stores.delete(vs.id)
   else:
     print(f"  Vector store '{name}' not found.")
 
@@ -690,7 +710,7 @@ def test_basic_file_functionalities(client):
 
 
 # 
-def test_file_search_functinalities(client):
+def test_file_search_functionalities(client):
   start_time = datetime.datetime.now()
   print(f"[{start_time.strftime('%Y-%m-%d %H:%M:%S')}] START: File functionalities (upload, vector stores, delete)...")
 
@@ -717,30 +737,30 @@ def test_file_search_functinalities(client):
   
   # Upload RAG files
   total_files = len(files)
-  print(f"Uploading {total_files} files...")
+  print(f"  Uploading {total_files} files...")
   for idx, file_path in enumerate(files, 1):
     with open(file_path, 'rb') as f:
       file = client.files.create(file=f, purpose="assistants")
     status = "OK" if file.id else "FAIL"
-    print(f"  [ {idx} / {total_files} ] {status}: ID={file.id} '{file_path}'")
+    print(f"    [ {idx} / {total_files} ] {status}: ID={file.id} '{file_path}'")
     files_data[file_path]['file_id'] = file.id
 
   # Create vector store
   vs_name = "test_vector_store"
-  print(f"Creating vector store '{vs_name}'...")
+  print(f"  Creating vector store '{vs_name}'...")
   vs = client.vector_stores.create(name=vs_name)
-  print(f"  OK. ID={vs.id}") if vs.id else print("  FAIL.")
+  print(f"    OK. ID={vs.id}") if vs.id else print("  FAIL.")
 
   # Add files to vector store
   failed_files = []
-  print(f"Adding files to vector store '{vs_name}'...")
+  print(f"  Adding files to vector store '{vs_name}'...")
   for idx, file_path in enumerate(files, 1):
     file_id = files_data[file_path]['file_id']
     try:
       client.vector_stores.files.create(vector_store_id=vs.id, file_id=file_id)
-      print(f"  [ {idx} / {total_files} ] OK: ID={file_id} '{file_path}'")
+      print(f"    [ {idx} / {total_files} ] OK: ID={file_id} '{file_path}'")
     except Exception as e:
-      print(f"  [ {idx} / {total_files} ] FAIL: '{file_path}' - {str(e)}")
+      print(f"    [ {idx} / {total_files} ] FAIL: '{file_path}' - {str(e)}")
       # add this file to failed files
       failed_files.append(file_path)
   
@@ -771,9 +791,9 @@ def test_file_search_functinalities(client):
   ```
 
   Here is some information about the file:
-  - filename: <filename>
+  - filename: '<filename>'
   - file_last_modified_date: <file_last_modified_date>
-  - source: <source>
+  - source: '<source>'
 
   **Rules**:
   - Return the requested value as plain text. No additional explanantion, description, or thoughts. No surrounding quotes. No markdown formatting.
@@ -825,7 +845,7 @@ def test_file_search_functinalities(client):
   
   # Create assistant for metadata extraction
   assistant = client.beta.assistants.create(
-    name="Test Metadata Extractor",
+    name="test_assistant",
     instructions="You are a metadata extraction assistant, returning extracted tags from documents as JSON.",
     model="gpt-4o-mini"
   )
@@ -835,7 +855,7 @@ def test_file_search_functinalities(client):
 
   # Extract metadata for each file
   total_files = len(files)
-  print(f"Extracting metadata for {total_files} files...")
+  print(f"  Extracting metadata for {total_files} files...")
   for idx, file_path in enumerate(files, 1):
     file_id = files_data[file_path]['file_id']
     file_last_modified_date = files_data[file_path]['file_last_modified_date']
@@ -848,7 +868,11 @@ def test_file_search_functinalities(client):
     message = client.beta.threads.messages.create(
       thread_id=thread.id,
       role="user",
-      content=prompt
+      content=prompt,
+      attachments=[{
+          "file_id": file_id,
+          "tools": [{"type": "file_search"}]
+      }]
     )
     
     # Run the assistant on the thread
@@ -869,23 +893,31 @@ def test_file_search_functinalities(client):
     # Get the latest assistant message
     assistant_message = next(msg for msg in messages if msg.role == 'assistant')
     extracted_metadata = assistant_message.content[0].text.value
-
-    prompt = user_prompt_template.format(
-      filename=filename,
-      file_last_modified_date=file_last_modified_date,
-      source=source,
-      content=content
-    )
-
-    metadata = response.choices[0].message.content
-    print(f"  [ {idx} / {total_files} ] OK: '{file_path}'")
+    print(f"    [ {idx} / {total_files} ] OK: '{file_path}'")
+    print(f"-------------------------------------------------")
+    print(f"{extracted_metadata}")
+    print(f"-------------------------------------------------")
+    metadata = json.loads(extracted_metadata)
     files_metadata[file_path].update(metadata)
 
   # Delete assistant
-
-
+  client.beta.assistants.delete(assistant.id)
 
   # Add extracted metadata to files in vector store
+  print(f"  Updating vector store file attributes with metadata...")
+  for idx, file_path in enumerate(files, 1):
+    file_id = files_data[file_path]['file_id']
+    metadata = files_metadata[file_path]
+    try:
+      client.vector_stores.files.update_attributes(
+        vector_store_id=vs.id,
+        file_id=file_id,
+        metadata=metadata
+      )
+      print(f"    [ {idx} / {total_files} ] OK: ID={file_id} '{file_path}'")
+    except Exception as e:
+      print(f"    [ {idx} / {total_files} ] FAIL: '{file_path}' - {str(e)}")
+
   # Search for files using query
   # Search for files using filter
   # Search for files using rewrite-query
@@ -913,8 +945,12 @@ if __name__ == '__main__':
   elif openai_service_type == "azure_openai":
     client = create_azure_openai_client(azure_openai_use_key_authentication)
 
-  # delete_vector_store_by_name(client, "test_vector_store", delete_files=True)
-  # test_file_search_functinalities(client)
+  # delete_failed_and_unused_files(client)
+
+  delete_vector_store_by_name(client, "test_vector_store", delete_files=True)
+  delete_assistant_by_name(client, "test_assistant")
+
+  test_file_search_functionalities(client)
 
   # test_file_functionalities(client)
 
