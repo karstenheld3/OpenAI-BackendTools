@@ -12,20 +12,19 @@ A collection of tools to test, operate and maintain Azure OpenAI backends
 | Open AI API                     | [Responses](https://platform.openai.com/docs/api-reference/responses) | [Completions](https://platform.openai.com/docs/api-reference/chat) | [Files](https://platform.openai.com/docs/api-reference/files) | [Vector stores](https://platform.openai.com/docs/api-reference/vector-stores) | [Assistants](https://platform.openai.com/docs/api-reference/assistants) |
 | Open AI Python                  | [OpenAI Agents SDK](https://openai.github.io/openai-agents-python/) |                                                              |                                                              |                                                              |                                                              |
 
+### Azure Open AI Deployment Types
 
+There is 3 types of Azure Open AI deployments with 2 types of endpoints. The difference is in the URL (`cognitiveservices` vs. `openai`).
 
-### Service Types
-
-There is two types of Azure Open AI endpoints. The difference is in the URL (`cognitiveservices` vs. `openai`).
-
-1) **Azure AI Services** (OpenAI + other ML services): `https://<your_open_ai_service_name>.cognitiveservices.azure.com/`
-   or
-   `https://<your_azure_ai_fondry_open_ai_service>.openai.azure.com/`
-
-2) **Azure OpenAI Service** (OpenAI only):
-   `https://<your_open_ai_service_name>.openai.azure.com/`
-
-### Access types
+1. **Azure Open AI Service** deployment ('*.openai.azure.com'):
+    - `https://<your_azure_openai_endpoint>.openai.azure.com/`
+2. **Azure AI Foundry** deployment ('cognitiveservices.azure.com' AND 'openai.azure.com' - both used):
+    - `https://<your_azure_openai_endpoint>.cognitiveservices.azure.com/`
+    - `https://<your_azure_openai_endpoint>.openai.azure.com/`
+3. **Azure AI Services** deployment ('cognitiveservices.azure.com' INSTEAD OF 'openai.azure.com'):
+    - `https://<your_azure_openai_endpoint>.cognitiveservices.azure.com/`
+  
+### Azure Open AI Access Types
 
 - **Service Principal** - In `.env` file:  `AZURE_CLIENT_ID` and`AZURE_CLIENT_SECRET`.
 - **Managed Identity**  - In `.env` file:  `AZURE_CLIENT_ID`
