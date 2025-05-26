@@ -936,23 +936,22 @@ def test_file_search_functionalities(client, folder_path, logExtractedMetadata=F
     print(f"    [ {idx} / {total_files} ] Extracting metadata for '{file_path}'...")
 
     prompt = prompt_template.replace("<filename>", filename).replace("<file_last_modified_date>", file_last_modified_date).replace("<source>", source)
-
-    # Create a thread for metadata extraction
-    thread = client.beta.threads.create()
-    
-    # Create message with file content and metadata
-    message = client.beta.threads.messages.create(
-      thread_id=thread.id,
-      role="user",
-      content=prompt,
-      attachments=[{ "file_id": file_id, "tools": [{"type": "file_search"}] }]
-    )
     
     # Run the assistant on the thread with retries
     max_attempts = 5
     attempt = 1
     while attempt <= max_attempts:
       try:
+        # Create a thread for metadata extraction
+        thread = client.beta.threads.create()
+        
+        # Create message with file content and metadata
+        message = client.beta.threads.messages.create(
+          thread_id=thread.id,
+          role="user",
+          content=prompt,
+          attachments=[{ "file_id": file_id, "tools": [{"type": "file_search"}] }]
+        )
         run = client.beta.threads.runs.create(thread_id=thread.id, assistant_id=assistant.id)
         
         # Wait for the run to complete
@@ -962,8 +961,8 @@ def test_file_search_functionalities(client, folder_path, logExtractedMetadata=F
             break
           elif run_status.status == 'failed':
             # delete thread
-            client.beta.threads.delete(thread_id=thread.id) 
-            raise Exception(f"Run failed: {run_status.error}")
+            client.beta.threads.delete(thread_id=thread.id)
+            raise Exception(f"Run failed: {run_status.last_error.message if hasattr(run_status, 'last_error') else 'Unknown error'}")
           time.sleep(1)
         
         # If we get here, the run completed successfully
@@ -972,9 +971,9 @@ def test_file_search_functionalities(client, folder_path, logExtractedMetadata=F
       except Exception as e:
         if attempt == max_attempts:
           raise Exception(f"Assistant run failed after {max_attempts} attempts: {str(e)}")
-        print(f"    Attempt {attempt} / {max_attempts} failed, retrying...")
+        print(f"      Attempt {attempt} / {max_attempts} failed, retrying...")
         attempt += 1
-        time.sleep(2)  # Wait before retry
+        time.sleep(10)  # Wait before retry
     
     # Get the assistant's response
     messages = client.beta.threads.messages.list( thread_id=thread.id )
@@ -1021,6 +1020,14 @@ def test_file_search_functionalities(client, folder_path, logExtractedMetadata=F
     except Exception as e:
       print(f"    [ {idx} / {total_files} ] FAIL: '{file_path}' - {str(e)}")
 
+    # make sure all files in the vector store have status 'processed' and delete those that don't
+    print(f"  Ensuring all files in the vector store have status='completed'...")
+    files = get_vector_store_files(client, vs)
+    for file in files:
+      if file.status != 'completed':
+        print(f"    Deleting file '{file.id}' with status '{file.status}'")
+        client.vector_stores.files.delete( vector_store_id=vs.id, file_id=file.id )
+
   # Search for files using query
   # https://cookbook.openai.com/examples/file_search_responses#standalone-vector-search
 
@@ -1054,7 +1061,6 @@ def test_file_search_functionalities(client, folder_path, logExtractedMetadata=F
   print(f"    {len(search_results.data)} search results")
   table = ("    " + format_search_results_table(search_results.data)).replace("\n","\n    ")
   print(table)
-
 
   # Search for files using rewrite-query
   query = "All files with file_type='md'."; score_threshold = 0.3; max_num_results = 10
@@ -1100,6 +1106,7 @@ if __name__ == '__main__':
   # test_basic_file_functionalities(client, "./RAGFiles/Batch01/Publications1.md")
 
   test_file_search_functionalities(client, "./RAGFiles/Batch01")
+  
   exit()
 
   # delete_expired_vector_stores(client)
