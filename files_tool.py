@@ -981,21 +981,19 @@ def test_file_search_functionalities(client, folder_path, logExtractedMetadata=F
     
     # Get the latest assistant message
     assistant_message = next(msg for msg in messages if msg.role == 'assistant')
-    extracted_metadata = assistant_message.content[0].text.value
+    extracted_metadata_string = assistant_message.content[0].text.value
     # remove ```json and ```
-    extracted_metadata = extracted_metadata.replace("```json", "").replace("```", "")
+    extracted_metadata_string = extracted_metadata_string.replace("```json", "").replace("```", "")
     if logExtractedMetadata:
       print("-"*140)
-      print(f"{extracted_metadata}")
+      print(f"{extracted_metadata_string}")
       print("-"*140)
     try:
-      metadata = json.loads(extracted_metadata)
-      files_metadata[file_path].update(metadata)
+      extracted_metadata = json.loads(extracted_metadata_string)
+      files_metadata[file_path].update(extracted_metadata)
       # Get non-empty values from metadata
-      non_empty_values = [value for value in metadata.values() if value]
-      # calculate metadata tags - count total fields
-      metadata_tags_returned = len(non_empty_values)
-      print(f"      OK: {non_empty_values} of {metadata_tags_returned} values extracted for file '{file_path}'")
+      non_empty_values = [value for value in extracted_metadata.values() if value]
+      print(f"      OK: {len(non_empty_values)} of {len(extracted_metadata.keys())} values extracted for file '{file_path}'")
     except:
       print(f"      FAIL: Metadata extraction returned invalid JSON for file '{file_path}'")
       continue
@@ -1010,16 +1008,16 @@ def test_file_search_functionalities(client, folder_path, logExtractedMetadata=F
   print(f"  Re-adding files to vector store with metadata...")
   for idx, file_path in enumerate(files, 1):
     file_id = files_data[file_path]['file_id']
-    metadata = files_metadata[file_path]
+    file_metadata = files_metadata[file_path]
     # calculate metadata tags - count total fields
-    metadata_tags = len(metadata.keys())
+    file_metadata_count = len(file_metadata.keys())
 
     try:
       # first remove the file from the vector store
       client.vector_stores.files.delete( vector_store_id=vs.id, file_id=file_id )
       # then add the file back with the updated metadata
-      client.vector_stores.files.create( vector_store_id=vs.id, file_id=file_id, attributes=metadata )
-      print(f"    [ {idx} / {total_files} ] OK: ID={file_id} with {metadata_tags} tags '{file_path}'")
+      client.vector_stores.files.create( vector_store_id=vs.id, file_id=file_id, attributes=file_metadata )
+      print(f"    [ {idx} / {total_files} ] OK: ID={file_id} with {file_metadata_count} attributes '{file_path}'")
     except Exception as e:
       print(f"    [ {idx} / {total_files} ] FAIL: '{file_path}' - {str(e)}")
 
