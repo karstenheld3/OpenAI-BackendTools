@@ -737,12 +737,11 @@ def delete_vector_store_by_name(client, name, delete_files=False):
 # ----------------------------------------------------- END: Cleanup ----------------------------------------------------------
 
 # ----------------------------------------------------- START: Tests ----------------------------------------------------------
-def test_basic_file_functionalities(client):
+def test_basic_file_functionalities(client, file_path="./RAGFiles/Batch01/Publications1.md"):
   start_time = datetime.datetime.now()
   print(f"[{start_time.strftime('%Y-%m-%d %H:%M:%S')}] START: File functionalities (upload, vector stores, delete)...")
 
-  # Upload a file  
-  file_path = "./RAGFiles/Batch01/Publications1.md"
+  # Upload a file
   if not os.path.exists(file_path):
     # remove part to move one folder up
     file_path_split = file_path.split("/")
@@ -788,13 +787,12 @@ def test_basic_file_functionalities(client):
 
 
 # 
-def test_file_search_functionalities(client, logExtractedMetadata=False):
+def test_file_search_functionalities(client, folder_path, logExtractedMetadata=False):
   start_time = datetime.datetime.now()
   print(f"[{start_time.strftime('%Y-%m-%d %H:%M:%S')}] START: File functionalities (upload, vector stores, delete)...")
 
   # Load RAG files and store metadata in dict (filename, file_year, file_type)
   files = []; files_metadata = {}; files_data = {}; 
-  folder_path = "./RAGFiles/Batch01"
   if not os.path.exists(folder_path):
     raise Exception(f"File '{folder_path}' does not exist.")
   else:
@@ -1055,10 +1053,25 @@ def test_file_search_functionalities(client, logExtractedMetadata=False):
   print(f"    {len(search_results.data)} search results")
   table = ("    " + format_search_results_table(search_results.data)).replace("\n","\n    ")
   print(table)
+
+
+  # Search for files using rewrite-query
+  query = "All files with file_type='md'."; score_threshold = 0.3; max_num_results = 10
   print("-"*140)
+  print(f"  Testing rewrite query search (score_threshold={str(score_threshold)}, max_num_results={max_num_results}): {query}")
+  search_results = client.vector_stores.search(
+    vector_store_id=vs.id,
+    query=query,
+    rewrite_query=True,
+    ranking_options={"ranker": "auto", "score_threshold": score_threshold},
+    max_num_results=max_num_results
+  )
+  print(f"    {len(search_results.data)} search results")
+  table = ("    " + format_search_results_table(search_results.data)).replace("\n","\n    ")
+  print(table)
 
-
-    # Search for files using rewrite-query
+  # Delete vector store
+  delete_vector_store_by_name(client, "test_vector_store", delete_files=True)
 
   end_time = datetime.datetime.now(); secs = (end_time - start_time).total_seconds()
   parts = [(int(secs // 3600), 'hour'), (int((secs % 3600) // 60), 'min'), (int(secs % 60), 'sec')]
@@ -1083,14 +1096,9 @@ if __name__ == '__main__':
   elif openai_service_type == "azure_openai":
     client = create_azure_openai_client(azure_openai_use_key_authentication)
 
-  # delete_failed_and_unused_files(client)
+  # test_basic_file_functionalities(client, "./RAGFiles/Batch01/Publications1.md")
 
-  delete_vector_store_by_name(client, "test_vector_store", delete_files=True)
-  delete_assistant_by_name(client, "test_assistant")
-  test_file_search_functionalities(client)
-  print(format_files_table(get_vector_store_files(client, "test_vector_store")))
-
-  # test_basic_file_functionalities(client)
+  # test_file_search_functionalities(client, "./RAGFiles/Batch02")
 
   # delete_expired_vector_stores(client)
   
