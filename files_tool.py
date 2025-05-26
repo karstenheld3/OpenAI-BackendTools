@@ -588,10 +588,6 @@ def format_search_results_table(search_results):
 
 # ----------------------------------------------------- START: Assistants ----------------------------------------------------
 
-# Get all assistants
-def get_all_assistants(client):
-  return client.beta.assistants.list()
-
 # Delete an assistant by name
 def delete_assistant_by_name(client, name):
   assistants = get_all_assistants(client)
@@ -1096,9 +1092,11 @@ if __name__ == '__main__':
   elif openai_service_type == "azure_openai":
     client = create_azure_openai_client(azure_openai_use_key_authentication)
 
-  # test_basic_file_functionalities(client, "./RAGFiles/Batch01/Publications1.md")
 
-  # test_file_search_functionalities(client, "./RAGFiles/Batch02")
+  test_basic_file_functionalities(client, "./RAGFiles/Batch01/Publications1.md")
+
+  test_file_search_functionalities(client, "./RAGFiles/Batch02")
+  exit()
 
   # delete_expired_vector_stores(client)
   
