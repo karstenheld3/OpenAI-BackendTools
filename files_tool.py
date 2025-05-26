@@ -180,6 +180,11 @@ def format_files_table(file_list_page):
     headers.append('Vector Store')
     max_widths.append(40)
   
+  append_metadata_column = (getattr(files[0], 'attributes', None) != None)
+  if append_metadata_column:
+    headers.append('Attributes')
+    max_widths.append(10)
+  
   # Initialize column widths with header lengths, but respect max widths
   col_widths = [min(len(h), max_widths[i]) for i, h in enumerate(headers)]
   
@@ -196,8 +201,11 @@ def format_files_table(file_list_page):
       getattr(item, 'purpose', '...'),
     ]
 
-    if append_vector_store_column:
-      row_data.append(getattr(item, 'vector_store_name', ''))
+    if append_vector_store_column: row_data.append(getattr(item, 'vector_store_name', ''))
+    if append_metadata_column:
+      attributes = getattr(item, 'attributes', '')
+      row_data.append(len(attributes))
+    
     
     # Truncate cells if they exceed max width
     for i, cell in enumerate(row_data):
@@ -410,6 +418,18 @@ def get_all_vector_stores(client):
   return all_vector_stores
 
 def get_vector_store_files(client, vector_store):
+
+  if isinstance(vector_store, str):
+    # if it's a name, retrieve the vector store
+    vector_stores = get_all_vector_stores(client)
+    for vs in vector_stores:
+      if vs.name == vector_store:
+        vector_store = vs
+        break
+
+  if not vector_store:
+    raise ValueError(f"Vector store '{vector_store}' not found")
+
   # Get the vector store ID
   vector_store_id = getattr(vector_store, 'id', None)
   vector_store_name = getattr(vector_store, 'name', None)
@@ -710,7 +730,7 @@ def test_basic_file_functionalities(client):
 
 
 # 
-def test_file_search_functionalities(client):
+def test_file_search_functionalities(client, logExtractedMetadata=False):
   start_time = datetime.datetime.now()
   print(f"[{start_time.strftime('%Y-%m-%d %H:%M:%S')}] START: File functionalities (upload, vector stores, delete)...")
 
@@ -777,7 +797,6 @@ def test_file_search_functionalities(client):
   Extract the following tags for the uploaded document and return them as JSON.
 
   Example answer format:
-  ```json
   {
     "title": "<document_title>"
     ,"description": "<document_description>"
@@ -788,7 +807,6 @@ def test_file_search_functionalities(client):
     ,"doc_start_date": "<document_doc_start_date>"
     ,"doc_end_date": "<document_doc_end_date>"
   }
-  ```
 
   Here is some information about the file:
   - filename: '<filename>'
@@ -814,8 +832,9 @@ def test_file_search_functionalities(client):
   Example: 'Insights on world demographics since the 1950s. Focus on Africa and Asia.'
 
   ### doc_type
-  What is the document's type?
+  What is the document's type? Use semantic analysis to determine the type.
   Return an answer with less than 30 characters.
+  Examples: 'Financial report', ''Market research', 'Invoice', 'Letter', 'Memo', 'Minutes', 'Newsletter', 'Press release', 'Report', 'Speech', 'Survey', 'White paper'
 
   ### doc_language
   What is the document's language? Return only one language.
@@ -850,9 +869,6 @@ def test_file_search_functionalities(client):
     model="gpt-4o-mini"
   )
   
-  # Create a thread for metadata extraction
-  thread = client.beta.threads.create()
-
   # Extract metadata for each file
   total_files = len(files)
   print(f"  Extracting metadata for {total_files} files...")
@@ -862,63 +878,96 @@ def test_file_search_functionalities(client):
     source = files_metadata[file_path]['source']
     filename = files_metadata[file_path]['filename']
 
+    print(f"    [ {idx} / {total_files} ] Extracting metadata for '{file_path}'...")
+
     prompt = prompt_template.replace("<filename>", filename).replace("<file_last_modified_date>", file_last_modified_date).replace("<source>", source)
+
+    # Create a thread for metadata extraction
+    thread = client.beta.threads.create()
     
     # Create message with file content and metadata
     message = client.beta.threads.messages.create(
       thread_id=thread.id,
       role="user",
       content=prompt,
-      attachments=[{
-          "file_id": file_id,
-          "tools": [{"type": "file_search"}]
-      }]
+      attachments=[{ "file_id": file_id, "tools": [{"type": "file_search"}] }]
     )
     
-    # Run the assistant on the thread
-    run = client.beta.threads.runs.create( thread_id=thread.id, assistant_id=assistant.id )
-    
-    # Wait for the run to complete
-    while True:
-      run_status = client.beta.threads.runs.retrieve( thread_id=thread.id, run_id=run.id )
-      if run_status.status == 'completed':
+    # Run the assistant on the thread with retries
+    max_attempts = 5
+    attempt = 1
+    while attempt <= max_attempts:
+      try:
+        run = client.beta.threads.runs.create(thread_id=thread.id, assistant_id=assistant.id)
+        
+        # Wait for the run to complete
+        while True:
+          run_status = client.beta.threads.runs.retrieve(thread_id=thread.id, run_id=run.id)
+          if run_status.status == 'completed':
+            break
+          elif run_status.status == 'failed':
+            # delete thread
+            client.beta.threads.delete(thread_id=thread.id) 
+            raise Exception(f"Run failed: {run_status.error}")
+          time.sleep(1)
+        
+        # If we get here, the run completed successfully
         break
-      time.sleep(1)
+        
+      except Exception as e:
+        if attempt == max_attempts:
+          raise Exception(f"Assistant run failed after {max_attempts} attempts: {str(e)}")
+        print(f"    Attempt {attempt} / {max_attempts} failed, retrying...")
+        attempt += 1
+        time.sleep(2)  # Wait before retry
     
     # Get the assistant's response
-    messages = client.beta.threads.messages.list(
-      thread_id=thread.id
-    )
+    messages = client.beta.threads.messages.list( thread_id=thread.id )
     
     # Get the latest assistant message
     assistant_message = next(msg for msg in messages if msg.role == 'assistant')
     extracted_metadata = assistant_message.content[0].text.value
-    print(f"    [ {idx} / {total_files} ] OK: '{file_path}'")
-    print(f"-------------------------------------------------")
-    print(f"{extracted_metadata}")
-    print(f"-------------------------------------------------")
-    metadata = json.loads(extracted_metadata)
-    files_metadata[file_path].update(metadata)
+    # remove ```json and ```
+    extracted_metadata = extracted_metadata.replace("```json", "").replace("```", "")
+    if logExtractedMetadata:
+      print(f"-------------------------------------------------")
+      print(f"{extracted_metadata}")
+      print(f"-------------------------------------------------")
+    try:
+      metadata = json.loads(extracted_metadata)
+      files_metadata[file_path].update(metadata)
+      # calculate metadata tags - count total fields
+      metadata_tags_returned = len(metadata.keys())
+      print(f"      OK: {metadata_tags_returned} metadata tags extracted for file '{file_path}'")
+    except:
+      print(f"      FAIL: Metadata extraction returned invalid JSON for file '{file_path}'")
+      continue
+
+    # delete thread
+    client.beta.threads.delete(thread.id)
 
   # Delete assistant
   client.beta.assistants.delete(assistant.id)
 
   # Add extracted metadata to files in vector store
-  print(f"  Updating vector store file attributes with metadata...")
+  print(f"  Re-adding files to vector store with metadata...")
   for idx, file_path in enumerate(files, 1):
     file_id = files_data[file_path]['file_id']
     metadata = files_metadata[file_path]
+    # calculate metadata tags - count total fields
+    metadata_tags = len(metadata.keys())
+
     try:
-      client.vector_stores.files.update_attributes(
-        vector_store_id=vs.id,
-        file_id=file_id,
-        metadata=metadata
-      )
-      print(f"    [ {idx} / {total_files} ] OK: ID={file_id} '{file_path}'")
+      # first remove the file from the vector store
+      client.vector_stores.files.delete( vector_store_id=vs.id, file_id=file_id )
+      # then add the file back with the updated metadata
+      client.vector_stores.files.create( vector_store_id=vs.id, file_id=file_id, attributes=metadata )
+      print(f"    [ {idx} / {total_files} ] OK: ID={file_id} with {metadata_tags} tags '{file_path}'")
     except Exception as e:
       print(f"    [ {idx} / {total_files} ] FAIL: '{file_path}' - {str(e)}")
 
   # Search for files using query
+  
   # Search for files using filter
   # Search for files using rewrite-query
 
@@ -949,10 +998,10 @@ if __name__ == '__main__':
 
   delete_vector_store_by_name(client, "test_vector_store", delete_files=True)
   delete_assistant_by_name(client, "test_assistant")
-
   test_file_search_functionalities(client)
+  print(format_files_table(get_vector_store_files(client, "test_vector_store")))
 
-  # test_file_functionalities(client)
+  # test_basic_file_functionalities(client)
 
   # delete_expired_vector_stores(client)
   
