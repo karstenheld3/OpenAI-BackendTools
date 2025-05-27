@@ -17,6 +17,10 @@ class TestVectorStoreWithFiles:
     self.files_metadata = files_metadata
     self.files_data = files_data
 
+def truncate_string(string, max_length):
+  if len(string) > max_length:
+    return string[:max_length] + "..."
+  return string
 
 def create_test_vector_store_with_files(client, vector_store_name, folder_path):
   function_name = 'Create test vector store with files'
@@ -291,6 +295,48 @@ def extract_and_add_metadata_to_vector_store(client, test_vector_store_with_file
   log_function_footer(function_name, start_time)
 
 
+def test_rag_operations_using_responses_api(client, test_vector_store_with_files):
+  function_name = 'RAG operations using responses API'
+  start_time = log_function_header(function_name)
+
+  model = os.getenv("AZURE_OPENAI_MODEL_NAME", "gpt-4o-mini")
+  vector_store_id = test_vector_store_with_files.vector_store.id
+
+  # Ask question
+  query = "Who is Arilena Drovik?";
+  print("-"*140)
+  print(f"  Testing query with 'file_search' tool: {query}")
+  response = client.responses.create(
+    model=model
+    ,input=query
+    ,tools=[{ "type": "file_search", "vector_store_ids": [vector_store_id] }]
+  )
+  print(f"    Response: {truncate_string(response.output_text,80)}")
+  print(f"    status='{response.status}', tool_choice='{response.tool_choice}', input_tokens={response.usage.input_tokens}, output_tokens={response.usage.output_tokens}")
+  # search for tool call of type 'file_search_call' in response.output
+  response_file_search_tool_call = next((item for item in response.output if item.type == 'file_search_call'), None)
+  if response_file_search_tool_call: print(f"    File search tool call status: '{response_file_search_tool_call.status}'")
+
+
+  print(f"  Testing query with 'file_search' tool with 'file_search_call.results': {query}")
+  response = client.responses.create(
+    model=model
+    ,input=query
+    ,tools=[{ "type": "file_search", "vector_store_ids": [vector_store_id] }]
+    ,include=["file_search_call.results"]
+  )
+  print(f"    Response: {truncate_string(response.output_text,80)}")
+  print(f"    status='{response.status}', tool_choice='{response.tool_choice}', input_tokens={response.usage.input_tokens}, output_tokens={response.usage.output_tokens}")
+  # search for tool call of type 'file_search_call' in response.output
+  response_file_search_tool_call = next((item for item in response.output if item.type == 'file_search_call'), None)
+  if response_file_search_tool_call: print(f"    File search tool call status: '{response_file_search_tool_call.status}'")
+  # search for 'file_search_call.results' in response.output
+  response_file_search_results = response_file_search_tool_call.results
+  lines = format_files_table(response_file_search_results)
+  print("    " + lines.replace("\n","\n    "))
+
+  log_function_footer(function_name, start_time)
+
 def test_file_search_functionalities(client, test_vector_store_with_files):
   function_name = 'File search functionalities (RAG search, filter, rewrite query)'
   start_time = log_function_header(function_name)
@@ -360,16 +406,24 @@ elif openai_service_type == "azure_openai":
 test_vector_store_name = "test_vector_store"
 
 # delete previously created vector stores (for example if script crashed previously)
-# delete_vector_store_by_name(client, test_vector_store_name, True)
+delete_vector_store_by_name(client, test_vector_store_name, True)
+delete_vector_store_by_name(client, test_vector_store_name, True)
+delete_vector_store_by_name(client, test_vector_store_name, True)
+
+
+
 
 # Part 1: Create vector store by uploading files
 test_vector_store_with_files = create_test_vector_store_with_files(client,test_vector_store_name, "./RAGFiles/Batch01")
 
 # Part 2: Extract metadata from files and re-add files with more metadata to the vector store
-extract_and_add_metadata_to_vector_store(client, test_vector_store_with_files, False)
+# extract_and_add_metadata_to_vector_store(client, test_vector_store_with_files, False)
 
 # Part 3: Test file search functionalities
-test_file_search_functionalities(client, test_vector_store_with_files)
+# test_file_search_functionalities(client, test_vector_store_with_files)
+
+
+test_rag_operations_using_responses_api(client, test_vector_store_with_files)
 
 # Part 4: Delete vector store including all files
 delete_vector_store_by_name(client, test_vector_store_name, True)
