@@ -359,6 +359,9 @@ elif openai_service_type == "azure_openai":
 
 test_vector_store_name = "test_vector_store"
 
+# delete previously created vector stores (for example if script crashed previously)
+# delete_vector_store_by_name(client, test_vector_store_name, True)
+
 # Part 1: Create vector store by uploading files
 test_vector_store_with_files = create_test_vector_store_with_files(client,test_vector_store_name, "./RAGFiles/Batch01")
 

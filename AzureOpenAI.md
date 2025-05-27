@@ -11,7 +11,6 @@ The `.env` file contains
 - Your Azure tenant ID
 - Your Azure Open AI deployment name, model name and API version
 
-
 **Where to get this information:**
 
 - Tenant ID: [Azure > Microsoft Entra ID > Overview](https://portal.azure.com/#view/Microsoft_AAD_IAM/ActiveDirectoryMenuBlade/~/Overview)
@@ -34,12 +33,12 @@ The `.env` file contains
     - To get the Client ID: Go to Azure > Microsoft Entra ID > [App registrations](https://portal.azure.com/#view/Microsoft_AAD_IAM/ActiveDirectoryMenuBlade/~/RegisteredApps) > Click on your application > Overview > Copy the Application (client) ID
     - To get the Client Secret: Go to Azure > Microsoft Entra ID > [App registrations](https://portal.azure.com/#view/Microsoft_AAD_IAM/ActiveDirectoryMenuBlade/~/RegisteredApps) > Click on your application > Certificates & secrets > New client secret > Copy the value
 
-
 **Example .env - Access via API key**
 
 ```python
 AZURE_OPENAI_ENDPOINT=https://<your_azure_openai_endpoint>.openai.azure.com/
 AZURE_OPENAI_API_KEY=<your_azure_openai_key>
+
 AZURE_OPENAI_DEPLOYMENT=gpt-4o-mini
 AZURE_OPENAI_MODEL_NAME=gpt-4o-mini
 AZURE_OPENAI_API_VERSION=2025-04-01-preview
@@ -52,6 +51,8 @@ AZURE_OPENAI_ENDPOINT=https://<your_azure_openai_endpoint>.openai.azure.com/
 AZURE_OPENAI_API_KEY=<your_azure_openai_key>
 AZURE_TENANT_ID=aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaa
 AZURE_CLIENT_ID=bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbb # Managed Identity
+# Client secret not neeeded as password will be handled and rotated automatically by Entra ID
+
 AZURE_OPENAI_DEPLOYMENT=gpt-4o-mini
 AZURE_OPENAI_MODEL_NAME=gpt-4o-mini
 AZURE_OPENAI_API_VERSION=2025-04-01-preview
@@ -65,6 +66,7 @@ AZURE_OPENAI_API_KEY=<your_azure_openai_key>
 AZURE_TENANT_ID=aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaa
 AZURE_CLIENT_ID=bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbb # Azure AD App registration client ID
 AZURE_CLIENT_SECRET=<your_client_secret>
+
 AZURE_OPENAI_DEPLOYMENT=gpt-4o-mini
 AZURE_OPENAI_MODEL_NAME=gpt-4o-mini
 AZURE_OPENAI_API_VERSION=2025-04-01-preview
@@ -85,9 +87,9 @@ There is 3 types of Azure Open AI deployments with 2 types of endpoints. The dif
   
 ### Azure Open AI Access Types
 
-- **Service Principal** - In `.env` file:  `AZURE_CLIENT_ID` and`AZURE_CLIENT_SECRET`.
-- **Managed Identity**  - In `.env` file:  `AZURE_CLIENT_ID`
 - **API Key** - In `.env` file:  `AZURE_OPENAI_API_KEY`
+- **Managed Identity**  - In `.env` file:  `AZURE_CLIENT_ID`
+- **Service Principal** - In `.env` file:  `AZURE_CLIENT_ID` and`AZURE_CLIENT_SECRET`.
 
 ### Access roles and restrictions
 
