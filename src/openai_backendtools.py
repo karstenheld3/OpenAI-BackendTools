@@ -243,7 +243,7 @@ def format_files_table(file_list_page):
   # Build table as string
   lines = []
   header_line = ' | '.join(h.ljust(col_widths[i]) for i, h in enumerate(headers))
-  sep_line = '-+-'.join('-'*col_widths[i] for i in range(len(headers)))
+  sep_line = ' | '.join('-'*col_widths[i] for i in range(len(headers)))
   lines.append(header_line)
   lines.append(sep_line)
   
@@ -399,7 +399,7 @@ def format_assistants_table(assistant_list):
   # Build table as string
   lines = []
   header_line = ' | '.join(h.ljust(col_widths[i]) for i, h in enumerate(headers))
-  sep_line = '-+-'.join('-'*col_widths[i] for i in range(len(headers)))
+  sep_line = ' | '.join('-'*col_widths[i] for i in range(len(headers)))
   lines.append(header_line)
   lines.append(sep_line)
   
@@ -558,7 +558,7 @@ def format_vector_stores_table(vector_store_list):
   # Build table as string
   lines = []
   header_line = ' | '.join(h.ljust(col_widths[i]) for i, h in enumerate(headers))
-  sep_line = '-+-'.join('-'*col_widths[i] for i in range(len(headers)))
+  sep_line = ' | '.join('-'*col_widths[i] for i in range(len(headers)))
   lines.append(header_line)
   lines.append(sep_line)
   
@@ -618,7 +618,7 @@ def format_search_results_table(search_results):
   # Build table as string
   lines = []
   header_line = ' | '.join(h.ljust(col_widths[i]) for i, h in enumerate(headers))
-  sep_line = '-+-'.join('-'*col_widths[i] for i in range(len(headers)))
+  sep_line = ' | '.join('-'*col_widths[i] for i in range(len(headers)))
   lines.append(header_line)
   lines.append(sep_line)
   
