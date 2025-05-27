@@ -26,7 +26,9 @@ def create_test_vector_store_with_files(client, vector_store_name, folder_path):
   # file source paths in list 'files' 
   # metadata to be uploaded in dict 'files_metadata' with key=file_path
   # metadata to not be uploaded in dict 'files_data' with key=file_path
-  files = []; files_metadata = {}; files_data = {}; 
+  files = []; files_metadata = {}; files_data = {};
+  # normalize folder path
+  folder_path = os.path.abspath(folder_path)
   if not os.path.exists(folder_path):
     raise Exception(f"File '{folder_path}' does not exist.")
   else:
