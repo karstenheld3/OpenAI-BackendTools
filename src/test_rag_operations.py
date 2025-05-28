@@ -54,15 +54,14 @@ def create_test_vector_store_with_files(client, vector_store_name, folder_path):
       if os.path.isfile(file_path):
         # Extract year from file's last modification date
         mod_timestamp = os.path.getmtime(file_path)
-        file_year = str(datetime.datetime.fromtimestamp(mod_timestamp).year)
         file_last_modified_date = datetime.datetime.fromtimestamp(mod_timestamp).strftime('%Y-%m-%d')
         # Get file type from extension (handles multiple dots in filename)
         file_type = filename.split('.')[-1] if '.' in filename else ''
         file_size = os.path.getsize(file_path)
         # Store file source path and metadata
         files.append(file_path)
-        files_metadata[file_path] = { 'source': file_path, 'filename': filename, 'file_year': file_year, 'file_type': file_type }
-        files_data[file_path] = { 'file_size': file_size, 'file_last_modified_date': file_last_modified_date }
+        files_metadata[file_path] = { 'source': file_path, 'filename': filename, 'file_type': file_type }
+        files_data[file_path] = { 'file_size': file_size, 'file_last_modified_date': file_last_modified_date}
   
   # Upload RAG files
   total_files = len(files)

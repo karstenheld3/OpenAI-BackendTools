@@ -172,6 +172,15 @@ def get_all_files(client):
   return all_files
 
 # Format a list of files into a table
+def truncate_row_data(row_data, max_widths, except_indices=[0,1]):
+  truncated_data = []
+  for i, cell in enumerate(row_data):
+    cell_str = str(cell)
+    if len(cell_str) > max_widths[i] and (not i in except_indices):  # Don't truncate row numbers or index
+      cell_str = cell_str[:max_widths[i]-3] + '...'
+    truncated_data.append(cell_str)
+  return truncated_data
+
 def format_files_table(file_list_page):
   # file_list_page: SyncCursorPage[FileObject] or similar
   files = getattr(file_list_page, 'data', None)
@@ -213,30 +222,11 @@ def format_files_table(file_list_page):
       attributes = getattr(item, 'attributes', '')
       row_data.append(len(attributes))
     
-    
-    # Truncate cells if they exceed max width
-    for i, cell in enumerate(row_data):
-      cell_str = str(cell)
-      if len(cell_str) > max_widths[i] and i > 1:  # Don't truncate row numbers or index
-        if i == 3:  # Filename column - special handling
-          # For filenames, keep the extension and truncate the middle
-          name_parts = cell_str.split('.')
-          if len(name_parts) > 1:
-            ext = name_parts[-1]
-            base = '.'.join(name_parts[:-1])
-            avail_chars = max_widths[i] - len(ext) - 3  # -3 for '...' and '.' before extension
-            if avail_chars > 5:  # Only truncate if we can show a reasonable amount
-              cell_str = base[:avail_chars] + '...' + '.' + ext
-            else:
-              cell_str = cell_str[:max_widths[i]-3] + '...'
-          else:
-            cell_str = cell_str[:max_widths[i]-3] + '...'
-        else:  # Other columns
-          cell_str = cell_str[:max_widths[i]-3] + '...'
-      
-      # Update column width if needed, but respect max width
+
+    # Truncate cells and update column widths
+    row_data = truncate_row_data(row_data, max_widths)
+    for i, cell_str in enumerate(row_data):
       col_widths[i] = min(max(col_widths[i], len(cell_str)), max_widths[i])
-      row_data[i] = cell_str
     
     rows.append(row_data)
   
@@ -285,7 +275,6 @@ def get_filelist_metrics(files):
 # ----------------------------------------------------- END: Files ------------------------------------------------------------
 
 # ----------------------------------------------------- START: Assistants -----------------------------------------------------
-
 
 def get_assistant_vector_store_id(assistant):
   if isinstance(assistant, str):
@@ -384,15 +373,10 @@ def format_assistants_table(assistant_list):
       "" if not getattr(item, 'vector_store_id') else getattr(item, 'vector_store_id', "")
     ]
     
-    # Truncate cells if they exceed max width
-    for i, cell in enumerate(row_data):
-      cell_str = str(cell)
-      if len(cell_str) > max_widths[i] and i > 1:  # Don't truncate row numbers or index
-        cell_str = cell_str[:max_widths[i]-3] + '...'
-      
-      # Update column width if needed, but respect max width
+    # Truncate cells and update column widths
+    row_data = truncate_row_data(row_data, max_widths)
+    for i, cell_str in enumerate(row_data):
       col_widths[i] = min(max(col_widths[i], len(cell_str)), max_widths[i])
-      row_data[i] = cell_str
     
     rows.append(row_data)
   
@@ -452,7 +436,7 @@ def get_vector_store_files(client, vector_store):
     # if it's a name, retrieve the vector store
     vector_stores = get_all_vector_stores(client)
     for vs in vector_stores:
-      if vs.name == vector_store:
+      if vs.name == vector_store or vs.id == vector_store:
         vector_store = vs
         break
 
@@ -543,15 +527,10 @@ def format_vector_stores_table(vector_store_list):
       files_str
     ]
     
-    # Truncate cells if they exceed max width
-    for i, cell in enumerate(row_data):
-      cell_str = str(cell)
-      if len(cell_str) > max_widths[i] and i > 1:  # Don't truncate row numbers or index
-        cell_str = cell_str[:max_widths[i]-3] + '...'
-      
-      # Update column width if needed, but respect max width
+    # Truncate cells and update column widths
+    row_data = truncate_row_data(row_data, max_widths)
+    for i, cell_str in enumerate(row_data):
       col_widths[i] = min(max(col_widths[i], len(cell_str)), max_widths[i])
-      row_data[i] = cell_str
     
     rows.append(row_data)
   
@@ -600,18 +579,73 @@ def format_search_results_table(search_results):
       attributes_string
     ]
     
-    # Truncate cells if they exceed max width
-    for i, cell in enumerate(row_data):
-      cell_str = str(cell)
-      if len(cell_str) > max_widths[i] and i > 1:  # Don't truncate row numbers or index
-        if i == 4:  # Content column - special handling to preserve useful info
-          cell_str = cell_str[:max_widths[i]-3] + '...'
-        else:
-          cell_str = cell_str[:max_widths[i]-3] + '...'
-      
-      # Update column width if needed, but respect max width
+    # Truncate cells and update column widths
+    row_data = truncate_row_data(row_data, max_widths)
+    for i, cell_str in enumerate(row_data):
       col_widths[i] = min(max(col_widths[i], len(cell_str)), max_widths[i])
-      row_data[i] = cell_str
+    
+    rows.append(row_data)
+  
+  # Build table as string
+  lines = []
+  header_line = ' | '.join(h.ljust(col_widths[i]) for i, h in enumerate(headers))
+  sep_line = ' | '.join('-'*col_widths[i] for i in range(len(headers)))
+  lines.append(header_line)
+  lines.append(sep_line)
+  
+  for row in rows:
+    lines.append(' | '.join(str(cell).ljust(col_widths[i]) for i, cell in enumerate(row)))
+  
+  return '\n'.join(lines)
+
+# return formatted table of files with attributes: index,  filename, file_size, followed by all attributes in the order they are defined in the file
+def list_vector_store_files_with_attributes(client, vector_store_id):
+  """Get a formatted table of files in a vector store with their attributes.
+  
+  Args:
+    client: OpenAI client
+    vector_store_id: ID or name of the vector store
+  
+  Returns:
+    Formatted table as string showing files and their attributes
+  """
+  files = get_vector_store_files(client, vector_store_id)
+  return format_file_attributes_table(files)
+
+def format_file_attributes_table(vector_store_files):
+  if not vector_store_files: return '(No files found)'
+  
+  # Get all possible attributes from all files
+  all_attribute_names = set()
+  for file in vector_store_files:
+    attributes = getattr(file, 'attributes', {})
+    all_attribute_names.update(attributes.keys())
+  
+  # create array with attribute name lengths
+  attribute_name_lengths = [len(attr_name) for attr_name in all_attribute_names]
+  # Define headers and max column widths
+  headers = ['Index'] + list(all_attribute_names)
+  max_widths = [6] + attribute_name_lengths  # Set reasonable default widths
+  
+  # Initialize column widths with header lengths, but respect max widths
+  col_widths = [min(len(h), max_widths[i]) for i, h in enumerate(headers)]
+  
+  rows = []
+  for idx, item in enumerate(vector_store_files):
+    # Prepare row data
+    row_data = [
+      f"{idx:05d}",
+    ]
+    
+    # Add attributes in the same order as headers
+    attributes = getattr(item, 'attributes', {})
+    for attr_name in all_attribute_names:
+      row_data.append(str(attributes.get(attr_name, '')))
+    
+    # Truncate cells and update column widths
+    row_data = truncate_row_data(row_data, max_widths, [])
+    for i, cell_str in enumerate(row_data):
+      col_widths[i] = min(max(col_widths[i], len(cell_str)), max_widths[i])
     
     rows.append(row_data)
   

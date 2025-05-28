@@ -51,9 +51,10 @@ A collection of tools and demo code to test, operate and maintain Open AI and Az
 │   └── test_search_operations.py              # Search API tests
 ├── RAGFiles/                                  # Directory for RAG-related test files
 ├── .env                                       # Environment configuration for Azure and OpenAI
-├── env-file-template.txt                      # Template for .env file
+├── env-file-template.txt                      # Template for .env file (documented in AzureOpenAI.md)
 ├── requirements.txt                           # Python package dependencies
 ├── LICENSE                                    # Project license information
+├── AzureOpenAI.md                             # Azure setup instructions
 └── README.md                                  # Project documentation
 ```
 
@@ -73,7 +74,7 @@ elif openai_service_type == "azure_openai":
 
 ## File Operations
 
-### Function: `list_all_files` 
+### Function: `list_all_files`
 
 **Location:** `test_file_listings.py`
 
@@ -94,7 +95,7 @@ Index | ID                                 | Filename                           
 00178 | assistant-P1YNs2NMxx9hTc6pLsf33ssz | Example-file-1.pdf                       | 4.82 MB   | 2024-12-19 10:55:57 | processed | assistants
 00179 | assistant-mLLOQ0Cdk82F3IHFFbw0aAHx | Example-file-with-very-long-name-that... | 1.44 MB   | 2024-12-19 10:55:47 | processed | assistants
 ```
-### Function: `list_vector_stores` 
+### Function: `list_vector_stores`
 
 **Location:** `test_file_listings.py`
 
@@ -113,7 +114,7 @@ Index | ID                          | Name                          | Created   
 00001 | vs_MBInFXZYATSGH7DwilCpe78p | vector-store-2                | 2025-03-03 11:12:12 | completed | 45.19 MB | Total: 35 (✓ 35, ⌛ 0, ❌ 0, ⏹ 0)
 00002 | vs_yJOdYW0eJKwPDh47zzSrPTyN | wa-vectorstore-ecar-2023-eval | 2024-12-19 10:59:51 | completed | 41.97 MB | Total: 32 (✓ 32, ⌛ 0, ❌ 0, ⏹ 0)
 ```
-### Function: `list_assistants` 
+### Function: `list_assistants`
 
 **Location:** `test_file_listings.py`
 
@@ -134,7 +135,7 @@ Index | ID                            | Name                                    
 0003  | asst_48p6SzMcbhQRIg3e8qdCElio | Document Metadata Extractor              | gpt-4o-mini | 2025-02-24 15:01:30 |
 0004  | asst_YdMYFQMEqs0pklCc9aKzzcnK | ECAR2023-Eval                            | gpt-4o-mini | 2024-12-19 17:04:49 | vs_yJOdYW0eJKwPDh47zzSrPTyN
 ```
-### Function: `list_files_used_by_vector_stores` 
+### Function: `list_files_used_by_vector_stores`
 
 **Location:** `test_file_listings.py`
 
@@ -177,7 +178,7 @@ Index | ID                                    | Filename                        
 00147 | file-20acda926dd84315bebb2096d74b1cda | 2024-12-19-EvalTest.jsonl                | 522.00 B  | 2024-12-19 12:26:48 | processed | fine-tune
 ```
 
-### Function: `list_files_used_by_assistants` 
+### Function: `list_files_used_by_assistants`
 
 **Location:** `test_file_listings.py`
 
@@ -223,9 +224,13 @@ Index | ID                                 | Filename                           
 
 ## Basic file operations
 
-### Function: `test_basic_file_operations(client, file_path)` 
+### Function: `test_basic_file_operations`
 
 **Location:** `test_basic_file_operations.py`
+
+**Parameters:** 
+- `client`: The OpenAI client instance to use for API calls 
+- `file_path`: The path to the file to upload
 
 Performs basic file operations: upload, add to vector store, deletion.
 
