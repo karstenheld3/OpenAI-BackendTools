@@ -1,11 +1,3 @@
-import sys
-import os
-
-# Add src directory to Python path
-src_path = os.path.join(os.path.dirname(__file__), 'src')
-if src_path not in sys.path:
-    sys.path.append(src_path)
-
 from dotenv import load_dotenv
 from openai_backendtools import *
 from test_rag_operations import *
@@ -349,34 +341,32 @@ def test_file_search_functionalities(client, test_vector_store_with_files):
 
 # ----------------------------------------------------- START: Main -----------------------------------------------------------
 
+if __name__ == '__main__':
+  openai_service_type = os.getenv("OPENAI_SERVICE_TYPE", "openai")
+  azure_openai_use_key_authentication = os.getenv("AZURE_OPENAI_USE_KEY_AUTHENTICATION", "false").lower() in ['true']
 
-openai_service_type = os.getenv("OPENAI_SERVICE_TYPE", "openai")
-azure_openai_use_key_authentication = os.getenv("AZURE_OPENAI_USE_KEY_AUTHENTICATION", "false").lower() in ['true']
+  if openai_service_type == "openai":
+    client = create_openai_client()
+  elif openai_service_type == "azure_openai":
+    client = create_azure_openai_client(azure_openai_use_key_authentication)
 
-if openai_service_type == "openai":
-  client = create_openai_client()
-elif openai_service_type == "azure_openai":
-  client = create_azure_openai_client(azure_openai_use_key_authentication)
-
-openai_model_name = os.getenv("AZURE_OPENAI_MODEL_NAME", "gpt-4o-mini")
-test_vector_store_name = "test_vector_store"
+  openai_model_name = os.getenv("AZURE_OPENAI_MODEL_NAME", "gpt-4o-mini")
+  test_vector_store_name = "test_vector_store"
 
 
-# Step 1: Create vector store by uploading files
-test_vector_store_with_files = create_test_vector_store_with_files(client,test_vector_store_name, "./RAGFiles/Batch01")
+  # Step 1: Create vector store by uploading files
+  test_vector_store_with_files = create_test_vector_store_with_files(client,test_vector_store_name, "./RAGFiles/Batch01")
 
-# Step 2: Extract metadata from files and re-add files with more metadata to the vector store
-# extract_and_add_metadata_to_vector_store_using_assistants_api(client, test_vector_store_with_files, metadata_extraction_prompt_template, openai_model_name, False)
-extract_and_add_metadata_to_vector_store_using_responses_api(client, test_vector_store_with_files, metadata_extraction_prompt_template, openai_model_name, False)
+  # Step 2: Extract metadata from files and re-add files with more metadata to the vector store
+  # extract_and_add_metadata_to_vector_store_using_assistants_api(client, test_vector_store_with_files, metadata_extraction_prompt_template, openai_model_name, False)
+  extract_and_add_metadata_to_vector_store_using_responses_api(client, test_vector_store_with_files, metadata_extraction_prompt_template, openai_model_name, False)
 
-# Step 3: Test file search functionalities
-test_file_search_functionalities(client, test_vector_store_with_files)
+  # Step 3: Test file search functionalities
+  test_file_search_functionalities(client, test_vector_store_with_files)
 
-print("-"*140)
+  print("-"*140)
 
-# Step 4: Delete vector store including all files
-delete_vector_store_by_name(client, test_vector_store_name, True)
-
-exit()
+  # Step 4: Delete vector store including all files
+  delete_vector_store_by_name(client, test_vector_store_name, True)
 
 # ----------------------------------------------------- END: Main -------------------------------------------------------------

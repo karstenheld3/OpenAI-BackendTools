@@ -44,6 +44,7 @@ Lists all files in the storage as markdown table, showing total consumed storage
 **Example output:**
 ```
 Total files: 180 using 780.60 MB (180 processed, 0 failed, 0 cancelled, 0 frozen, 0 in_progress, 0 completed). Showing first 25 and last 25 files.
+------------------------------------------------------------------------------------------------------------------------------------------------
 Index | ID                                 | Filename                                 | Size      | Created             | Status    | Purpose   
 ----- | ---------------------------------- | ---------------------------------------- | --------- | ------------------- | --------- | ----------
 00000 | assistant-VLcmNN3SF7XNTQRZTz7SFG   | Publications1.md                         | 1.87 KB   | 2025-05-27 10:50:39 | processed | assistants
@@ -60,13 +61,15 @@ Index | ID                                 | Filename                           
 Lists all vector stores in a table format, showing total count and number of expired stores at the top.
 
 **Example output:**
+```
 Total vector stores: 3 (0 expired)
+--------------------------------------------------------------------------------------------------------------------------------------------------------------------
 Index | ID                          | Name                          | Created             | Status    | Size     | Files (completed, in_progress, failed, cancelled)
 ----- | --------------------------- | ----------------------------- | ------------------- | --------- | -------- | -------------------------------------------------
 00000 | vs_590JuZn9rMPObfpUjZcTU9PS | vector-store-1                | 2025-03-06 11:08:02 | completed | 2.36 MB  | Total: 4 (✓ 4, ⌛ 0, ❌ 0, ⏹ 0)
 00001 | vs_MBInFXZYATSGH7DwilCpe78p | vector-store-2                | 2025-03-03 11:12:12 | completed | 45.19 MB | Total: 35 (✓ 35, ⌛ 0, ❌ 0, ⏹ 0)
 00002 | vs_yJOdYW0eJKwPDh47zzSrPTyN | wa-vectorstore-ecar-2023-eval | 2024-12-19 10:59:51 | completed | 41.97 MB | Total: 32 (✓ 32, ⌛ 0, ❌ 0, ⏹ 0)
-
+```
 ---
 
 **File:** `test_file_listings.py` 
@@ -76,6 +79,7 @@ Lists all assistants with their associated vector stores.
 
 **Example output:**
 Total assistants: 5
+--------------------------------------------------------------------------------------------------------------------------------------------------
 Index | ID                            | Name                                     | Model       | Created             | Vector Store
 ----- | ----------------------------- | ---------------------------------------- | ----------- | ------------------- | ---------------------------
 0000  | asst_KlxUhvUWcZ1bhK1TXM1EeDXU | Annual Reports 2022                      | gpt-4o-mini | 2025-03-06 11:06:06 | vs_590JuZn9rMPObfpUjZcTU9PS
@@ -92,7 +96,9 @@ Index | ID                            | Name                                    
 Lists all files that are currently used by any vector store. Shows file metrics in the top row.
 
 **Example output:**
+```
 Total files in vector stores: 71 (0 processed, 0 failed, 0 cancelled, 0 frozen, 0 in_progress, 71 completed)
+----------------------------------------------------------------------------------------------------------------------------------------
 Index | ID                                 | Filename | Size | Created             | Status    | Purpose | Vector Store
 ----- | ---------------------------------- | -------- | ---- | ------------------- | --------- | ------- | -----------------------------
 00000 | assistant-Wtv2TczLwUjfw9aP3KV2fP   | ...      |      | 2025-05-18 10:27:36 | completed | ...     | Annual Reports 2022
@@ -100,6 +106,7 @@ Index | ID                                 | Filename | Size | Created          
 ...   | ...                                | ...      |      |                     | ...       | ...     |
 00030 | assistant-fpY3LXyV7eJZtGKd1RAI9o6i | ...      |      | 2024-12-19 10:59:51 | completed | ...     | ECAR2023-Eval
 00031 | assistant-YLBF6lSf0Pe8argPa9dCOciG | ...      |      | 2024-12-19 10:59:51 | completed | ...     | ECAR2023-Eval
+```
 ---
 
 **File:** `test_file_listings.py` 
@@ -108,13 +115,16 @@ Index | ID                                 | Filename | Size | Created          
 Lists all files that are not currently used by any vector store.
 
 **Example output:**
+```
 Total files NOT used in vector stores: 4
+--------------------------------------------------------------------------------------------------------------------------------------------------
 Index | ID                                    | Filename                                 | Size      | Created             | Status    | Purpose
 ----- | ------------------------------------- | ---------------------------------------- | --------- | ------------------- | --------- | ---------
 00096 | file-a25022b39f214e39aadf8dbee8825599 | 2025-02-06_Copilot-Eval-Input.jsonl      | 124.73 KB | 2025-05-21 11:24:24 | processed | fine-tune
 00137 | file-3d8f50beb9924e33aa608b9eea8e85bb | 2025-02-03_CustomGPT-WebSearchOnly-In... | 158.34 KB | 2025-02-03 11:00:02 | processed | fine-tune
 00138 | file-7a5268a1221540acb99b65c2eee8841a | 2025-01-15_CustomChatGPT-Eval-Input.j... | 131.93 KB | 2025-01-20 15:03:13 | processed | fine-tune
 00147 | file-20acda926dd84315bebb2096d74b1cda | 2024-12-19-EvalTest.jsonl                | 522.00 B  | 2024-12-19 12:26:48 | processed | fine-tune
+```
 ---
 
 **File:** `test_file_listings.py` 
@@ -123,7 +133,9 @@ Index | ID                                    | Filename                        
 Lists all files that are currently used by any assistant through their vector stores. Shows file metrics in the top row.
 
 **Example output:**
+```
 Total files used by assistants: 71 (0 processed, 0 failed, 0 cancelled, 0 frozen, 0 in_progress, 71 completed)
+----------------------------------------------------------------------------------------------------------------------------------------
 Index | ID                                 | Filename | Size | Created             | Status    | Purpose | Vector Store
 ----- | ---------------------------------- | -------- | ---- | ------------------- | --------- | ------- | -----------------------------
 00000 | assistant-nRZsjbeim0wrRTFy1yi76ee0 | ...      |      | 2024-12-19 10:59:51 | completed | ...     | vector-store-1
@@ -131,6 +143,7 @@ Index | ID                                 | Filename | Size | Created          
 ...   | ...                                | ...      |      |                     | ...       | ...     |
 00069 | assistant-Nx2tjSf9p5B9PynfmEZu9S   | ...      |      | 2025-03-03 11:12:12 | completed | ...     | vector-store-2
 00070 | assistant-7hoSir2fZajRSPgjtoXnsm   | ...      |      | 2025-03-03 11:12:12 | completed | ...     | vector-store-2
+```
 ---
 
 **File:** `test_file_listings.py` 
@@ -139,6 +152,7 @@ Index | ID                                 | Filename | Size | Created          
 Lists all files that are not currently used by any assistant. Shows file metrics in the top row.
 
 **Example output:**
+```
 Total files NOT used by assistants: 180 (180 processed, 0 failed, 0 cancelled, 0 frozen, 0 in_progress, 0 completed)
 Index | ID                                 | Filename                                 | Size      | Created             | Status    | Purpose
 ----- | ---------------------------------- | ---------------------------------------- | --------- | ------------------- | --------- | ----------
@@ -147,4 +161,5 @@ Index | ID                                 | Filename                           
 ...   | ...                                | ...                                      |           |                     | ...       | ...
 00178 | assistant-P1YNs2NMxx9hTc6pLsf33ssz | Example-file-1.pdf                       | 4.82 MB   | 2024-12-19 10:55:57 | processed | assistants
 00179 | assistant-mLLOQ0Cdk82F3IHFFbw0aAHx | Example-file-with-very-long-name-that... | 1.44 MB   | 2024-12-19 10:55:47 | processed | assistants
+```
 ---

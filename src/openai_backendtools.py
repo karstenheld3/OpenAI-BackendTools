@@ -187,7 +187,7 @@ def format_files_table(file_list_page):
     headers.append('Vector Store')
     max_widths.append(40)
   
-  append_metadata_column = (getattr(files[0], 'attributes', None) != None)
+  append_metadata_column = (getattr(files[0], 'attributes', {}) != {})
   if append_metadata_column:
     headers.append('Attributes')
     max_widths.append(10)

@@ -96,27 +96,28 @@ def list_files_not_used_by_assistants(files_used_by_vector_stores):
 
 # ----------------------------------------------------- START: Main -----------------------------------------------------------
 
-openai_service_type = os.getenv("OPENAI_SERVICE_TYPE", "openai")
-azure_openai_use_key_authentication = os.getenv("AZURE_OPENAI_USE_KEY_AUTHENTICATION", "false").lower() in ['true']
+if __name__ == '__main__':
+  openai_service_type = os.getenv("OPENAI_SERVICE_TYPE", "openai")
+  azure_openai_use_key_authentication = os.getenv("AZURE_OPENAI_USE_KEY_AUTHENTICATION", "false").lower() in ['true']
 
-if openai_service_type == "openai":
-  client = create_openai_client()
-elif openai_service_type == "azure_openai":
-  client = create_azure_openai_client(azure_openai_use_key_authentication)
+  if openai_service_type == "openai":
+    client = create_openai_client()
+  elif openai_service_type == "azure_openai":
+    client = create_azure_openai_client(azure_openai_use_key_authentication)
 
-all_vector_stores = list_vector_stores()
+  all_vector_stores = list_vector_stores()
 
-all_assistants = list_assistants()
+  all_assistants = list_assistants()
 
-all_files = list_all_files()
+  all_files = list_all_files()
 
-files_used_by_vector_stores = list_files_used_by_vector_stores()
+  files_used_by_vector_stores = list_files_used_by_vector_stores()
 
-list_files_not_used_by_vector_stores(all_files)
+  list_files_not_used_by_vector_stores(all_files)
 
-files_used_by_assistants = list_files_used_by_assistants()
+  files_used_by_assistants = list_files_used_by_assistants()
 
-list_files_not_used_by_assistants(files_used_by_vector_stores)
+  list_files_not_used_by_assistants(files_used_by_vector_stores)
 
 
 # ----------------------------------------------------- END: Main -------------------------------------------------------------
