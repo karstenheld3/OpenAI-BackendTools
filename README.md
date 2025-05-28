@@ -7,7 +7,7 @@ A collection of tools and demo code to test, operate and maintain Open AI and Az
 - **RAG demos** with `test_rag_operations.py`: Code that demonstrates uploading files to vector stores with metadata extraction.
 - **Vector Store Search**: Code that demonstrates vector store search, filtering and query rewrite.
 
-#### 👉 How to set up your Azure Open AI Service and how to use this toolkit: [AzureOpenAI.md](AzureOpenAI.md)
+#### 👉 How to set up your Azure Open AI Service to use this toolkit: [AzureOpenAI.md](AzureOpenAI.md)
 - Creating your .env file and where to get the information from
 - Example .env files for access via API keys, Managed Identity, and Service Principal
 - Azure Open AI deployment and access types
@@ -41,7 +41,9 @@ A collection of tools and demo code to test, operate and maintain Open AI and Az
 
 Lists all files in the storage as markdown table, showing total consumed storage at the top. Limits output to 50 rows because of Python console character limit.
 
-**Example output:** Total files: 180 using 780.60 MB (180 processed, 0 failed, 0 cancelled, 0 frozen, 0 in_progress, 0 completed). Showing first 25 and last 25 files.
+**Example output:**
+```
+Total files: 180 using 780.60 MB (180 processed, 0 failed, 0 cancelled, 0 frozen, 0 in_progress, 0 completed). Showing first 25 and last 25 files.
 Index | ID                                 | Filename                                 | Size      | Created             | Status    | Purpose   
 ----- | ---------------------------------- | ---------------------------------------- | --------- | ------------------- | --------- | ----------
 00000 | assistant-VLcmNN3SF7XNTQRZTz7SFG   | Publications1.md                         | 1.87 KB   | 2025-05-27 10:50:39 | processed | assistants
@@ -49,7 +51,7 @@ Index | ID                                 | Filename                           
 ...   | ...                                | ...                                      |           |                     | ...       | ...       
 00178 | assistant-P1YNs2NMxx9hTc6pLsf33ssz | Example-file-1.pdf                       | 4.82 MB   | 2024-12-19 10:55:57 | processed | assistants
 00179 | assistant-mLLOQ0Cdk82F3IHFFbw0aAHx | Example-file-with-very-long-name-that... | 1.44 MB   | 2024-12-19 10:55:47 | processed | assistants
-
+```
 ---
 
 **File:** `test_file_listings.py` 
