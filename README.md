@@ -32,6 +32,40 @@ A collection of tools and demo code to test, operate and maintain Open AI and Az
 - python-dotenv 1.1.0 ([releases](https://pypi.org/project/python-dotenv/))
 - openai 1.79.0 ([releases](https://pypi.org/project/openai/))
 
+### Project structure
+
+```
+├── src/
+│   ├── openai_backendtools.py                 # Main library implementation with core functionality
+│   ├── test_access_with_api_key.py            # Tests Azure OpenAI access using API key authentication
+│   ├── test_access_with_service_principal.py  # Tests Azure OpenAI access using service principal
+│   ├── test_basic_file_operations.py          # Basic file operations: upload, add to vector  store, deletion
+│   ├── test_cleanup_operations.py             # Cleanup of files and vector stores
+│   ├── test_file_listings.py                  # Listing of assistants, vector stores, files, unused files, etc. 
+│   ├── test_rag_operations.py                 # RAG (Retrieval Augmented Generation) tests
+│   └── test_search_operations.py              # Search API tests
+├── RAGFiles/                                  # Directory for RAG-related test files
+├── .env                                       # Environment configuration for Azure and OpenAI
+├── env-file-template.txt                      # Template for .env file
+├── requirements.txt                           # Python package dependencies
+├── LICENSE                                    # Project license information
+└── README.md                                  # Project documentation
+```
+
+### How to create the Open AI client
+
+This is done as follows in all scripts:
+
+```python
+openai_service_type = os.getenv("OPENAI_SERVICE_TYPE", "openai")
+azure_openai_use_key_authentication = os.getenv("AZURE_OPENAI_USE_KEY_AUTHENTICATION", "false").lower() in ['true']
+
+if openai_service_type == "openai":
+  client = create_openai_client()
+elif openai_service_type == "azure_openai":
+  client = create_azure_openai_client(azure_openai_use_key_authentication)
+```
+
 ## File Operations
 
 ### Function: `list_all_files()` 
@@ -158,3 +192,5 @@ Index | ID                                 | Filename                           
 00178 | assistant-P1YNs2NMxx9hTc6pLsf33ssz | Example-file-1.pdf                       | 4.82 MB   | 2024-12-19 10:55:57 | processed | assistants
 00179 | assistant-mLLOQ0Cdk82F3IHFFbw0aAHx | Example-file-with-very-long-name-that... | 1.44 MB   | 2024-12-19 10:55:47 | processed | assistants
 ```
+
+## 
