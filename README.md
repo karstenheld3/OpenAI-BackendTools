@@ -84,7 +84,7 @@ Index | ID                                 | Filename                           
 00001 | assistant-7dbdC1J2XTpE84cBEgFzwY   | Publications1.md                         | 1.87 KB   | 2025-05-26 19:36:26 | processed | assistants
 ...   | ...                                | ...                                      |           |                     | ...       | ...       
 00178 | assistant-P1YNs2NMxx9hTc6pLsf33ssz | Example-file-1.pdf                       | 4.82 MB   | 2024-12-19 10:55:57 | processed | assistants
-00179 | assis
+00179 | assistant-mLLOQ0Cdk82F3IHFFbw0aAHx | Example-file-with-very-long-name-that... | 1.44 MB   | 2024-12-19 10:55:47 | processed | assistants
 ```
 ### Function: `list_vector_stores()`
 
@@ -118,7 +118,7 @@ Index | ID                            | Name                                    
 0001  | asst_7l1vkPnCE5sQpvMP2xmOKrWH | Annual Reports 2023                      | gpt-4o-mini | 2025-03-03 11:08:01 | vs_MBInFXZYATSGH7DwilCpe78p
 0002  | asst_6tlbDUrWIopTQtDMZJv9zKPo | Annual Reports 2024                      | gpt-4o-mini | 2025-02-28 14:08:46 | vs_yJOdYW0eJKwPDh47zzSrPTyN
 0003  | asst_48p6SzMcbhQRIg3e8qdCElio | Document Metadata Extractor              | gpt-4o-mini | 2025-02-24 15:01:30 |
-0004  | asst_
+0004  | asst_YdMYFQMEqs0pklCc9aKzzcnK | ECAR2023-Eval                            | gpt-4o-mini | 2024-12-19 17:04:49 | vs_yJOdYW0eJKwPDh47zzSrPTyN
 ```
 ### Function: `list_files_used_by_vector_stores()` 
 
@@ -136,7 +136,7 @@ Index | ID                                 | Filename | Size | Created          
 00001 | assistant-NiwJb48FkbAdABN7Vt2ox6   | ...      |      | 2025-03-06 11:08:02 | completed | ...     | Annual Reports 2022
 ...   | ...                                | ...      |      |                     | ...       | ...     |
 00030 | assistant-fpY3LXyV7eJZtGKd1RAI9o6i | ...      |      | 2024-12-19 10:59:51 | completed | ...     | ECAR2023-Eval
-00031 | assis
+00031 | assistant-YLBF6lSf0Pe8argPa9dCOciG | ...      |      | 2024-12-19 10:59:51 | completed | ...     | ECAR2023-Eval
 ```
 ### Function: `list_files_not_used_by_vector_stores()` 
 
@@ -153,7 +153,7 @@ Index | ID                                    | Filename                        
 00096 | file-a25022b39f214e39aadf8dbee8825599 | 2025-02-06_Copilot-Eval-Input.jsonl      | 124.73 KB | 2025-05-21 11:24:24 | processed | fine-tune
 00137 | file-3d8f50beb9924e33aa608b9eea8e85bb | 2025-02-03_CustomGPT-WebSearchOnly-In... | 158.34 KB | 2025-02-03 11:00:02 | processed | fine-tune
 00138 | file-7a5268a1221540acb99b65c2eee8841a | 2025-01-15_CustomChatGPT-Eval-Input.j... | 131.93 KB | 2025-01-20 15:03:13 | processed | fine-tune
-00147 | file-
+00147 | file-20acda926dd84315bebb2096d74b1cda | 2024-12-19-EvalTest.jsonl                | 522.00 B  | 2024-12-19 12:26:48 | processed | fine-tune
 ```
 
 ### Function: `list_files_used_by_assistants()` 
@@ -172,7 +172,7 @@ Index | ID                                 | Filename | Size | Created          
 00001 | assistant-xPWevvbUOtHjIgKaGjKvupLN | ...      |      | 2024-12-19 10:59:51 | completed | ...     | vector-store-1
 ...   | ...                                | ...      |      |                     | ...       | ...     |
 00069 | assistant-Nx2tjSf9p5B9PynfmEZu9S   | ...      |      | 2025-03-03 11:12:12 | completed | ...     | vector-store-2
-00070 | assis
+00070 | assistant-55XqW6W2X2oX4Xp8X2oX4Xp8 | ...      |      | 2025-02-28 14:08:46 | completed | ...     | vector-store-2
 ```
 
 ### Function: `list_files_not_used_by_assistants()` 
