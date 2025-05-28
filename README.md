@@ -36,9 +36,8 @@ A collection of tools and demo code to test, operate and maintain Open AI and Az
 
 ---
 
+### Function: `list_all_files()` 
 **File:** `test_file_listings.py` 
-**Function:** `list_all_files()` 
-
 Lists all files in the storage as markdown table, showing total consumed storage at the top. Limits output to 50 rows because of Python console character limit.
 
 **Example output:**
@@ -72,12 +71,13 @@ Index | ID                          | Name                          | Created   
 ```
 ---
 
-**File:** `test_file_listings.py` 
 **Function:** `list_assistants()` 
+**File:** `test_file_listings.py`
 
 Lists all assistants with their associated vector stores.
 
 **Example output:**
+```
 Total assistants: 5
 --------------------------------------------------------------------------------------------------------------------------------------------------
 Index | ID                            | Name                                     | Model       | Created             | Vector Store
@@ -87,7 +87,7 @@ Index | ID                            | Name                                    
 0002  | asst_6tlbDUrWIopTQtDMZJv9zKPo | Annual Reports 2024                      | gpt-4o-mini | 2025-02-28 14:08:46 | vs_yJOdYW0eJKwPDh47zzSrPTyN
 0003  | asst_48p6SzMcbhQRIg3e8qdCElio | Document Metadata Extractor              | gpt-4o-mini | 2025-02-24 15:01:30 |
 0004  | asst_YdMYFQMEqs0pklCc9aKzzcnK | ECAR2023-Eval                            | gpt-4o-mini | 2024-12-19 17:04:49 | vs_yJOdYW0eJKwPDh47zzSrPTyN
-
+```
 ---
 
 **File:** `test_file_listings.py` 
