@@ -26,7 +26,12 @@ A collection of tools and demo code to test, operate and maintain Open AI and Az
 | Open AI API                     | [Responses](https://platform.openai.com/docs/api-reference/responses) | [Completions](https://platform.openai.com/docs/api-reference/chat) | [Files](https://platform.openai.com/docs/api-reference/files) | [Vector stores](https://platform.openai.com/docs/api-reference/vector-stores) | [Assistants](https://platform.openai.com/docs/api-reference/assistants) |
 | Open AI Python                  | [OpenAI Agents SDK](https://openai.github.io/openai-agents-python/) |                                                              |                                                              |                                                              |                                                              |
 
+#### Demo
+
+![Demo](./assets/OpenAI-BackendTools01.gif)
+
 #### Requirements / Packages
+
 - azure-identity 1.23.0 ([releases](https://pypi.org/project/azure-identity/))
 - requests 2.32.3 ([releases](https://pypi.org/project/requests/))
 - python-dotenv 1.1.0 ([releases](https://pypi.org/project/python-dotenv/))
@@ -68,9 +73,12 @@ elif openai_service_type == "azure_openai":
 
 ## File Operations
 
-### Function: `list_all_files()` 
+### Function: `list_all_files` 
 
 **Location:** `test_file_listings.py`
+
+**Parameters:** 
+- `client`: The OpenAI client instance to use for API calls
 
 Lists all files in the storage as markdown table, showing total consumed storage at the top. Limits output to 50 rows because of Python console character limit.
 
@@ -86,9 +94,12 @@ Index | ID                                 | Filename                           
 00178 | assistant-P1YNs2NMxx9hTc6pLsf33ssz | Example-file-1.pdf                       | 4.82 MB   | 2024-12-19 10:55:57 | processed | assistants
 00179 | assistant-mLLOQ0Cdk82F3IHFFbw0aAHx | Example-file-with-very-long-name-that... | 1.44 MB   | 2024-12-19 10:55:47 | processed | assistants
 ```
-### Function: `list_vector_stores()`
+### Function: `list_vector_stores` 
 
-**Location:** `test_file_listings.py` 
+**Location:** `test_file_listings.py`
+
+**Parameters:** 
+- `client`: The OpenAI client instance to use for API calls
 
 Lists all vector stores in a table format, showing total count and number of expired stores at the top.
 
@@ -102,9 +113,12 @@ Index | ID                          | Name                          | Created   
 00001 | vs_MBInFXZYATSGH7DwilCpe78p | vector-store-2                | 2025-03-03 11:12:12 | completed | 45.19 MB | Total: 35 (✓ 35, ⌛ 0, ❌ 0, ⏹ 0)
 00002 | vs_yJOdYW0eJKwPDh47zzSrPTyN | wa-vectorstore-ecar-2023-eval | 2024-12-19 10:59:51 | completed | 41.97 MB | Total: 32 (✓ 32, ⌛ 0, ❌ 0, ⏹ 0)
 ```
-### Function: `list_assistants()` 
+### Function: `list_assistants` 
 
 **Location:** `test_file_listings.py`
+
+**Parameters:** 
+- `client`: The OpenAI client instance to use for API calls
 
 Lists all assistants with their associated vector stores.
 
@@ -120,10 +134,13 @@ Index | ID                            | Name                                    
 0003  | asst_48p6SzMcbhQRIg3e8qdCElio | Document Metadata Extractor              | gpt-4o-mini | 2025-02-24 15:01:30 |
 0004  | asst_YdMYFQMEqs0pklCc9aKzzcnK | ECAR2023-Eval                            | gpt-4o-mini | 2024-12-19 17:04:49 | vs_yJOdYW0eJKwPDh47zzSrPTyN
 ```
-### Function: `list_files_used_by_vector_stores()` 
+### Function: `list_files_used_by_vector_stores` 
 
-**Location:** `test_file_listings.py` 
+**Location:** `test_file_listings.py`
 
+**Parameters:** 
+- `client`: The OpenAI client instance to use for API calls 
+- `all_files`: Optional. List of all files. If not provided, will fetch files using the client. 
 Lists all files that are currently used by any vector store. Shows file metrics in the top row.
 
 **Example output:**
@@ -132,15 +149,19 @@ Total files in vector stores: 71 (0 processed, 0 failed, 0 cancelled, 0 frozen, 
 ----------------------------------------------------------------------------------------------------------------------------------------
 Index | ID                                 | Filename | Size | Created             | Status    | Purpose | Vector Store
 ----- | ---------------------------------- | -------- | ---- | ------------------- | --------- | ------- | -----------------------------
-00000 | assistant-Wtv2TczLwUjfw9aP3KV2fP   | ...      |      | 2025-05-18 10:27:36 | completed | ...     | Annual Reports 2022
-00001 | assistant-NiwJb48FkbAdABN7Vt2ox6   | ...      |      | 2025-03-06 11:08:02 | completed | ...     | Annual Reports 2022
+00000 | assistant-nRZsjbeim0wrRTFy1yi76ee0 | ...      |      | 2024-12-19 10:59:51 | completed | ...     | vector-store-1
+00001 | assistant-xPWevvbUOtHjIgKaGjKvupLN | ...      |      | 2024-12-19 10:59:51 | completed | ...     | vector-store-1
 ...   | ...                                | ...      |      |                     | ...       | ...     |
-00030 | assistant-fpY3LXyV7eJZtGKd1RAI9o6i | ...      |      | 2024-12-19 10:59:51 | completed | ...     | ECAR2023-Eval
-00031 | assistant-YLBF6lSf0Pe8argPa9dCOciG | ...      |      | 2024-12-19 10:59:51 | completed | ...     | ECAR2023-Eval
+00069 | assistant-Nx2tjSf9p5B9PynfmEZu9S   | ...      |      | 2025-03-03 11:12:12 | completed | ...     | vector-store-2
+00070 | assistant-55XqW6W2X2oX4Xp8X2oX4Xp8 | ...      |      | 2025-02-28 14:08:46 | completed | ...     | vector-store-2
 ```
-### Function: `list_files_not_used_by_vector_stores()` 
+### Function: `list_files_not_used_by_vector_stores` 
 
-**Location:** `test_file_listings.py` 
+**Location:** `test_file_listings.py`
+
+**Parameters:** 
+- `client`: The OpenAI client instance to use for API calls 
+- `all_files`: Optional. List of all files. If not provided, will fetch files using the client. 
 
 Lists all files that are not currently used by any vector store.
 
@@ -156,9 +177,12 @@ Index | ID                                    | Filename                        
 00147 | file-20acda926dd84315bebb2096d74b1cda | 2024-12-19-EvalTest.jsonl                | 522.00 B  | 2024-12-19 12:26:48 | processed | fine-tune
 ```
 
-### Function: `list_files_used_by_assistants()` 
+### Function: `list_files_used_by_assistants` 
 
-**Location:** `test_file_listings.py` 
+**Location:** `test_file_listings.py`
+
+**Parameters:** 
+- `client`: The OpenAI client instance to use for API calls
 
 Lists all files that are currently used by any assistant through their vector stores. Shows file metrics in the top row.
 
@@ -175,9 +199,13 @@ Index | ID                                 | Filename | Size | Created          
 00070 | assistant-55XqW6W2X2oX4Xp8X2oX4Xp8 | ...      |      | 2025-02-28 14:08:46 | completed | ...     | vector-store-2
 ```
 
-### Function: `list_files_not_used_by_assistants()` 
+### Function: `list_files_not_used_by_assistants` 
 
-**Location:** `test_file_listings.py` 
+**Location:** `test_file_listings.py`
+
+**Parameters:** 
+- `client`: The OpenAI client instance to use for API calls
+- `files_used_by_vector_stores`: Optional. List of files used by vector stores. If not provided, will fetch the list using the client. 
 
 Lists all files that are not currently used by any assistant. Shows file metrics in the top row.
 
@@ -193,4 +221,25 @@ Index | ID                                 | Filename                           
 00179 | assistant-mLLOQ0Cdk82F3IHFFbw0aAHx | Example-file-with-very-long-name-that... | 1.44 MB   | 2024-12-19 10:55:47 | processed | assistants
 ```
 
-## 
+## Basic file operations
+
+### Function: `test_basic_file_operations(client, file_path)` 
+
+**Location:** `test_basic_file_operations.py`
+
+Performs basic file operations: upload, add to vector store, deletion.
+
+**Example output:**
+```
+[2025-05-28 17:06:44] START: Basic file operations (upload, vector stores, delete)...
+8c25ac8191a7580b81cdc3faff
+  Adding file 'Publications1.md' to vector store...
+    OK.
+  Removing file 'Publications1.md' from vector store...
+    OK.
+  Deleting vector store 'test_vector_store'...
+    OK.
+  Deleting file 'Publications1.md'...
+    OK.
+[2025-05-28 17:07:00] END: Basic file operations (upload, vector stores, delete) (16 secs).
+```
