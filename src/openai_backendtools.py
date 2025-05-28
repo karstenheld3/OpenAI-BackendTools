@@ -473,7 +473,6 @@ def get_vector_store_files(client, vector_store):
   
   return all_files
 
-
 # Gets the file metrics for a vector store as dictionary with keys: total, failed, cancelled, in_progress, completed
 def get_vector_store_file_metrics(vector_store):
   metrics = { "total": 0, "failed": 0, "cancelled": 0, "in_progress": 0, "completed": 0 }
@@ -621,11 +620,14 @@ def format_file_attributes_table(vector_store_files):
     attributes = getattr(file, 'attributes', {})
     all_attribute_names.update(attributes.keys())
   
-  # create array with attribute name lengths
-  attribute_name_lengths = [len(attr_name) for attr_name in all_attribute_names]
+  # Define max widths for each attribute type
+  attribute_max_widths = {
+    'filename': 30  # Fixed width for filename
+  }
+  
   # Define headers and max column widths
   headers = ['Index'] + list(all_attribute_names)
-  max_widths = [6] + attribute_name_lengths  # Set reasonable default widths
+  max_widths = [6] + [attribute_max_widths.get(attr, len(attr)) for attr in all_attribute_names]  # Use fixed width for filename, attribute length for others
   
   # Initialize column widths with header lengths, but respect max widths
   col_widths = [min(len(h), max_widths[i]) for i, h in enumerate(headers)]

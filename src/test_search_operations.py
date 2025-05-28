@@ -66,14 +66,17 @@ Return an answer in exactly 4 characters.
 Examples: '1981', '2022', '2022'
 
 ### doc_start_date
-What is the document's data or reporting start date? If the date can't be extracted, return an empty string.
+If the document contains data that spans multiple years, return oldest date referenced in the document.
+If its a report, return the report start date.
+If month or day are unknown, use month = 01, day = 01.
 Return an answer in exactly 10 characters as ISO-Date or an empty string.
 Examples: '1981-01-01', '2022-09-01', '2022-12-31', ''
 
 ### doc_end_date
 What is the document's data or reporting end date? If the date can't be extracted, use the file_last_modified_date.
 Return an answer in exactly 10 characters as ISO-Date.
-Examples: '1981-01-01', '2022-09-01', '2022-12-31'
+If month or day are unknown, use month = 12, day = last day of the month.
+Examples: '1981-01-12', '2022-09-30', '2022-12-31'
 """
 
 # ----------------------------------------------------- START: Tests ----------------------------------------------------------
@@ -332,7 +335,7 @@ def test_file_search_functionalities(client, vector_store_id):
   ), indentation=4)
 
   print(f"    {len(search_results.data)} search results")
-  rewritten_search_query = search_results.model_extra['search_query']
+  rewritten_search_query = search_results.model_extra['search_query'][0]
   print(f"    Rewritten query: {rewritten_search_query}")
 
   table = ("    " + format_search_results_table(search_results.data)).replace("\n","\n    ")
@@ -368,7 +371,7 @@ if __name__ == '__main__':
 
   print("\n")
 
-  files = get_vector_store_files(client, test_vector_store_name)
+  files = get_vector_store_files(client, test_vector_store_with_files.vector_store)
   print(f"{len(files)} files in vector store:")
   print("-"*140)
   print(format_file_attributes_table(files))
