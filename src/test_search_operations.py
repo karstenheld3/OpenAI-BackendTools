@@ -332,6 +332,9 @@ def test_file_search_functionalities(client, vector_store_id):
   ), indentation=4)
 
   print(f"    {len(search_results.data)} search results")
+  rewritten_search_query = search_results.model_extra['search_query']
+  print(f"    Rewritten query: {rewritten_search_query}")
+
   table = ("    " + format_search_results_table(search_results.data)).replace("\n","\n    ")
   print(table)
   log_function_footer(function_name, start_time)
@@ -357,7 +360,7 @@ if __name__ == '__main__':
   delete_vector_store_by_name(client, test_vector_store_name, True)
 
   # Step 1: Create vector store by uploading files
-  test_vector_store_with_files = create_test_vector_store_with_files(client,test_vector_store_name, "./RAGFiles/Batch02")
+  test_vector_store_with_files = create_test_vector_store_with_files(client,test_vector_store_name, "./RAGFiles/Batch01")
 
   # Step 2: Extract metadata from files and re-add files with more metadata to the vector store
   # extract_and_add_metadata_to_vector_store_using_assistants_api(client, test_vector_store_with_files, metadata_extraction_prompt_template, openai_model_name, False)
