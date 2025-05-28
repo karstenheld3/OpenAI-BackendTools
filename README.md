@@ -34,10 +34,10 @@ A collection of tools and demo code to test, operate and maintain Open AI and Az
 
 ## File Operations
 
----
-
 ### Function: `list_all_files()` 
-**File:** `test_file_listings.py` 
+
+**Location:** `test_file_listings.py`
+
 Lists all files in the storage as markdown table, showing total consumed storage at the top. Limits output to 50 rows because of Python console character limit.
 
 **Example output:**
@@ -50,12 +50,11 @@ Index | ID                                 | Filename                           
 00001 | assistant-7dbdC1J2XTpE84cBEgFzwY   | Publications1.md                         | 1.87 KB   | 2025-05-26 19:36:26 | processed | assistants
 ...   | ...                                | ...                                      |           |                     | ...       | ...       
 00178 | assistant-P1YNs2NMxx9hTc6pLsf33ssz | Example-file-1.pdf                       | 4.82 MB   | 2024-12-19 10:55:57 | processed | assistants
-00179 | assistant-mLLOQ0Cdk82F3IHFFbw0aAHx | Example-file-with-very-long-name-that... | 1.44 MB   | 2024-12-19 10:55:47 | processed | assistants
+00179 | assis
 ```
----
+### Function: `list_vector_stores()`
 
-**File:** `test_file_listings.py` 
-**Function:** `list_vector_stores()` 
+**Location:** `test_file_listings.py` 
 
 Lists all vector stores in a table format, showing total count and number of expired stores at the top.
 
@@ -69,10 +68,9 @@ Index | ID                          | Name                          | Created   
 00001 | vs_MBInFXZYATSGH7DwilCpe78p | vector-store-2                | 2025-03-03 11:12:12 | completed | 45.19 MB | Total: 35 (✓ 35, ⌛ 0, ❌ 0, ⏹ 0)
 00002 | vs_yJOdYW0eJKwPDh47zzSrPTyN | wa-vectorstore-ecar-2023-eval | 2024-12-19 10:59:51 | completed | 41.97 MB | Total: 32 (✓ 32, ⌛ 0, ❌ 0, ⏹ 0)
 ```
----
+### Function: `list_assistants()` 
 
-**Function:** `list_assistants()` 
-**File:** `test_file_listings.py`
+**Location:** `test_file_listings.py`
 
 Lists all assistants with their associated vector stores.
 
@@ -86,12 +84,11 @@ Index | ID                            | Name                                    
 0001  | asst_7l1vkPnCE5sQpvMP2xmOKrWH | Annual Reports 2023                      | gpt-4o-mini | 2025-03-03 11:08:01 | vs_MBInFXZYATSGH7DwilCpe78p
 0002  | asst_6tlbDUrWIopTQtDMZJv9zKPo | Annual Reports 2024                      | gpt-4o-mini | 2025-02-28 14:08:46 | vs_yJOdYW0eJKwPDh47zzSrPTyN
 0003  | asst_48p6SzMcbhQRIg3e8qdCElio | Document Metadata Extractor              | gpt-4o-mini | 2025-02-24 15:01:30 |
-0004  | asst_YdMYFQMEqs0pklCc9aKzzcnK | ECAR2023-Eval                            | gpt-4o-mini | 2024-12-19 17:04:49 | vs_yJOdYW0eJKwPDh47zzSrPTyN
+0004  | asst_
 ```
----
+### Function: `list_files_used_by_vector_stores()` 
 
-**File:** `test_file_listings.py` 
-**Function:** `list_files_used_by_vector_stores()` 
+**Location:** `test_file_listings.py` 
 
 Lists all files that are currently used by any vector store. Shows file metrics in the top row.
 
@@ -105,12 +102,11 @@ Index | ID                                 | Filename | Size | Created          
 00001 | assistant-NiwJb48FkbAdABN7Vt2ox6   | ...      |      | 2025-03-06 11:08:02 | completed | ...     | Annual Reports 2022
 ...   | ...                                | ...      |      |                     | ...       | ...     |
 00030 | assistant-fpY3LXyV7eJZtGKd1RAI9o6i | ...      |      | 2024-12-19 10:59:51 | completed | ...     | ECAR2023-Eval
-00031 | assistant-YLBF6lSf0Pe8argPa9dCOciG | ...      |      | 2024-12-19 10:59:51 | completed | ...     | ECAR2023-Eval
+00031 | assis
 ```
----
+### Function: `list_files_not_used_by_vector_stores()` 
 
-**File:** `test_file_listings.py` 
-**Function:** `list_files_not_used_by_vector_stores()` 
+**Location:** `test_file_listings.py` 
 
 Lists all files that are not currently used by any vector store.
 
@@ -123,12 +119,12 @@ Index | ID                                    | Filename                        
 00096 | file-a25022b39f214e39aadf8dbee8825599 | 2025-02-06_Copilot-Eval-Input.jsonl      | 124.73 KB | 2025-05-21 11:24:24 | processed | fine-tune
 00137 | file-3d8f50beb9924e33aa608b9eea8e85bb | 2025-02-03_CustomGPT-WebSearchOnly-In... | 158.34 KB | 2025-02-03 11:00:02 | processed | fine-tune
 00138 | file-7a5268a1221540acb99b65c2eee8841a | 2025-01-15_CustomChatGPT-Eval-Input.j... | 131.93 KB | 2025-01-20 15:03:13 | processed | fine-tune
-00147 | file-20acda926dd84315bebb2096d74b1cda | 2024-12-19-EvalTest.jsonl                | 522.00 B  | 2024-12-19 12:26:48 | processed | fine-tune
+00147 | file-
 ```
----
 
-**File:** `test_file_listings.py` 
-**Function:** `list_files_used_by_assistants()` 
+### Function: `list_files_used_by_assistants()` 
+
+**Location:** `test_file_listings.py` 
 
 Lists all files that are currently used by any assistant through their vector stores. Shows file metrics in the top row.
 
@@ -142,12 +138,12 @@ Index | ID                                 | Filename | Size | Created          
 00001 | assistant-xPWevvbUOtHjIgKaGjKvupLN | ...      |      | 2024-12-19 10:59:51 | completed | ...     | vector-store-1
 ...   | ...                                | ...      |      |                     | ...       | ...     |
 00069 | assistant-Nx2tjSf9p5B9PynfmEZu9S   | ...      |      | 2025-03-03 11:12:12 | completed | ...     | vector-store-2
-00070 | assistant-7hoSir2fZajRSPgjtoXnsm   | ...      |      | 2025-03-03 11:12:12 | completed | ...     | vector-store-2
+00070 | assis
 ```
----
 
-**File:** `test_file_listings.py` 
-**Function:** `list_files_not_used_by_assistants()` 
+### Function: `list_files_not_used_by_assistants()` 
+
+**Location:** `test_file_listings.py` 
 
 Lists all files that are not currently used by any assistant. Shows file metrics in the top row.
 
@@ -162,4 +158,3 @@ Index | ID                                 | Filename                           
 00178 | assistant-P1YNs2NMxx9hTc6pLsf33ssz | Example-file-1.pdf                       | 4.82 MB   | 2024-12-19 10:55:57 | processed | assistants
 00179 | assistant-mLLOQ0Cdk82F3IHFFbw0aAHx | Example-file-with-very-long-name-that... | 1.44 MB   | 2024-12-19 10:55:47 | processed | assistants
 ```
----
