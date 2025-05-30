@@ -39,8 +39,7 @@ The `.env` file contains
 AZURE_OPENAI_ENDPOINT=https://<your_azure_openai_endpoint>.openai.azure.com/
 AZURE_OPENAI_API_KEY=<your_azure_openai_key>
 
-AZURE_OPENAI_DEPLOYMENT=gpt-4o-mini
-AZURE_OPENAI_MODEL_NAME=gpt-4o-mini
+AZURE_OPENAI_MODEL_DEPLOYMENT_NAME=gpt-4o-mini
 AZURE_OPENAI_API_VERSION=2025-04-01-preview
 ```
 
@@ -53,8 +52,7 @@ AZURE_TENANT_ID=aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaa
 AZURE_CLIENT_ID=bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbb # Managed Identity
 # Client secret not neeeded as password will be handled and rotated automatically by Entra ID
 
-AZURE_OPENAI_DEPLOYMENT=gpt-4o-mini
-AZURE_OPENAI_MODEL_NAME=gpt-4o-mini
+AZURE_OPENAI_MODEL_DEPLOYMENT_NAME=gpt-4o-mini
 AZURE_OPENAI_API_VERSION=2025-04-01-preview
 ```
 
@@ -67,8 +65,7 @@ AZURE_TENANT_ID=aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaa
 AZURE_CLIENT_ID=bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbb # Azure AD App registration client ID
 AZURE_CLIENT_SECRET=<your_client_secret>
 
-AZURE_OPENAI_DEPLOYMENT=gpt-4o-mini
-AZURE_OPENAI_MODEL_NAME=gpt-4o-mini
+AZURE_OPENAI_MODEL_DEPLOYMENT_NAME=gpt-4o-mini
 AZURE_OPENAI_API_VERSION=2025-04-01-preview
 ```
 

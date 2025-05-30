@@ -356,7 +356,8 @@ if __name__ == '__main__':
   elif openai_service_type == "azure_openai":
     client = create_azure_openai_client(azure_openai_use_key_authentication)
 
-  openai_model_name = os.getenv("AZURE_OPENAI_MODEL_NAME", "gpt-4o-mini")
+  # In Azure, the model name is the deployment name
+  openai_model_name = os.getenv("AZURE_OPENAI_MODEL_DEPLOYMENT_NAME", "gpt-4o-mini")
   test_vector_store_name = "test_vector_store"
 
   delete_vector_store_by_name(client, test_vector_store_name, True)

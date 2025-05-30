@@ -14,22 +14,19 @@ load_dotenv()
 # You will have to set the following environment variables in the .env file:
 #    AZURE_OPENAI_ENDPOINT=https://<your_open_ai_service_name>.openai.azure.com/
 #    AZURE_OPENAI_API_KEY=<your_open_ai_api_key>
-#    AZURE_OPENAI_DEPLOYMENT=gpt-4o-mini
-#    AZURE_OPENAI_MODEL_NAME=gpt-4o-mini
+#    AZURE_OPENAI_MODEL_DEPLOYMENT_NAME=gpt-4o-mini
 #    AZURE_OPENAI_API_VERSION=2024-12-01-preview
 ###
 
 endpoint = os.environ.get('AZURE_OPENAI_ENDPOINT')
 api_key = os.environ.get('AZURE_OPENAI_API_KEY')
-model_name = os.environ.get('AZURE_OPENAI_MODEL_NAME')
-deployment = os.environ.get('AZURE_OPENAI_DEPLOYMENT')
+model_deployment_name = os.environ.get('AZURE_OPENAI_MODEL_DEPLOYMENT_NAME')
 api_version = os.environ.get('AZURE_OPENAI_API_VERSION')
 
 # Uncomment the following lines if you want to use a different endpoint
 # endpoint = "https://<your_open_ai_service_name>.openai.azure.com/"
 # api_key = "<your_open_ai_api_key>"
 # model_name = "gpt-4o-mini"
-# deployment = "gpt-4o-mini"
 # api_version = "2024-12-01-preview"
 
 # Set up logging before creating the credential
@@ -50,7 +47,7 @@ response = client.chat.completions.create(
         { "role": "user", "content": question }
     ],
     max_tokens=200, temperature=1.0, top_p=0.1,
-    model=deployment
+    model=model_deployment_name
 )
 print(f"Question: {question}")
 print(f"Answer: {response.choices[0].message.content}")
