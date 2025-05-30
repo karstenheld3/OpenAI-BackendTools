@@ -196,7 +196,8 @@ def format_files_table(file_list_page):
     headers.append('Vector Store')
     max_widths.append(40)
   
-  append_metadata_column = (getattr(files[0], 'attributes', {}) != {})
+  attributes = getattr(files[0], 'attributes', {})
+  append_metadata_column = isinstance(attributes, dict) and len(attributes) > 0
   if append_metadata_column:
     headers.append('Attributes')
     max_widths.append(10)
@@ -220,8 +221,10 @@ def format_files_table(file_list_page):
     if append_vector_store_column: row_data.append(getattr(item, 'vector_store_name', ''))
     if append_metadata_column:
       attributes = getattr(item, 'attributes', '')
-      row_data.append(len(attributes))
-    
+      if isinstance(attributes, dict):
+        row_data.append(len(attributes))
+      else:
+        row_data.append('')  
 
     # Truncate cells and update column widths
     row_data = truncate_row_data(row_data, max_widths)
