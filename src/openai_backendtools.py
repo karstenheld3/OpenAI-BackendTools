@@ -438,9 +438,9 @@ def get_vector_store_files(client, vector_store):
   if isinstance(vector_store, str):
     # if it's a name, retrieve the vector store
     vector_stores = get_all_vector_stores(client)
-    for vs in vector_stores:
-      if vs.name == vector_store or vs.id == vector_store:
-        vector_store = vs
+    for vector_store in vector_stores:
+      if vector_store.name == vector_store or vector_store.id == vector_store:
+        vector_store = vector_store
         break
 
   if not vector_store:
@@ -483,9 +483,9 @@ def get_vector_store_file_metrics(vector_store):
   if isinstance(vector_store, str):
     # if it's a name, retrieve the vector store
     vector_stores = get_all_vector_stores(client)
-    for vs in vector_stores:
-      if vs.name == vector_store:
-        vector_store = vs
+    for vector_store in vector_stores:
+      if vector_store.name == vector_store:
+        vector_store = vector_store
         break
 
   if not vector_store:

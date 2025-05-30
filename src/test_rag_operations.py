@@ -39,6 +39,12 @@ def create_test_vector_store_with_files(client, vector_store_name, folder_path):
   function_name = 'Create test vector store with files'
   start_time = log_function_header(function_name)
 
+  # Create vector store
+  print(f"  Creating vector store '{vector_store_name}'...")
+  vector_store = client.vector_stores.create(name=vector_store_name)
+  print(f"    OK. ID={vector_store.id}") if vector_store.id else print("  FAIL.")
+
+
   # Load RAG files and store
   # file source paths in list 'files' 
   # metadata to be uploaded in dict 'files_metadata' with key=file_path
@@ -63,43 +69,68 @@ def create_test_vector_store_with_files(client, vector_store_name, folder_path):
         files_metadata[file_path] = { 'source': file_path, 'filename': filename, 'file_type': file_type }
         files_data[file_path] = { 'file_size': file_size, 'file_last_modified_date': file_last_modified_date}
   
+
   # Upload RAG files
-  total_files = len(files)
-  print(f"  Uploading {total_files} files...")
-  for idx, file_path in enumerate(files, 1):
-    with open(file_path, 'rb') as f:
-      file = client.files.create(file=f, purpose="assistants")
-    status = "OK" if file.id else "FAIL"
-    print(f"    [ {idx} / {total_files} ] {status}: ID={file.id} '{file_path}'")
-    files_data[file_path]['file_id'] = file.id
+  files_to_upload = files.copy(); failed_files = []; do_not_retry_files = []
 
-  # Create vector store
-  print(f"  Creating vector store '{vector_store_name}'...")
-  vs = client.vector_stores.create(name=vector_store_name)
-  print(f"    OK. ID={vs.id}") if vs.id else print("  FAIL.")
+  print(f"  Uploading {len(files_to_upload)} files...")
+  for idx, file_path in enumerate(files_to_upload, 1):
+    # Step 1: Upload file, but only if not already uploaded
+    file_id = files_data[file_path].get('file_id') if files_data[file_path] else None
+    if not file_id:    
+      with open(file_path, 'rb') as f:
+        try:
+          file = client.files.create(file=f, purpose="assistants")
+          if file.id:
+            status = f"OK: Upload"
+            files_data[file_path]['file_id'] = file.id
+          else:
+            status = f"FAIL: Upload"
+            failed_files.append(file_path)
+        except Exception as e:
+          status = f"FAIL: Upload '{file_path}' - {str(e)}"
+          failed_files.append(file_path)
 
-  # Add files to vector store
-  failed_files = []
-  print(f"  Adding files to vector store '{vector_store_name}'...")
-  for idx, file_path in enumerate(files, 1):
+    # Step 2: Add file to vector store
     file_id = files_data[file_path]['file_id']
-    try:
-      client.vector_stores.files.create(vector_store_id=vs.id, file_id=file_id)
-      print(f"    [ {idx} / {total_files} ] OK: ID={file_id} '{file_path}'")
-    except Exception as e:
-      print(f"    [ {idx} / {total_files} ] FAIL: '{file_path}' - {str(e)}")
-      # add this file to failed files
-      failed_files.append(file_path)
+    if file_id:
+      try:
+        retVal = client.vector_stores.files.create(vector_store_id=vector_store.id, file_id=file_id)
+        status += f", OK: Add to vector store ID={file_id} '{file_path}'"
+      except Exception as e:
+        # Error code: 400 - File type not supported; Error = 'unsupported_file'; do not retry
+        if e.status_code == 400 and e.code == 'unsupported_file':
+          do_not_retry_files.append(file_path)
+        status += f", FAIL: Add to vector store ID={file_id} '{file_path}' - {str(e)}"
+        failed_files.append(file_path)
+    print(f"    [ {idx} / {len(files_to_upload)} ] {status}")
+
+  # Try to delete files globally that are marked as not retryable
+  for file_path in do_not_retry_files:
+    try: client.files.delete(file_id=files_data[file_path]['file_id'])
+    except Exception as e: pass
   
+  # Ensure all files in the vector store are of status 'completed'; otherwise add them to failed files
+  vector_store_files = get_vector_store_files(client, vector_store)
+  for file in vector_store_files:
+    if file.status != 'completed':
+      file_id = file.id
+      # delete file from vector store
+      client.vector_stores.files.delete(vector_store_id=vector_store.id, file_id=file_id)
+      # find file path from files_data
+      file_path = next((path for path, data in files_data.items() if data['file_id'] == file_id), None)
+      if file_path:
+        failed_files.append(file_path)
+
+
   # Remove failed files from files data
   for file_path in failed_files:
     del files_data[file_path]
     del files_metadata[file_path]
     del files[files.index(file_path)]
-    total_files -= 1
 
   log_function_footer(function_name, start_time)
-  return TestVectorStoreWithFiles(vs, files, files_metadata, files_data)
+  return TestVectorStoreWithFiles(vector_store, files, files_metadata, files_data)
 
 def test_rag_operations_using_responses_api(client, test_vector_store_with_files, openai_model_name):
   function_name = 'RAG operations using responses API'
@@ -157,15 +188,18 @@ if __name__ == '__main__':
   elif openai_service_type == "azure_openai":
     client = create_azure_openai_client(azure_openai_use_key_authentication)
 
+
   # In Azure, the model name is the deployment name
   openai_model_name = os.getenv("AZURE_OPENAI_MODEL_DEPLOYMENT_NAME", "gpt-4o-mini")
   test_vector_store_name = "test_vector_store"
 
+  delete_vector_store_by_name(client, test_vector_store_name, True)
+
   # Step 1: Create vector store by uploading files
-  test_vector_store_with_files = create_test_vector_store_with_files(client,test_vector_store_name,"./RAGFiles/Batch01")
+  test_vector_store_with_files = create_test_vector_store_with_files(client,test_vector_store_name,"./RAGFiles/Batch02")
 
   # Step 2: Test file RAG functionalities
-  test_rag_operations_using_responses_api(client, test_vector_store_with_files, openai_model_name)
+  # test_rag_operations_using_responses_api(client, test_vector_store_with_files, openai_model_name)
 
   print("-"*140)
 
