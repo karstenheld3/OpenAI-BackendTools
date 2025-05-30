@@ -35,6 +35,7 @@ def truncate_string(string, max_length):
     return string[:max_length] + "..."
   return string
 
+# Creates a vector store and uploads files from the given folder. Retries upload 3 times.
 def create_test_vector_store_with_files(client, vector_store_name, folder_path):
   function_name = 'Create test vector store with files'
   start_time = log_function_header(function_name)
@@ -103,6 +104,8 @@ def create_test_vector_store_with_files(client, vector_store_name, folder_path):
           except Exception as e:
             status = f"FAIL: Upload '{file_path}' - {str(e)}"
             failed_files.append(file_path)
+      else:
+        status = f"OK: Upload (skipped)"
 
       # Step 2: Add file to vector store
       file_id = files_data[file_path]['file_id']
@@ -124,10 +127,21 @@ def create_test_vector_store_with_files(client, vector_store_name, folder_path):
       try: client.files.delete(file_id=file_id)
       except Exception as e: pass
     
-    # Ensure all files in the vector store are of status 'completed'; otherwise add them to failed files
+    # Ensure all files in the vector store are of status 'completed'
+    # Otherwise delete them from vector store and add them to failed files
+    print(f"  Verifying all vector store files are 'completed'...")
+    max_status_checks = 10; status_check = 0; in_progress_files_count=0
+    while status_check < max_status_checks:
+      temp_vector_store = client.vector_stores.retrieve(vector_store.id)
+      in_progress_files_count = temp_vector_store.file_counts.in_progress
+      if in_progress_files_count == 0: break
+      print(f"    Waiting 10 seconds ( {status_check + 1} / {max_status_checks} ) for {in_progress_files_count} files to complete...")
+      time.sleep(10)
+      status_check += 1
+
     vector_store_files = get_vector_store_files(client, vector_store)
     for file in vector_store_files:
-      if file.status != 'completed':
+      if file.status != 'completed' and file.status != 'in_progress':
         file_id = file.id
         # delete file from vector store
         client.vector_stores.files.delete(vector_store_id=vector_store.id, file_id=file_id)
@@ -139,10 +153,19 @@ def create_test_vector_store_with_files(client, vector_store_name, folder_path):
     attempt += 1
 
   # Remove failed files from files data
-  for file_path in failed_files:
-    del files_data[file_path]
-    del files_metadata[file_path]
-    del files[files.index(file_path)]
+  if len(failed_files) > 0:
+    print(f"  WARNING: {len(failed_files)} files could not be added to vector store. Deleting them...")
+    for idx, file_path in enumerate(failed_files, 1):
+      file_id = files_data[file_path]['file_id']
+      print(f"    [ {idx} / {len(failed_files)} ] ID={file_id} '{file_path}'")    
+      # Delete file from vector store and from global file storage
+      try: client.vector_stores.files.delete(vector_store_id=vector_store.id, file_id=file_id)
+      except Exception as e: pass
+      try: client.files.delete(file_id=file_id)
+      except Exception as e: pass
+      del files_data[file_path]
+      del files_metadata[file_path]
+      del files[files.index(file_path)]
 
   log_function_footer(function_name, start_time)
   return TestVectorStoreWithFiles(vector_store, files, files_metadata, files_data)
@@ -203,13 +226,12 @@ if __name__ == '__main__':
   elif openai_service_type == "azure_openai":
     client = create_azure_openai_client(azure_openai_use_key_authentication)
 
-
   # In Azure, the model name is the deployment name
   openai_model_name = os.getenv("AZURE_OPENAI_MODEL_DEPLOYMENT_NAME", "gpt-4o-mini")
   test_vector_store_name = "test_vector_store"
 
   # Step 1: Create vector store by uploading files
-  test_vector_store_with_files = create_test_vector_store_with_files(client,test_vector_store_name,"./RAGFiles/Batch02")
+  test_vector_store_with_files = create_test_vector_store_with_files(client,test_vector_store_name,"./RAGFiles/Batch01")
 
   # Step 2: Test file RAG functionalities
   test_rag_operations_using_responses_api(client, test_vector_store_with_files, openai_model_name)
