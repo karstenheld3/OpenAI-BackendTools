@@ -621,6 +621,7 @@ def format_file_attributes_table(vector_store_files):
   all_attribute_names = set()
   for file in vector_store_files:
     attributes = getattr(file, 'attributes', {})
+    if not attributes: continue
     all_attribute_names.update(attributes.keys())
   
   # Define max widths for each attribute type
