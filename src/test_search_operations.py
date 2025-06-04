@@ -360,15 +360,12 @@ if __name__ == '__main__':
   openai_model_name = os.getenv("AZURE_OPENAI_MODEL_DEPLOYMENT_NAME", "gpt-4o-mini")
   test_vector_store_name = "test_vector_store"
 
-  delete_vector_store_by_name(client, test_vector_store_name, True)
-  delete_vector_store_by_name(client, test_vector_store_name, True)
-
   # Step 1: Create vector store by uploading files
   test_vector_store_with_files = create_test_vector_store_with_files(client,test_vector_store_name, "./RAGFiles/Batch01")
 
   # Step 2: Extract metadata from files and re-add files with more metadata to the vector store
   # extract_and_add_metadata_to_vector_store_using_assistants_api(client, test_vector_store_with_files, metadata_extraction_prompt_template, openai_model_name, False)
-  # extract_and_add_metadata_to_vector_store_using_responses_api(client, test_vector_store_with_files, metadata_extraction_prompt_template, openai_model_name, False)
+  extract_and_add_metadata_to_vector_store_using_responses_api(client, test_vector_store_with_files, metadata_extraction_prompt_template, openai_model_name, False)
 
   print("\n")
 
