@@ -613,3 +613,116 @@ messages = client.beta.threads.messages.list(thread_id=thread.id)
 assistant_message = next(msg for msg in messages if msg.role == 'assistant')
 extracted_metadata = json.loads(assistant_message.content[0].text.value)
 ```
+
+## Cleanup operations
+
+Functions used to clean up vector stores, files, and assistants in OpenAI/Azure OpenAI environments:
+- Function `delete_expired_vector_stores` – Deletes all vector stores with status 'expired'.
+- Function `delete_duplicate_files_in_vector_stores` – Deletes duplicate files (by filename) in each vector store, retaining only the most recent file.
+- Function `delete_vector_stores_not_used_by_assistants` – Deletes all non-assistant vector stores older than a specified date.
+- Function `delete_failed_and_unused_files` – Deletes all files with status 'failed' or 'cancelled', and all assistant files not used by any vector store.
+- Function `delete_vector_store_by_name` – Deletes a vector store by name, and optionally deletes its files.
+- Function `delete_assistant_by_name` – Deletes an assistant by name.
+
+### Function: `delete_expired_vector_stores`
+
+Deletes all vector stores with status 'expired'.
+
+**Location:** `openai_backendtools.py`
+
+**Parameters:**
+- `client`: The OpenAI client instance to use for API calls
+
+**Example output:**
+```
+[2025-06-09 18:00:00] START: Delete expired vector stores...
+  Deleting expired vector store ID=vs_abc123 'old_store'...
+[2025-06-09 18:00:02] END: Delete expired vector stores (2 secs).
+```
+
+### Function: `delete_duplicate_files_in_vector_stores`
+
+Deletes duplicate files (by filename) in each vector store, keeping only the most recent (newest) file.
+
+**Location:** `openai_backendtools.py`
+
+**Parameters:**
+- `client`: The OpenAI client instance to use for API calls
+
+**Example output:**
+```
+[2025-06-09 18:01:00] START: Delete duplicate files in vector stores...
+  Loading all files...
+  Loading all vector stores...
+  Loading files for vector store 'store1'...
+    Deleting duplicate file ID=file_xyz 'duplicate.pdf' (2025-05-01 12:00:00)...
+[2025-06-09 18:01:03] END: Delete duplicate files in vector stores (3 secs).
+```
+
+### Function: `delete_vector_stores_not_used_by_assistants`
+
+Deletes all vector stores not used by any assistant and created before a specified date.
+
+**Location:** `openai_backendtools.py`
+
+**Parameters:**
+- `client`: The OpenAI client instance to use for API calls
+- `until_date_created`: `datetime` – Only vector stores created on or before this date will be deleted
+
+**Example output:**
+```
+[2025-06-09 18:02:00] START: Delete vector stores not used by assistants...
+  Deleting vector store ID=vs_789 'unused_store' (2025-05-15 14:00:00)...
+[2025-06-09 18:02:05] END: Delete vector stores not used by assistants (5 secs).
+```
+
+### Function: `delete_failed_and_unused_files`
+
+Deletes all files with status 'failed', 'cancelled', and all assistant files not used by any vector store.
+
+**Location:** `openai_backendtools.py`
+
+**Parameters:**
+- `client`: The OpenAI client instance to use for API calls
+
+**Example output:**
+```
+[2025-06-09 18:03:00] START: Delete failed and unused files...
+  Loading all files...
+    Deleting file ID=file_failed1 'doc1.pdf' (2025-05-10 10:00:00)...
+    Deleting file ID=file_cancelled2 'doc2.md' (2025-05-11 11:00:00)...
+[2025-06-09 18:03:04] END: Delete failed and unused files (4 secs).
+```
+
+### Function: `delete_vector_store_by_name`
+
+Deletes a vector store by name. If `delete_files=True`, also deletes all files in the vector store.
+
+**Location:** `openai_backendtools.py`
+
+**Parameters:**
+- `client`: The OpenAI client instance to use for API calls
+- `name`: Name of the vector store to delete
+- `delete_files`: Boolean. If `True`, also deletes all files in the vector store
+
+**Example output:**
+```
+  Deleting vector store ID=vs_123 'test_vector_store' (2025-06-01 09:00:00)...
+    Deleting file ID=file_abc (2025-06-01 09:01:00)...
+    Deleting file ID=file_def (2025-06-01 09:02:00)...
+```
+
+### Function: `delete_assistant_by_name`
+
+Deletes an assistant by name.
+
+**Location:** `openai_backendtools.py`
+
+**Parameters:**
+- `client`: The OpenAI client instance to use for API calls
+- `name`: Name of the assistant to delete
+
+**Example output:**
+```
+  Deleting assistant 'test_assistant'...
+```

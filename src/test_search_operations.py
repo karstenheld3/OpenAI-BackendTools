@@ -377,8 +377,8 @@ if __name__ == '__main__':
   test_vector_store_with_files = create_test_vector_store_with_files(client,params.vector_store_name, params.folder_path)
 
   # Step 2: Extract metadata from files and re-add files with more metadata to the vector store
-  extract_and_add_metadata_to_vector_store_using_asssistants_api(client, test_vector_store_with_files, metadata_extraction_prompt_template, openai_model_name, True)
-  # extract_and_add_metadata_to_vector_store_using_responses_api(client, test_vector_store_with_files, metadata_extraction_prompt_template, openai_model_name, False)
+  # extract_and_add_metadata_to_vector_store_using_asssistants_api(client, test_vector_store_with_files, metadata_extraction_prompt_template, openai_model_name, True)
+  extract_and_add_metadata_to_vector_store_using_responses_api(client, test_vector_store_with_files, metadata_extraction_prompt_template, openai_model_name, False)
 
   print("\n")
 
