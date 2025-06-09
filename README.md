@@ -95,6 +95,17 @@ Index | ID                                 | Filename                           
 00178 | assistant-P1YNs2NMxx9hTc6pLsf33ssz | Example-file-1.pdf                       | 4.82 MB   | 2024-12-19 10:55:57 | processed | assistants
 00179 | assistant-mLLOQ0Cdk82F3IHFFbw0aAHx | Example-file-with-very-long-name-that... | 1.44 MB   | 2024-12-19 10:55:47 | processed | assistants
 ```
+
+**Open AI SDK code with pagination**
+```
+first_page = client.files.list()
+has_more = hasattr(first_page, 'has_more') and first_page.has_more
+...
+while has_more:
+  last_id = current_page.data[-1].id if current_page.data else None    
+  next_page = client.files.list(after=last_id)
+```
+
 ### Function: `list_vector_stores`
 
 **Location:** `test_file_listings.py`
@@ -114,6 +125,17 @@ Index | ID                          | Name                          | Created   
 00001 | vs_MBInFXZYATSGH7DwilCpe78p | vector-store-2                | 2025-03-03 11:12:12 | completed | 45.19 MB | Total: 35 (✓ 35, ⌛ 0, ❌ 0, ⏹ 0)
 00002 | vs_yJOdYW0eJKwPDh47zzSrPTyN | wa-vectorstore-ecar-2023-eval | 2024-12-19 10:59:51 | completed | 41.97 MB | Total: 32 (✓ 32, ⌛ 0, ❌ 0, ⏹ 0)
 ```
+
+**Open AI SDK code with pagination**
+```
+first_page = client.vector_stores.list()
+has_more = hasattr(first_page, 'has_more') and first_page.has_more
+...
+while has_more:
+  last_id = current_page.data[-1].id if current_page.data else None
+  next_page = client.vector_stores.list(after=last_id)
+```
+
 ### Function: `list_assistants`
 
 **Location:** `test_file_listings.py`
@@ -135,6 +157,17 @@ Index | ID                            | Name                                    
 0003  | asst_48p6SzMcbhQRIg3e8qdCElio | Document Metadata Extractor              | gpt-4o-mini | 2025-02-24 15:01:30 |
 0004  | asst_YdMYFQMEqs0pklCc9aKzzcnK | ECAR2023-Eval                            | gpt-4o-mini | 2024-12-19 17:04:49 | vs_yJOdYW0eJKwPDh47zzSrPTyN
 ```
+
+**Open AI SDK code with pagination**
+```
+first_page = client.beta.assistants.list()
+has_more = hasattr(first_page, 'has_more') and first_page.has_more
+...
+while has_more:
+  last_id = current_page.data[-1].id if current_page.data else None
+  next_page = client.beta.assistants.list(after=last_id)
+```
+
 ### Function: `list_files_used_by_vector_stores`
 
 **Location:** `test_file_listings.py`
@@ -156,6 +189,17 @@ Index | ID                                 | Filename | Size | Created          
 00069 | assistant-Nx2tjSf9p5B9PynfmEZu9S   | ...      |      | 2025-03-03 11:12:12 | completed | ...     | vector-store-2
 00070 | assistant-55XqW6W2X2oX4Xp8X2oX4Xp8 | ...      |      | 2025-02-28 14:08:46 | completed | ...     | vector-store-2
 ```
+
+**Open AI SDK code**
+```
+files_page = client.vector_stores.files.list(vector_store_id=vector_store_id)
+has_more = hasattr(files_page, 'has_more') and files_page.has_more
+...
+while has_more:
+  last_id = current_page.data[-1].id if current_page.data else None
+  next_page = client.vector_stores.files.list(vector_store_id=vector_store_id, after=last_id)
+```
+
 ### Function: `list_files_not_used_by_vector_stores` 
 
 **Location:** `test_file_listings.py`
@@ -247,16 +291,124 @@ Performs basic file operations: upload, add to vector store, deletion.
     OK.
 [2025-05-28 17:07:00] END: Basic file operations (upload, vector stores, delete) (16 secs).
 ```
+
+**Open AI SDK code**
+```
+with open(file_path, 'rb') as f:
+  file = client.files.create(file=f, purpose="assistants")
+...
+vs = client.vector_stores.create(name=vs_name)
+...
+client.vector_stores.files.create(vector_store_id=vs.id, file_id=file.id)
+...
+client.vector_stores.files.delete(vector_store_id=vs.id, file_id=file.id)
+...
+client.vector_stores.delete(vs.id)
+...
+client.files.delete(file.id)
+```
+
 ## RAG operations
 
-### Function: `create_test_vector_store_with_files`
+Functions and classes used to prepare test vector store and files:
+- Function `create_test_vector_store_with_files` - Creates a vector store and uploads files from the specified folder to it. Handles retries and verifies file processing completion.
+- Function `extract_and_add_metadata_to_vector_store_using_responses_api` - Extracts metadata from files and re-adds files with more metadata to the vector store using the responses API. Handles retries and verifies file processing completion.
+- Function `extract_and_add_metadata_to_vector_store_using_assistants_api` - Extracts metadata from files using the assistants API. Creates and deletes a temporary assistant to extract metadata.
+- Class `TestVectorStoreWithFiles` - Container class that holds information about a test vector store and its associated files. Used to pass vector store and file information between test functions.
+
+### Class: `TestVectorStoreWithFiles`
+
+Container class that holds information about a test vector store and its associated files. Used to pass vector store and file information between test functions.
+
+**Location:** `test_rag_operations.py`
+
+**Fields:**
+- `vector_store`: The vector store instance
+- `files`: List of file paths that were uploaded
+- `files_metadata`: Dictionary of metadata for each file (key=file_path) including source, filename, and file type
+- `files_data`: Dictionary of additional file data (key=file_path) including file size, last modified date, and file ID
+
+### Function: `create_test_vector_store_with_files` 
 
 **Location:** `test_rag_operations.py`
 
 **Parameters:** 
-- `client`: The OpenAI client instance to use for API calls 
-- `vector_store_name`: The name of the vector store to create
-- `folder_path`: The path to the folder containing the files to upload
+- `client`: The OpenAI client instance to use for API calls
+- `vector_store_name`: Name of the vector store to create
+- `folder_path`: Path to folder containing files to upload
 
+Creates a vector store and uploads files from the specified folder to it. Handles retries and verifies file processing completion.
 
+**Example output:**
+```
+[2025-06-09 12:39:37] START: Create test vector store with files...
+  Creating vector store 'test_vector_store'...
+    OK. ID=vs_6846b9ee0114819191d3197f66cf7ee1
+  Uploading 2 files...
+    [ 1 / 2 ] OK: Upload, OK: Add to vector store ID=file-NYFxgXFYqp2xTgYquTM4Z5 'E:\dev\OpenAI-BackendTools\RAGFiles\Batch01\ArilenaDrovikCV.pdf'
+    [ 2 / 2 ] OK: Upload, OK: Add to vector store ID=file-TwCGYwub7ho7USKninPcEh 'E:\dev\OpenAI-BackendTools\RAGFiles\Batch01\Publications1.md'
+  Verifying all vector store files are 'completed'...
+    Waiting 10 seconds ( 1 / 10 ) for 1 files to complete...
+[2025-06-09 12:39:55] END: Create test vector store with files (17 secs).
+```
+### Function: `test_rag_operations_using_responses_api`
+
+**Location:** `test_rag_operations.py`
+
+**Parameters:** 
+- `client`: The OpenAI client instance to use for API calls
+- `test_vector_store_with_files`: Instance of TestVectorStoreWithFiles containing vector store and file information
+- `openai_model_name`: Name of the OpenAI model to use (in Azure Open AI it's the model deployment name)
+- `query`: The query to test RAG operations with
+
+Tests RAG operations by querying a vector store using the responses API, with and without file search results included.
+
+**Example output:**
+```
+[2025-06-09 12:39:55] START: RAG operations using responses API...
+--------------------------------------------------------------------------------------------------------------------------------------------
+  Test query with 'file_search' tool: Who is Arilena Drovik?
+    Response: Arilena Drovik is a highly accomplished molecular biologist and geneticist with ...
+    status='completed', tool_choice='auto', input_tokens=3168, output_tokens=163
+    File search tool call status: 'completed', results: N/A
+  Test query with 'file_search' tool with 'file_search_call.results': Who is Arilena Drovik?
+    Response: Arilena Drovik is a highly accomplished molecular biologist and geneticist with ...
+    status='completed', tool_choice='auto', input_tokens=3168, output_tokens=163
+    File search tool call status: 'completed', results: 2
+    Index | File ID                     | Filename            | Score | Attributes | Content
+    ----- | --------------------------- | ------------------- | ----- | ---------- | ------------------------------------------------------------
+    00000 | file-NYFxgXFYqp2xTgYquTM4Z5 | ArilenaDrovikCV.pdf | 0.92  | 0 of 0     | (anonymous)  Arilena Drovik PhD Molecular Biology Princip...
+    00001 | file-TwCGYwub7ho7USKninPcEh | Publications1.md    | 0.66  | 0 of 0     | | Title | Author(s) | Year | Publisher | Link | |-------|...
+[2025-06-09 12:40:05] END: RAG operations using responses API (10 secs).
+```
+
+**Open AI SDK code**
+```
+# Query with response model that searches in vector store
+response = client.responses.create(
+    model=openai_model_name
+    ,input=query
+    ,tools=[{ "type": "file_search", "vector_store_ids": [vector_store_id] }]
+    ,temperature=0
+)
+...
+# Query with response model that searches in vector store and returns file search results
+response = client.responses.create(
+    model=openai_model_name
+    ,input=query
+    ,tools=[{ "type": "file_search", "vector_store_ids": [vector_store_id] }]
+    ,include=["file_search_call.results"]
+    ,temperature=0
+)
+response_file_search_tool_call = next((item for item in response.output if item.type == 'file_search_call'), None)
+response_file_search_results = response_file_search_tool_call.results
+```
+
+## Search operations
+
+Functions and classes used to prepare test vector store and files:
+- Function `create_test_vector_store_with_files` - Creates a vector store and uploads files from the specified folder to it. Handles retries and verifies file processing completion.
+- Function `extract_and_add_metadata_to_vector_store_using_responses_api` - Extracts metadata from files and re-adds files with more metadata to the vector store using the responses API. Handles retries and verifies file processing completion.
+- Function `extract_and_add_metadata_to_vector_store_using_assistants_api` - Extracts metadata from files using the assistants API. Creates and deletes a temporary assistant to extract metadata.
+- Class `TestVectorStoreWithFiles` - Container class that holds information about a test vector store and its associated files. Used to pass vector store and file information between test functions.
 
