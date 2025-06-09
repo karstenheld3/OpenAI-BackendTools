@@ -1,6 +1,14 @@
 # OpenAI-BackendTools
 A collection of tools and demo code to test, operate and maintain Open AI and Azure OpenAI backends. The toolkit is targeted at developers and operators who need to interact with Azure OpenAI services programmatically.
 
+## Table of Contents
+- [1. File listings](#1-file-listings) - files, assistants, vector stores
+- [2. Basic file operations](#2-basic-file-operations) - upload file, add to vector store, deletion
+- [3. RAG operations](#3-rag-operations) - create vector store, add files to vector store, query vector store
+- [4. Search operations](#4-search-operations) - extract document metadata, search vector store, filter vector store, query rewrite
+- [5. Cleanup operations](#5-cleanup-operations) - delete expired and unused files, delete expired vector stores and unneeded assistants
+
+#### Files, Features, Demos
 - **Authentication Management**: Support for multiple authentication methods including Service Principals, Managed Identities, and API Keys, all configured in `.env` file. Functions to test authentication: `test_access_with_api_key.py` and `test_access_with_service_principal.py`.
 - **List and manage stored files** with `test_file_listings.py`: Functions for listing stored files with total storage and status (`processed`, `cancelled`, `frozen`, `in_progress`, `completed`) , vector stores (used and expired), assistants, and files NOT used in vector stores and assistants.
 - **Cleanup** with `test_cleanup_operations.py`: Tools for deleting expired and unused files to save cost, delete expired vector stores and unneeded assistants.
@@ -74,7 +82,7 @@ elif openai_service_type == "azure_openai":
 
 
 
-## 1. File Operations
+## 1. File Listings
 
 ### Function: `list_all_files`
 
