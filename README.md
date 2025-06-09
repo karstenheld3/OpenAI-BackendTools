@@ -1,5 +1,5 @@
 # OpenAI-BackendTools
-A collection of tools and demo code to test, operate and maintain Open AI and Azure OpenAI backends. The toolkit is targeted at developers and operators who need to interact with Azure OpenAI services programmatically.
+A collection of tools and demo code to test, operate and maintain Open AI and Azure OpenAI backends. The toolkit is targeted at developers and operators who need to interact with Azure OpenAI and OpenAI backends programmatically. For example list files, assistants, vector stores, delete files, assistants, vector stores, upload files to vector stores, query vector stores, test search, etc.
 
 ## Table of Contents
 - [1. File listings](#1-file-listings) - files, assistants, vector stores
@@ -22,7 +22,6 @@ A collection of tools and demo code to test, operate and maintain Open AI and Az
 - How to set up access roles for managed identities and service principals
 - Terminology explained: What is a service principal, managed identity, tenant, client ID, client secret
 
-
 #### Open AI Links
 
 | Source                          | Links                                                        |                                                              |                                                              |                                                              |                                                              |
@@ -33,10 +32,6 @@ A collection of tools and demo code to test, operate and maintain Open AI and Az
 | Open AI Docs - File search tool | [File search tool](https://platform.openai.com/docs/guides/tools-file-search) | [Retrieval customization](https://platform.openai.com/docs/guides/tools-file-search#retrieval-customization) | [Metadata filtering](https://platform.openai.com/docs/guides/tools-file-search#metadata-filtering) | [Supported files](https://platform.openai.com/docs/guides/tools-file-search#supported-files) |                                                              |
 | Open AI API                     | [Responses](https://platform.openai.com/docs/api-reference/responses) | [Completions](https://platform.openai.com/docs/api-reference/chat) | [Files](https://platform.openai.com/docs/api-reference/files) | [Vector stores](https://platform.openai.com/docs/api-reference/vector-stores) | [Assistants](https://platform.openai.com/docs/api-reference/assistants) |
 | Open AI Python                  | [OpenAI Agents SDK](https://openai.github.io/openai-agents-python/) |                                                              |                                                              |                                                              |                                                              |
-
-#### Demo
-
-![Demo](./assets/OpenAI-BackendTools01.gif)
 
 #### Requirements / Packages
 
@@ -83,6 +78,8 @@ elif openai_service_type == "azure_openai":
 
 
 ## 1. File Listings
+
+![Demo](./assets/OpenAI-BackendTools01.gif)
 
 ### Function: `list_all_files`
 
