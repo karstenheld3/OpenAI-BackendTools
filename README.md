@@ -510,3 +510,106 @@ search_results = client.vector_stores.search(
 )
 rewritten_search_query = search_results.model_extra['search_query'][0]
 ```
+
+### Function: `extract_and_add_metadata_to_vector_store_using_responses_api`
+
+Extracts metadata ´(language, author, etc.) from files in a vector store using the responses API. Extracted metadata depends on the used prompt template. When adding the metadata, files are temporarely removed from the vector store and re-added with the extracted metadata since updating metadata ( `àttributes`) in the vector store is not supported as of 2025-06-09.
+
+**Example metadata:**
+```
+{
+  "title": "Arilena Drovik Curriculum Vitae",
+  "description": "A comprehensive curriculum vitae of Arilena Drovik, detailing her academic and professional accomplishments in molecular biology and genetics.",
+  "doc_type": "Curriculum vitae",
+  "doc_language": "English",
+  "doc_author": "Arilena Drovik",
+  "doc_year": "2025",
+  "doc_start_date": "",
+  "doc_end_date": "2025-05-15"
+}
+```
+
+This metadata is added to the existing metadata of the files in the vector store.
+
+**Location:** `test_search_operations.py`
+
+**Parameters:** 
+- `client`: The OpenAI client instance to use for API calls
+- `test_vector_store_with_files`: Instance of TestVectorStoreWithFiles containing vector store and file information
+- `metadata_extraction_prompt_template`: Template for metadata extraction prompt
+- `openai_model_name`: Name of the OpenAI model to use
+- `logExtractedMetadata`: Optional boolean to control logging of extracted metadata
+
+**Example metadata formatted as table:**
+```
+Index | file_type | doc_end_date | source | filename            | doc_type | title | doc_language | doc_start_date | doc_author | description | doc_year
+----- | --------- | ------------ | ------ | ------------------- | -------- | ----- | ------------ | -------------- | ---------- | ----------- | --------
+00000 | md        | 2025-05-15   | E:\... | Publications1.md    | Resea... | CR... | English      |                | Arilena... | A compil... | 2020
+00001 | pdf       | 2025-05-15   | E:\... | ArilenaDrovikCV.pdf | Curri... | Ar... | English      |                | Arilena... | A compre... | 2025
+```
+
+**Open AI SDK code**
+```python
+client.responses.create(
+  model=openai_model_name
+  ,input=prompt
+  ,tools=[
+    {
+      "type": "file_search"
+      ,"vector_store_ids": [temp_vector_store.id]
+      ,"max_num_results": 50
+    }
+  ]
+)
+extracted_metadata_string = response.output_text
+# remove ```json and ```
+extracted_metadata_string = extracted_metadata_string.replace("```json", "").replace("```", "")
+extracted_metadata = json.loads(extracted_metadata_string)
+```
+
+### Function: `extract_and_add_metadata_to_vector_store_using_assistants_api`
+
+Extracts metadata from files in a vector store using the assistants API. Creates a temporary assistant and vector store to process one file at a time. After metadata extraction, re-adds the files with the extracted metadata back to the original vector store. The Assistants API is from 2024 and subject to deprecation.
+
+**Location:** `test_search_operations.py`
+
+**Parameters:** 
+- `client`: The OpenAI client instance to use for API calls
+- `test_vector_store_with_files`: Instance of TestVectorStoreWithFiles containing vector store and file information
+- `metadata_extraction_prompt_template`: Template for metadata extraction prompt
+- `openai_model_name`: Name of the OpenAI model to use
+- `logExtractedMetadata`: Optional boolean to control logging of extracted metadata
+
+**Example metadata formatted as table:**
+```
+Index | file_type | doc_end_date | source | filename            | doc_type | title | doc_language | doc_start_date | doc_author | description | doc_year
+----- | --------- | ------------ | ------ | ------------------- | -------- | ----- | ------------ | -------------- | ---------- | ----------- | --------
+00000 | md        | 2025-05-15   | E:\... | Publications1.md    | Resea... | CR... | English      |                | Arilena... | A compil... | 2020
+00001 | pdf       | 2025-05-15   | E:\... | ArilenaDrovikCV.pdf | Curri... | Ar... | English      |                | Arilena... | A compre... | 2025
+```
+
+**Open AI SDK code**
+```python
+# Create assistant for metadata extraction
+assistant = client.beta.assistants.create(
+  name="test_assistant"
+  ,instructions="You are a metadata extraction assistant, returning extracted tags from documents as JSON."
+  ,model=openai_model_name
+  ,tools=[{"type": "file_search"}]
+  ,tool_resources={"file_search": {"vector_store_ids": [temp_vector_store.id]}}
+)
+
+# Create thread and run assistant
+thread = client.beta.threads.create()
+client.beta.threads.messages.create(
+  thread_id=thread.id
+  ,role="user"
+  ,content=prompt
+)
+run = client.beta.threads.runs.create(thread_id=thread.id, assistant_id=assistant.id)
+
+# Get results
+messages = client.beta.threads.messages.list(thread_id=thread.id)
+assistant_message = next(msg for msg in messages if msg.role == 'assistant')
+extracted_metadata = json.loads(assistant_message.content[0].text.value)
+```
