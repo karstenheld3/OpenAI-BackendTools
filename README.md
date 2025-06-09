@@ -640,6 +640,11 @@ Deletes all vector stores with status 'expired'.
 [2025-06-09 18:00:02] END: Delete expired vector stores (2 secs).
 ```
 
+**Open AI SDK code**
+```python
+client.vector_stores.delete(vs.id)
+```
+
 ### Function: `delete_duplicate_files_in_vector_stores`
 
 Deletes duplicate files (by filename) in each vector store, keeping only the most recent (newest) file.
@@ -659,6 +664,11 @@ Deletes duplicate files (by filename) in each vector store, keeping only the mos
 [2025-06-09 18:01:03] END: Delete duplicate files in vector stores (3 secs).
 ```
 
+**Open AI SDK code**
+```python
+client.vector_stores.files.delete(file_id=file.id, vector_store_id=vs.id)
+```
+
 ### Function: `delete_vector_stores_not_used_by_assistants`
 
 Deletes all vector stores not used by any assistant and created before a specified date.
@@ -674,6 +684,11 @@ Deletes all vector stores not used by any assistant and created before a specifi
 [2025-06-09 18:02:00] START: Delete vector stores not used by assistants...
   Deleting vector store ID=vs_789 'unused_store' (2025-05-15 14:00:00)...
 [2025-06-09 18:02:05] END: Delete vector stores not used by assistants (5 secs).
+```
+
+**Open AI SDK code**
+```python
+client.vector_stores.delete(vs.id)
 ```
 
 ### Function: `delete_failed_and_unused_files`
@@ -694,6 +709,11 @@ Deletes all files with status 'failed', 'cancelled', and all assistant files not
 [2025-06-09 18:03:04] END: Delete failed and unused files (4 secs).
 ```
 
+**Open AI SDK code**
+```python
+client.files.delete(file_id=file.id)
+```
+
 ### Function: `delete_vector_store_by_name`
 
 Deletes a vector store by name. If `delete_files=True`, also deletes all files in the vector store.
@@ -712,6 +732,12 @@ Deletes a vector store by name. If `delete_files=True`, also deletes all files i
     Deleting file ID=file_def (2025-06-01 09:02:00)...
 ```
 
+**Open AI SDK code**
+```python
+client.files.delete(file_id=file.id)         # (when delete_files=True)
+client.vector_stores.delete(vs.id)
+```
+
 ### Function: `delete_assistant_by_name`
 
 Deletes an assistant by name.
@@ -725,4 +751,9 @@ Deletes an assistant by name.
 **Example output:**
 ```
   Deleting assistant 'test_assistant'...
+```
+
+**Open AI SDK code**
+```python
+client.beta.assistants.delete(assistant.id)
 ```
