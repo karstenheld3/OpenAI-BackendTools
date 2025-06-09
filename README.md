@@ -32,10 +32,10 @@ A collection of tools and demo code to test, operate and maintain Open AI and Az
 
 #### Requirements / Packages
 
-- azure-identity 1.23.0 ([releases](https://pypi.org/project/azure-identity/))
-- requests 2.32.3 ([releases](https://pypi.org/project/requests/))
-- python-dotenv 1.1.0 ([releases](https://pypi.org/project/python-dotenv/))
-- openai 1.79.0 ([releases](https://pypi.org/project/openai/))
+- azure-identity 1.23.0 ([Package](https://pypi.org/project/azure-identity/))
+- requests 2.32.3 ([Package](https://pypi.org/project/requests/))
+- python-dotenv 1.1.0 ([Package](https://pypi.org/project/python-dotenv/))
+- openai 1.79.0 ([Package](https://pypi.org/project/openai/))
 
 ### Project structure
 
@@ -72,7 +72,9 @@ elif openai_service_type == "azure_openai":
   client = create_azure_openai_client(azure_openai_use_key_authentication)
 ```
 
-## File Operations
+
+
+## 1. File Operations
 
 ### Function: `list_all_files`
 
@@ -268,7 +270,11 @@ Index | ID                                 | Filename                           
 00179 | assistant-mLLOQ0Cdk82F3IHFFbw0aAHx | Example-file-with-very-long-name-that... | 1.44 MB   | 2024-12-19 10:55:47 | processed | assistants
 ```
 
-## Basic file operations
+
+
+## 2. Basic file operations
+
+![Search Demo](./assets/OpenAI-BackendTools02.gif)
 
 ### Function: `test_basic_file_operations`
 
@@ -310,9 +316,14 @@ client.vector_stores.delete(vs.id)
 client.files.delete(file.id)
 ```
 
-## RAG operations
+
+
+## 3. RAG operations
+
+![Search Demo](./assets/OpenAI-BackendTools03.gif)
 
 Functions and classes used to prepare test vector store and files:
+
 - Function `create_test_vector_store_with_files` - Creates a vector store and uploads files from the specified folder to it. Handles retries and verifies file processing completion.
 - Function `extract_and_add_metadata_to_vector_store_using_responses_api` - Extracts metadata from files and re-adds files with more metadata to the vector store using the responses API. Handles retries and verifies file processing completion.
 - Function `extract_and_add_metadata_to_vector_store_using_assistants_api` - Extracts metadata from files using the assistants API. Creates and deletes a temporary assistant to extract metadata.
@@ -409,7 +420,12 @@ response_file_search_tool_call = next((item for item in response.output if item.
 response_file_search_results = response_file_search_tool_call.results
 ```
 
-## Search operations
+
+
+## 4. Search operations
+
+![Search Demo](./assets/OpenAI-BackendTools04.gif)
+
 
 Functions and classes used to demonstrate vector store search, filtering, and query rewrite:
 - Function `test_file_search_functionalities` - Demonstrates file search functionalities including basic search, filtered search, and query rewriting using a vector store.
@@ -614,7 +630,9 @@ assistant_message = next(msg for msg in messages if msg.role == 'assistant')
 extracted_metadata = json.loads(assistant_message.content[0].text.value)
 ```
 
-## Cleanup operations
+
+
+## 5. Cleanup operations
 
 Functions used to clean up vector stores, files, and assistants in OpenAI/Azure OpenAI environments:
 - Function `delete_expired_vector_stores` – Deletes all vector stores with status 'expired'.
