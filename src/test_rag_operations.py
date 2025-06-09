@@ -1,3 +1,4 @@
+from dataclasses import dataclass
 from dotenv import load_dotenv
 from openai_backendtools import *
 import time
@@ -15,25 +16,6 @@ class TestVectorStoreWithFiles:
     self.files = files
     self.files_metadata = files_metadata
     self.files_data = files_data
-
-# Retries the given function on rate limit errors
-def retry_on_openai_errors(fn, indentation=0, retries=5, backoff_seconds=10):
-  for attempt in range(retries):
-    try:
-      return fn()
-    except Exception as e:
-      # Only retry on rate limit errors
-      if not (hasattr(e, 'type') and e.type == 'rate_limit_error'):
-        raise e
-      if attempt == retries - 1:  # Last attempt
-        raise e
-      print(f"{' '*indentation}Rate limit reached, retrying in {backoff_seconds} seconds... (attempt {attempt + 2} of {retries})")
-      time.sleep(backoff_seconds)
-
-def truncate_string(string, max_length):
-  if len(string) > max_length:
-    return string[:max_length] + "..."
-  return string
 
 # Creates a vector store and uploads files from the given folder. Retries upload 3 times.
 def create_test_vector_store_with_files(client, vector_store_name, folder_path):
@@ -170,44 +152,44 @@ def create_test_vector_store_with_files(client, vector_store_name, folder_path):
   log_function_footer(function_name, start_time)
   return TestVectorStoreWithFiles(vector_store, files, files_metadata, files_data)
 
-def test_rag_operations_using_responses_api(client, test_vector_store_with_files, openai_model_name):
+def test_rag_operations_using_responses_api(client, test_vector_store_with_files, openai_model_name, query):
   function_name = 'RAG operations using responses API'
   start_time = log_function_header(function_name)
 
   vector_store_id = test_vector_store_with_files.vector_store.id
 
   # Ask question
-  query = "Who is Arilena Drovik?";
   print("-"*140)
-  print(f"  Testing query with 'file_search' tool: {query}")
+  print(f"  Test query with 'file_search' tool: {query}")
 
   response = retry_on_openai_errors(lambda: client.responses.create(
     model=openai_model_name
     ,input=query
     ,tools=[{ "type": "file_search", "vector_store_ids": [vector_store_id] }]
+    ,temperature=0
   ), indentation=4)
   print(f"    Response: {truncate_string(response.output_text,80)}")
   print(f"    status='{response.status}', tool_choice='{response.tool_choice}', input_tokens={response.usage.input_tokens}, output_tokens={response.usage.output_tokens}")
   # search for tool call of type 'file_search_call' in response.output
   response_file_search_tool_call = next((item for item in response.output if item.type == 'file_search_call'), None)
-  if response_file_search_tool_call: print(f"    File search tool call status: '{response_file_search_tool_call.status}'")
+  response_file_search_results = response_file_search_tool_call.results
+  if response_file_search_tool_call: print(f"    File search tool call status: '{response_file_search_tool_call.status}', results: {len(response_file_search_results) if response_file_search_results else 'N/A'}")
 
-
-  print(f"  Testing query with 'file_search' tool with 'file_search_call.results': {query}")
+  print(f"  Test query with 'file_search' tool with 'file_search_call.results': {query}")
   response = retry_on_openai_errors(lambda: client.responses.create(
     model=openai_model_name
     ,input=query
     ,tools=[{ "type": "file_search", "vector_store_ids": [vector_store_id] }]
     ,include=["file_search_call.results"]
+    ,temperature=0
   ), indentation=4)
   print(f"    Response: {truncate_string(response.output_text,80)}")
   print(f"    status='{response.status}', tool_choice='{response.tool_choice}', input_tokens={response.usage.input_tokens}, output_tokens={response.usage.output_tokens}")
   # search for tool call of type 'file_search_call' in response.output
   response_file_search_tool_call = next((item for item in response.output if item.type == 'file_search_call'), None)
-  if response_file_search_tool_call: print(f"    File search tool call status: '{response_file_search_tool_call.status}'")
-  # search for 'file_search_call.results' in response.output
   response_file_search_results = response_file_search_tool_call.results
-  lines = format_files_table(response_file_search_results)
+  if response_file_search_tool_call: print(f"    File search tool call status: '{response_file_search_tool_call.status}', results: {len(response_file_search_results) if response_file_search_results else 'N/A'}")
+  lines = format_search_results_table(response_file_search_results)
   print("    " + lines.replace("\n","\n    "))
 
   log_function_footer(function_name, start_time)
@@ -220,26 +202,33 @@ def test_rag_operations_using_responses_api(client, test_vector_store_with_files
 if __name__ == '__main__':
   openai_service_type = os.getenv("OPENAI_SERVICE_TYPE", "openai")
   azure_openai_use_key_authentication = os.getenv("AZURE_OPENAI_USE_KEY_AUTHENTICATION", "false").lower() in ['true']
+  # In Azure, the model name is the deployment name
+  openai_model_name = os.getenv("AZURE_OPENAI_MODEL_DEPLOYMENT_NAME", "gpt-4o-mini")
 
   if openai_service_type == "openai":
     client = create_openai_client()
   elif openai_service_type == "azure_openai":
     client = create_azure_openai_client(azure_openai_use_key_authentication)
 
-  # In Azure, the model name is the deployment name
-  openai_model_name = os.getenv("AZURE_OPENAI_MODEL_DEPLOYMENT_NAME", "gpt-4o-mini")
-  test_vector_store_name = "test_vector_store"
+  @dataclass
+  class SearchParams: vector_store_name: str; folder_path: str; query: str
 
+  params = SearchParams(
+    vector_store_name="test_vector_store",
+    folder_path="./RAGFiles/Batch01",
+    query="Who is Arilena Drovik?"
+  )
+  
   # Step 1: Create vector store by uploading files
-  test_vector_store_with_files = create_test_vector_store_with_files(client,test_vector_store_name,"./RAGFiles/Batch01")
+  test_vector_store_with_files = create_test_vector_store_with_files(client, params.vector_store_name, params.folder_path)
 
   # Step 2: Test file RAG functionalities
-  test_rag_operations_using_responses_api(client, test_vector_store_with_files, openai_model_name)
+  test_rag_operations_using_responses_api(client, test_vector_store_with_files, openai_model_name, params.query)
 
   print("-"*140)
 
   # Step 3: Delete vector store including all files
-  delete_vector_store_by_name(client, test_vector_store_name, True)
+  delete_vector_store_by_name(client, params.vector_store_name, True)
 
 # ----------------------------------------------------- END: Main -------------------------------------------------------------
 

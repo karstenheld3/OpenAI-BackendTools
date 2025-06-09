@@ -237,7 +237,6 @@ Performs basic file operations: upload, add to vector store, deletion.
 **Example output:**
 ```
 [2025-05-28 17:06:44] START: Basic file operations (upload, vector stores, delete)...
-8c25ac8191a7580b81cdc3faff
   Adding file 'Publications1.md' to vector store...
     OK.
   Removing file 'Publications1.md' from vector store...
@@ -248,3 +247,16 @@ Performs basic file operations: upload, add to vector store, deletion.
     OK.
 [2025-05-28 17:07:00] END: Basic file operations (upload, vector stores, delete) (16 secs).
 ```
+## RAG operations
+
+### Function: `create_test_vector_store_with_files`
+
+**Location:** `test_rag_operations.py`
+
+**Parameters:** 
+- `client`: The OpenAI client instance to use for API calls 
+- `vector_store_name`: The name of the vector store to create
+- `folder_path`: The path to the folder containing the files to upload
+
+
+

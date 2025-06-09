@@ -1,3 +1,4 @@
+from dataclasses import dataclass
 from dotenv import load_dotenv
 from openai_backendtools import *
 from test_rag_operations import *
@@ -5,6 +6,8 @@ import time
 import json
 import os
 import datetime
+
+load_dotenv()
 
 metadata_extraction_prompt_template = """
 ## Task
@@ -284,15 +287,14 @@ def extract_and_add_metadata_to_vector_store_using_asssistants_api(client, test_
   log_function_footer(function_name, start_time)
 
 
-def test_file_search_functionalities(client, vector_store_id):
+def test_file_search_functionalities(client, vector_store_id, params):
   function_name = 'File search functionalities (RAG search, filter, rewrite query)'
   start_time = log_function_header(function_name)
 
   # Search for files using query
   # https://cookbook.openai.com/examples/file_search_responses#standalone-vector-search
 
-  query = "Search for information about Arilena Drovik."; score_threshold = 0.3; max_num_results = 10
-  print("-"*140)
+  query = params.search_query_1; score_threshold = 0.3; max_num_results = 10
   print(f"  Testing query search (score_threshold={str(score_threshold)}, max_num_results={max_num_results}): {query}")
   search_results = client.vector_stores.search(
     vector_store_id=vector_store_id,
@@ -307,8 +309,9 @@ def test_file_search_functionalities(client, vector_store_id):
   print(table)
 
   # Search for files using filter
-  filters = { "key": "file_type", "type": "eq", "value": "md" }
-  print("-"*140)
+  query = params.search_query_2
+  filters = params.search_query_2_filters
+  print("  " + "-"*140)
   print(f"  Testing filtered query search (filter: {filters['key']}='{filters['value']}', score_threshold={str(score_threshold)}, max_num_results={max_num_results}): {query}")
 
   search_results = retry_on_openai_errors(lambda: client.vector_stores.search(
@@ -323,8 +326,8 @@ def test_file_search_functionalities(client, vector_store_id):
   print(table)
 
   # Search for files using rewrite-query
-  query = "All files from year 2015."; score_threshold = 0.3; max_num_results = 10
-  print("-"*140)
+  query = params.search_query_3_with_query_rewrite; score_threshold = 0.3; max_num_results = 10
+  print("  " + "-"*140)
   print(f"  Testing rewrite query search (score_threshold={str(score_threshold)}, max_num_results={max_num_results}): {query}")
   search_results = retry_on_openai_errors(lambda: client.vector_stores.search(
     vector_store_id=vector_store_id,
@@ -350,22 +353,31 @@ def test_file_search_functionalities(client, vector_store_id):
 if __name__ == '__main__':
   openai_service_type = os.getenv("OPENAI_SERVICE_TYPE", "openai")
   azure_openai_use_key_authentication = os.getenv("AZURE_OPENAI_USE_KEY_AUTHENTICATION", "false").lower() in ['true']
+  openai_model_name = os.getenv("AZURE_OPENAI_MODEL_DEPLOYMENT_NAME", "gpt-4o-mini")
 
   if openai_service_type == "openai":
     client = create_openai_client()
   elif openai_service_type == "azure_openai":
     client = create_azure_openai_client(azure_openai_use_key_authentication)
 
-  # In Azure, the model name is the deployment name
-  openai_model_name = os.getenv("AZURE_OPENAI_MODEL_DEPLOYMENT_NAME", "gpt-4o-mini")
-  test_vector_store_name = "test_vector_store"
+  @dataclass
+  class SearchParams: vector_store_name: str; folder_path: str; search_query_1: str; search_query_2: str; search_query_2_filters: dict; search_query_3_with_query_rewrite: str
+
+  params = SearchParams(
+    vector_store_name="test_vector_store"
+    ,folder_path="./RAGFiles/Batch01"
+    ,search_query_1="Who is Arilena Drovik?"
+    ,search_query_2="Who is Arilena Drovik?"
+    ,search_query_2_filters = { "key": "file_type", "type": "eq", "value": "md" }
+    ,search_query_3_with_query_rewrite="All files from year 2015."
+  )
 
   # Step 1: Create vector store by uploading files
-  test_vector_store_with_files = create_test_vector_store_with_files(client,test_vector_store_name, "./RAGFiles/Batch01")
+  test_vector_store_with_files = create_test_vector_store_with_files(client,params.vector_store_name, params.folder_path)
 
   # Step 2: Extract metadata from files and re-add files with more metadata to the vector store
   # extract_and_add_metadata_to_vector_store_using_assistants_api(client, test_vector_store_with_files, metadata_extraction_prompt_template, openai_model_name, False)
-  extract_and_add_metadata_to_vector_store_using_responses_api(client, test_vector_store_with_files, metadata_extraction_prompt_template, openai_model_name, False)
+  # extract_and_add_metadata_to_vector_store_using_responses_api(client, test_vector_store_with_files, metadata_extraction_prompt_template, openai_model_name, False)
 
   print("\n")
 
@@ -377,12 +389,11 @@ if __name__ == '__main__':
   print("\n")
 
   # Step 3: Test file search functionalities
-  test_file_search_functionalities(client, test_vector_store_with_files.vector_store.id)
+  test_file_search_functionalities(client, test_vector_store_with_files.vector_store.id, params)
 
   print("-"*140)
-  print("\n")
 
   # Step 4: Delete vector store including all files
-  delete_vector_store_by_name(client, test_vector_store_name, True)
+  delete_vector_store_by_name(client, params.vector_store_name, True)
 
 # ----------------------------------------------------- END: Main -------------------------------------------------------------

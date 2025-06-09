@@ -29,6 +29,25 @@ def create_azure_openai_client(use_key_authentication=False):
     # Create client with token provider
     return openai.AzureOpenAI( api_version=api_version, azure_endpoint=endpoint, azure_ad_token_provider=token_provider )
 
+# Retries the given function on rate limit errors
+def retry_on_openai_errors(fn, indentation=0, retries=5, backoff_seconds=10):
+  for attempt in range(retries):
+    try:
+      return fn()
+    except Exception as e:
+      # Only retry on rate limit errors
+      if not (hasattr(e, 'type') and e.type == 'rate_limit_error'):
+        raise e
+      if attempt == retries - 1:  # Last attempt
+        raise e
+      print(f"{' '*indentation}Rate limit reached, retrying in {backoff_seconds} seconds... (attempt {attempt + 2} of {retries})")
+      time.sleep(backoff_seconds)
+
+def truncate_string(string, max_length):
+  if len(string) > max_length:
+    return string[:max_length] + "..."
+  return string
+
 # Format a file size in bytes into a human-readable string
 def format_filesize(num_bytes):
   if not num_bytes: return ''
@@ -548,58 +567,6 @@ def format_vector_stores_table(vector_store_list):
   
   return '\n'.join(lines)
 
-# formats a list of vector store search results 
-def format_search_results_table(search_results):
-  # search_results: list of search results
-  if not search_results: return '(No search results found)'
-  
-  # Define headers and max column widths
-  headers = ['Index', 'File ID', 'Filename', 'Score', 'Content', 'Attributes']
-  max_widths = [6, 36, 40, 8, 40, 10]  # Maximum width for each column
-  
-  # Initialize column widths with header lengths, but respect max widths
-  col_widths = [min(len(h), max_widths[i]) for i, h in enumerate(headers)]
-  
-  # Process each row
-  rows = []
-  for idx, item in enumerate(search_results):
-    content = getattr(item, 'content', '...')
-    # Clean content for better readability
-    if content and len(content) > 0:
-      content = content[0].text.replace('\n', ' ').replace('\r', ' ').replace('\t', ' ').replace('  ', ' ')
-    attributes = getattr(item, 'attributes', {})
-    # calculate metadata tags - count total fields that are not empty
-    non_empty_values = [value for value in attributes.values() if value]
-    attributes_string = f"{len(non_empty_values)} of {len(attributes)}"
-    # Prepare row data
-    row_data = [
-      f"{idx:05d}",
-      getattr(item, 'file_id', '...'),
-      getattr(item, 'filename', '...'),
-      f"{getattr(item, 'score', 0):.2f}",
-      content,
-      attributes_string
-    ]
-    
-    # Truncate cells and update column widths
-    row_data = truncate_row_data(row_data, max_widths)
-    for i, cell_str in enumerate(row_data):
-      col_widths[i] = min(max(col_widths[i], len(cell_str)), max_widths[i])
-    
-    rows.append(row_data)
-  
-  # Build table as string
-  lines = []
-  header_line = ' | '.join(h.ljust(col_widths[i]) for i, h in enumerate(headers))
-  sep_line = ' | '.join('-'*col_widths[i] for i in range(len(headers)))
-  lines.append(header_line)
-  lines.append(sep_line)
-  
-  for row in rows:
-    lines.append(' | '.join(str(cell).ljust(col_widths[i]) for i, cell in enumerate(row)))
-  
-  return '\n'.join(lines)
-
 # return formatted table of files with attributes: index,  filename, file_size, followed by all attributes in the order they are defined in the file
 def list_vector_store_files_with_attributes(client, vector_store_id):
   """Get a formatted table of files in a vector store with their attributes.
@@ -668,6 +635,68 @@ def format_file_attributes_table(vector_store_files):
   return '\n'.join(lines)
   
 # ----------------------------------------------------- END: Vector stores ----------------------------------------------------
+
+
+# ----------------------------------------------------- START: Search results -------------------------------------------------
+
+# formats a list of vector store search results 
+def format_search_results_table(search_results):
+  # search_results: list of search results
+  if not search_results: return '(No search results found)'
+  
+  # Define headers and max column widths
+  headers = ['Index', 'File ID', 'Filename', 'Score', 'Attributes', 'Content']
+  max_widths = [6, 36, 40, 8, 10, 60]  # Maximum width for each column
+  
+  # Initialize column widths with header lengths, but respect max widths
+  col_widths = [min(len(h), max_widths[i]) for i, h in enumerate(headers)]
+  
+  # Process each row
+  rows = []
+  for idx, item in enumerate(search_results):
+    # Get content safely, checking for content list first, then falling back to text
+    content = '...'
+    if hasattr(item, 'content') and item.content and len(item.content) > 0: content = item.content[0].text
+    elif hasattr(item, 'text'): content = item.text
+    
+    # Clean content for better readability
+    if content != '...': content = content.replace('\n', ' ').replace('\r', ' ').replace('\t', ' ').replace('  ', ' ')
+    attributes = getattr(item, 'attributes', {})
+    # calculate metadata tags - count total fields that are not empty
+    non_empty_values = [value for value in attributes.values() if value]
+    attributes_string = f"{len(non_empty_values)} of {len(attributes)}"
+    # Prepare row data
+    row_data = [
+      f"{idx:05d}",
+      getattr(item, 'file_id', '...'),
+      getattr(item, 'filename', '...'),
+      f"{getattr(item, 'score', 0):.2f}",
+      attributes_string,
+      content
+    ]
+    
+    # Truncate cells and update column widths
+    row_data = truncate_row_data(row_data, max_widths)
+    for i, cell_str in enumerate(row_data):
+      col_widths[i] = min(max(col_widths[i], len(cell_str)), max_widths[i])
+    
+    rows.append(row_data)
+  
+  # Build table as string
+  lines = []
+  header_line = ' | '.join(h.ljust(col_widths[i]) for i, h in enumerate(headers))
+  sep_line = ' | '.join('-'*col_widths[i] for i in range(len(headers)))
+  lines.append(header_line)
+  lines.append(sep_line)
+  
+  for row in rows:
+    lines.append(' | '.join(str(cell).ljust(col_widths[i]) for i, cell in enumerate(row)))
+  
+  return '\n'.join(lines)
+
+
+# ----------------------------------------------------- END: Search results ---------------------------------------------------
+
 
 # ----------------------------------------------------- START: Cleanup --------------------------------------------------------
 # Delete expired vector stores
