@@ -1,7 +1,7 @@
 # OpenAI-BackendTools
 A collection of tools and demo code to test, operate and maintain Open AI and Azure OpenAI backends. The toolkit is targeted at developers and operators who need to interact with Azure OpenAI and OpenAI backends programmatically. For example list files, assistants, vector stores, delete files, assistants, vector stores, upload files to vector stores, query vector stores, test search, etc.
 
-## Table of Contents
+#### Table of Contents
 - [1. File listings](#1-file-listings) - files, assistants, vector stores
 - [2. Basic file operations](#2-basic-file-operations) - upload file, add to vector store, deletion
 - [3. RAG operations](#3-rag-operations) - create vector store, add files to vector store, query vector store
@@ -40,7 +40,7 @@ A collection of tools and demo code to test, operate and maintain Open AI and Az
 - python-dotenv 1.1.0 ([Package](https://pypi.org/project/python-dotenv/))
 - openai 1.79.0 ([Package](https://pypi.org/project/openai/))
 
-### Project structure
+#### Project structure
 
 ```
 ├── src/
@@ -61,7 +61,29 @@ A collection of tools and demo code to test, operate and maintain Open AI and Az
 └── README.md                                  # Project documentation
 ```
 
-### How to create the Open AI client
+#### .env File Template
+
+```python
+# Use OpenAI = 'openai', or Azure OpenAI = 'azure_openai'
+OPENAI_SERVICE_TYPE=azure_openai
+
+# Open AI backend settings
+OPENAI_API_KEY=sk-svcacct-xxxxxxxxxxxxxxxx
+OPEN_AI_ORGANIZATION=org-xxxxxxxxxxxxxxxxx
+
+# Azure OpenAI key authentication. If 'false', then managed identity or service principal authentication will be used.
+AZURE_OPENAI_USE_KEY_AUTHENTICATION=true
+# Azure Open AI backend settings
+AZURE_OPENAI_ENDPOINT=https://xxxxxxxxxxxxx.openai.azure.com/
+AZURE_OPENAI_API_KEY=xxxxxxxxxxxxxxxxxxxxxx
+AZURE_TENANT_ID=aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa
+AZURE_CLIENT_ID=bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb
+AZURE_CLIENT_SECRET=xxxxxxxxxxxxxxxxxxxxxx
+AZURE_OPENAI_MODEL_DEPLOYMENT_NAME=gpt-4o-mini
+AZURE_OPENAI_API_VERSION=2025-04-01-preview
+```
+
+#### How to create the Open AI client
 
 This is done as follows in all scripts:
 
