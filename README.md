@@ -76,12 +76,12 @@ elif openai_service_type == "azure_openai":
 
 ### Function: `list_all_files`
 
+Lists all files in the storage as markdown table, showing total consumed storage at the top. Limits output to 50 rows because of Python console character limit.
+
 **Location:** `test_file_listings.py`
 
 **Parameters:** 
 - `client`: The OpenAI client instance to use for API calls
-
-Lists all files in the storage as markdown table, showing total consumed storage at the top. Limits output to 50 rows because of Python console character limit.
 
 **Example output:**
 ```
@@ -108,12 +108,12 @@ while has_more:
 
 ### Function: `list_vector_stores`
 
+Lists all vector stores in a table format, showing total count and number of expired stores at the top.
+
 **Location:** `test_file_listings.py`
 
 **Parameters:** 
 - `client`: The OpenAI client instance to use for API calls
-
-Lists all vector stores in a table format, showing total count and number of expired stores at the top.
 
 **Example output:**
 ```
@@ -138,12 +138,13 @@ while has_more:
 
 ### Function: `list_assistants`
 
+Lists all assistants with their associated vector stores.
+
 **Location:** `test_file_listings.py`
 
 **Parameters:** 
 - `client`: The OpenAI client instance to use for API calls
 
-Lists all assistants with their associated vector stores.
 
 **Example output:**
 ```
@@ -170,12 +171,13 @@ while has_more:
 
 ### Function: `list_files_used_by_vector_stores`
 
+Lists all files that are currently used by any vector store. Shows file metrics in the top row.
+
 **Location:** `test_file_listings.py`
 
 **Parameters:** 
 - `client`: The OpenAI client instance to use for API calls 
-- `all_files`: Optional. List of all files. If not provided, will fetch files using the client. 
-Lists all files that are currently used by any vector store. Shows file metrics in the top row.
+- `all_files`: Optional. List of all files. If not provided, will fetch files using the client.
 
 **Example output:**
 ```
@@ -202,13 +204,13 @@ while has_more:
 
 ### Function: `list_files_not_used_by_vector_stores` 
 
+Lists all files that are not currently used by any vector store.
+
 **Location:** `test_file_listings.py`
 
 **Parameters:** 
 - `client`: The OpenAI client instance to use for API calls 
 - `all_files`: Optional. List of all files. If not provided, will fetch files using the client. 
-
-Lists all files that are not currently used by any vector store.
 
 **Example output:**
 ```
@@ -224,12 +226,12 @@ Index | ID                                    | Filename                        
 
 ### Function: `list_files_used_by_assistants`
 
+Lists all files that are currently used by any assistant through their vector stores. Shows file metrics in the top row.
+
 **Location:** `test_file_listings.py`
 
 **Parameters:** 
 - `client`: The OpenAI client instance to use for API calls
-
-Lists all files that are currently used by any assistant through their vector stores. Shows file metrics in the top row.
 
 **Example output:**
 ```
@@ -246,13 +248,13 @@ Index | ID                                 | Filename | Size | Created          
 
 ### Function: `list_files_not_used_by_assistants` 
 
+Lists all files that are not currently used by any assistant. Shows file metrics in the top row.
+
 **Location:** `test_file_listings.py`
 
 **Parameters:** 
 - `client`: The OpenAI client instance to use for API calls
-- `files_used_by_vector_stores`: Optional. List of files used by vector stores. If not provided, will fetch the list using the client. 
-
-Lists all files that are not currently used by any assistant. Shows file metrics in the top row.
+- `files_used_by_vector_stores`: Optional. List of files used by vector stores. If not provided, will fetch the list using the client.
 
 **Example output:**
 ```
@@ -270,13 +272,13 @@ Index | ID                                 | Filename                           
 
 ### Function: `test_basic_file_operations`
 
+Performs basic file operations: upload, add to vector store, deletion. With Azure Open AI Services, if vector store and file deletion fails and you are using a Service Principal or Managed Identity, you need to assign it the 'Cognitive Services OpenAI Contributor' role. See [AzureOpenAI.md](AzureOpenAI.md) for more information.  
+
 **Location:** `test_basic_file_operations.py`
 
 **Parameters:** 
 - `client`: The OpenAI client instance to use for API calls 
 - `file_path`: The path to the file to upload
-
-Performs basic file operations: upload, add to vector store, deletion.
 
 **Example output:**
 ```
@@ -328,7 +330,12 @@ Container class that holds information about a test vector store and its associa
 - `files_metadata`: Dictionary of metadata for each file (key=file_path) including source, filename, and file type
 - `files_data`: Dictionary of additional file data (key=file_path) including file size, last modified date, and file ID
 
-### Function: `create_test_vector_store_with_files` 
+### Function: `create_test_vector_store_with_files`
+
+Creates a vector store and uploads files from the specified folder to it. Handles retries and verifies file processing completion. Sets the following metadata for each file:
+- `source`: The source path of the file
+- `filename`: The filename of the file
+- `file_type`: The file type of the file
 
 **Location:** `test_rag_operations.py`
 
@@ -336,8 +343,6 @@ Container class that holds information about a test vector store and its associa
 - `client`: The OpenAI client instance to use for API calls
 - `vector_store_name`: Name of the vector store to create
 - `folder_path`: Path to folder containing files to upload
-
-Creates a vector store and uploads files from the specified folder to it. Handles retries and verifies file processing completion.
 
 **Example output:**
 ```
@@ -351,8 +356,10 @@ Creates a vector store and uploads files from the specified folder to it. Handle
     Waiting 10 seconds ( 1 / 10 ) for 1 files to complete...
 [2025-06-09 12:39:55] END: Create test vector store with files (17 secs).
 ```
+
 ### Function: `test_rag_operations_using_responses_api`
 
+Tests RAG operations by querying a vector store using the responses API, with and without file search results included.
 **Location:** `test_rag_operations.py`
 
 **Parameters:** 
@@ -360,8 +367,6 @@ Creates a vector store and uploads files from the specified folder to it. Handle
 - `test_vector_store_with_files`: Instance of TestVectorStoreWithFiles containing vector store and file information
 - `openai_model_name`: Name of the OpenAI model to use (in Azure Open AI it's the model deployment name)
 - `query`: The query to test RAG operations with
-
-Tests RAG operations by querying a vector store using the responses API, with and without file search results included.
 
 **Example output:**
 ```
@@ -406,9 +411,102 @@ response_file_search_results = response_file_search_tool_call.results
 
 ## Search operations
 
+Functions and classes used to demonstrate vector store search, filtering, and query rewrite:
+- Function `test_file_search_functionalities` - Demonstrates file search functionalities including basic search, filtered search, and query rewriting using a vector store.
 Functions and classes used to prepare test vector store and files:
 - Function `create_test_vector_store_with_files` - Creates a vector store and uploads files from the specified folder to it. Handles retries and verifies file processing completion.
 - Function `extract_and_add_metadata_to_vector_store_using_responses_api` - Extracts metadata from files and re-adds files with more metadata to the vector store using the responses API. Handles retries and verifies file processing completion.
 - Function `extract_and_add_metadata_to_vector_store_using_assistants_api` - Extracts metadata from files using the assistants API. Creates and deletes a temporary assistant to extract metadata.
 - Class `TestVectorStoreWithFiles` - Container class that holds information about a test vector store and its associated files. Used to pass vector store and file information between test functions.
+- Class `SearchParams` - Container class for search parameters used in test functions, such as vector store name, folder path, queries, and filters.
 
+### Class: `SearchParams`
+
+Container class for search parameters used in file search tests.
+
+**Location:** `test_search_operations.py`
+
+**Fields:**
+- `vector_store_name`: Name of the vector store to use
+- `folder_path`: Path to folder containing files to upload/search
+- `search_query_1`: Basic search query
+- `search_query_2`: Filtered search query
+- `search_query_2_filters`: Dictionary of filters for search (e.g., `{ "key": "file_type", "type": "eq", "value": "md" }`)
+- `search_query_3_with_query_rewrite`: Query to test search with query rewriting
+
+### Function: `test_file_search_functionalities`
+
+Demonstrates file search functionalities by performing:
+- Basic search in a vector store
+- Filtered search using metadata filters
+- Search with query rewriting
+
+**Location:** `test_search_operations.py`
+
+**Parameters:**
+- `client`: The OpenAI client instance to use for API calls
+- `vector_store_id`: ID of the vector store to search
+- `params`: Instance of `SearchParams` containing search queries and filters
+
+**Example output:**
+```
+[2025-06-09 16:58:47] START: File search functionalities (RAG search, filter, rewrite query)...
+  Testing query search (score_threshold=0.3, max_num_results=10): Who is Arilena Drovik?
+    2 search results
+    Index | File ID                     | Filename            | Score | Attributes | Content
+    ----- | --------------------------- | ------------------- | ----- | ---------- | ------------------------------------------------------------
+    00000 | file-EQPc9biqQ1WPMVGVEz15wK | ArilenaDrovikCV.pdf | 0.90  | 3 of 3     | (anonymous)  Arilena Drovik PhD Molecular Biology Princip...
+    00001 | file-3hwPtVZzFg3a472r7UdfGd | Publications1.md    | 0.64  | 3 of 3     | | Title | Author(s) | Year | Publisher | Link | |-------|...
+  --------------------------------------------------------------------------------------------------------------------------------------------
+  Testing filtered query search (filter: file_type='md', score_threshold=0.3, max_num_results=10): Who is Arilena Drovik?
+    1 search results
+    Index | File ID                     | Filename         | Score | Attributes | Content
+    ----- | --------------------------- | ---------------- | ----- | ---------- | ------------------------------------------------------------
+    00000 | file-3hwPtVZzFg3a472r7UdfGd | Publications1.md | 0.64  | 3 of 3     | | Title | Author(s) | Year | Publisher | Link | |-------|...
+  --------------------------------------------------------------------------------------------------------------------------------------------
+  Testing rewrite query search (score_threshold=0.3, max_num_results=10): All files from year 2015.
+    1 search results
+    Rewritten query: Files from 2015
+    Index | File ID                     | Filename         | Score | Attributes | Content
+    ----- | --------------------------- | ---------------- | ----- | ---------- | ------------------------------------------------------------
+    00000 | file-3hwPtVZzFg3a472r7UdfGd | Publications1.md | 0.64  | 3 of 3     | | Title | Author(s) | Year | Publisher | Link | |-------|...
+[2025-06-09 16:59:03] END: File search functionalities (RAG search, filter, rewrite query) (16 secs).
+```
+
+**Links**
+- [Search files in vector stores - Open AI API Reference](https://platform.openai.com/docs/api-reference/vector-stores/search)
+- [Metadata filtering - Open AI Docs](https://platform.openai.com/docs/guides/tools-file-search#metadata-filtering)
+- [Query rewriting - Open AI Docs](https://platform.openai.com/docs/guides/retrieval#query-rewriting)
+
+**Open AI SDK code**
+```
+# Basic search: finds files that contain relevant content to answer a query
+# https://platform.openai.com/docs/api-reference/vector-stores/search
+client.vector_stores.search(
+    vector_store_id=vector_store_id,
+    query=query,
+    ranking_options={"ranker": "auto", "score_threshold": 0.3},
+    max_num_results=10
+)
+
+# Filtered search: finds files that contain relevant content but filtered by metadata
+# https://platform.openai.com/docs/guides/tools-file-search#metadata-filtering
+search_results = client.vector_stores.search(
+  vector_store_id=vector_store_id,
+  query=params.search_query_2,
+  ranking_options={"ranker": "auto", "score_threshold": 0.3},
+  max_num_results=10,
+  filters={"key": "file_type", "type": "eq", "value": "md"}
+)
+
+# Search with query rewriting: finds files that contain relevant content to answer a query but rewritten by the model
+# https://platform.openai.com/docs/guides/retrieval#query-rewriting
+search_results = client.vector_stores.search(
+  vector_store_id=vector_store_id,
+  query=params.search_query_3_with_query_rewrite,
+  rewrite_query=True,
+  ranking_options={"ranker": "auto", "score_threshold": 0.3},
+  max_num_results=10
+)
+rewritten_search_query = search_results.model_extra['search_query'][0]
+```

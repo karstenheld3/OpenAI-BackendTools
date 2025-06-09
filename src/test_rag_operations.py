@@ -93,7 +93,8 @@ def create_test_vector_store_with_files(client, vector_store_name, folder_path):
       file_id = files_data[file_path]['file_id']
       if file_id:
         try:
-          retVal = client.vector_stores.files.create(vector_store_id=vector_store.id, file_id=file_id)
+          metadata = files_metadata[file_path]
+          retVal = client.vector_stores.files.create(vector_store_id=vector_store.id, file_id=file_id, attributes=metadata)
           status += f", OK: Add to vector store ID={file_id} '{file_path}'"
         except Exception as e:
           # Error code: 400 - File type not supported; Error = 'unsupported_file'; do not retry

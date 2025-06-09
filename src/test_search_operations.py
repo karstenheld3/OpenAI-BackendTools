@@ -296,12 +296,12 @@ def test_file_search_functionalities(client, vector_store_id, params):
 
   query = params.search_query_1; score_threshold = 0.3; max_num_results = 10
   print(f"  Testing query search (score_threshold={str(score_threshold)}, max_num_results={max_num_results}): {query}")
-  search_results = client.vector_stores.search(
+  search_results = retry_on_openai_errors(lambda: client.vector_stores.search(
     vector_store_id=vector_store_id,
     query=query,
     ranking_options={"ranker": "auto", "score_threshold": score_threshold},
     max_num_results=max_num_results
-  )
+  ), indentation=4)
   # sort by score
   search_results.data.sort(key=lambda x: x.score, reverse=True)
   print(f"    {len(search_results.data)} search results")
@@ -309,6 +309,7 @@ def test_file_search_functionalities(client, vector_store_id, params):
   print(table)
 
   # Search for files using filter
+  # https://platform.openai.com/docs/guides/tools-file-search#metadata-filtering
   query = params.search_query_2
   filters = params.search_query_2_filters
   print("  " + "-"*140)
@@ -326,6 +327,7 @@ def test_file_search_functionalities(client, vector_store_id, params):
   print(table)
 
   # Search for files using rewrite-query
+  # https://platform.openai.com/docs/guides/retrieval#query-rewriting
   query = params.search_query_3_with_query_rewrite; score_threshold = 0.3; max_num_results = 10
   print("  " + "-"*140)
   print(f"  Testing rewrite query search (score_threshold={str(score_threshold)}, max_num_results={max_num_results}): {query}")
@@ -371,6 +373,10 @@ if __name__ == '__main__':
     ,search_query_2_filters = { "key": "file_type", "type": "eq", "value": "md" }
     ,search_query_3_with_query_rewrite="All files from year 2015."
   )
+
+  delete_vector_store_by_name(client, params.vector_store_name, True)
+  delete_vector_store_by_name(client, params.vector_store_name, True)
+
 
   # Step 1: Create vector store by uploading files
   test_vector_store_with_files = create_test_vector_store_with_files(client,params.vector_store_name, params.folder_path)
