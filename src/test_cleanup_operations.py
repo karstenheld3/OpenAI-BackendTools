@@ -31,4 +31,7 @@ if __name__ == '__main__':
   
   # client.beta.assistants.delete("asst_bImGzB7olqLzO177ydqvRQNE")
 
+  # USE WITH CAUTION! This will delete all stored files. Including those used in current conversations.
+  # delete_files(client, get_all_files(client))
+
 # ----------------------------------------------------- END: Main -------------------------------------------------------------

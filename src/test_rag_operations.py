@@ -118,8 +118,8 @@ def create_test_vector_store_with_files(client, vector_store_name, folder_path):
       temp_vector_store = client.vector_stores.retrieve(vector_store.id)
       in_progress_files_count = temp_vector_store.file_counts.in_progress
       if in_progress_files_count == 0: break
-      print(f"    Waiting 10 seconds ( {status_check + 1} / {max_status_checks} ) for {in_progress_files_count} files to complete...")
-      time.sleep(10)
+      print(f"    Waiting 3 seconds ( {status_check + 1} / {max_status_checks} ) for {in_progress_files_count} files to complete...")
+      time.sleep(3)
       status_check += 1
 
     vector_store_files = get_vector_store_files(client, vector_store)

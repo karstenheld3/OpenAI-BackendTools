@@ -119,7 +119,7 @@ def extract_and_add_metadata_to_vector_store_using_responses_api(client, test_ve
   # We use a temporary vector store that ónly contains 1 file at a time because we can't specify the file_id in the file_search tool
 
   # Create temporary vector store for metadata extraction
-  temp_vector_store = client.vector_stores.create(name="temp_vector_store")
+  temp_vector_store = client.vector_stores.create(name="temp_vector_store", expires_after={ "anchor": "last_active_at", "days": 1})
 
   # Extract metadata for each file
   print(f"  Extracting metadata for {len(test_vector_store_with_files.files)} files...")
@@ -183,7 +183,7 @@ def extract_and_add_metadata_to_vector_store_using_asssistants_api(client, test_
   # We use a temporary vector store that ónly contains 1 file at a time to avoid the automatic creation of unnecessary vector stores 
 
   # Create temporary vector store for metadata extraction
-  temp_vector_store = client.vector_stores.create(name="temp_vector_store")
+  temp_vector_store = client.vector_stores.create(name="temp_vector_store", expires_after={ "anchor": "last_active_at", "days": 1})
  
   # Create assistant for metadata extraction
   assistant = client.beta.assistants.create(
@@ -373,12 +373,15 @@ if __name__ == '__main__':
     ,search_query_3_with_query_rewrite="All files from year 2015."
   )
 
+  delete_vector_store_by_name(client, params.vector_store_name, True)
+  delete_vector_store_by_name(client, params.vector_store_name, True)
+  
   # Step 1: Create vector store by uploading files
   test_vector_store_with_files = create_test_vector_store_with_files(client,params.vector_store_name, params.folder_path)
 
   # Step 2: Extract metadata from files and re-add files with more metadata to the vector store
-  # extract_and_add_metadata_to_vector_store_using_asssistants_api(client, test_vector_store_with_files, metadata_extraction_prompt_template, openai_model_name, True)
-  extract_and_add_metadata_to_vector_store_using_responses_api(client, test_vector_store_with_files, metadata_extraction_prompt_template, openai_model_name, True)
+  extract_and_add_metadata_to_vector_store_using_asssistants_api(client, test_vector_store_with_files, metadata_extraction_prompt_template, openai_model_name, True)
+  # extract_and_add_metadata_to_vector_store_using_responses_api(client, test_vector_store_with_files, metadata_extraction_prompt_template, openai_model_name, True)
 
   print("\n")
 
