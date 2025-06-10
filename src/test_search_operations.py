@@ -372,9 +372,6 @@ if __name__ == '__main__':
     ,search_query_2_filters = { "key": "file_type", "type": "eq", "value": "md" }
     ,search_query_3_with_query_rewrite="All files from year 2015."
   )
-
-  delete_vector_store_by_name(client, params.vector_store_name, True)
-  delete_vector_store_by_name(client, params.vector_store_name, True)
   
   # Step 1: Create vector store by uploading files
   test_vector_store_with_files = create_test_vector_store_with_files(client,params.vector_store_name, params.folder_path)

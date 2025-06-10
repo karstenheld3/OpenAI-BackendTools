@@ -212,9 +212,9 @@ if __name__ == '__main__':
     client = create_azure_openai_client(azure_openai_use_key_authentication)
 
   @dataclass
-  class SearchParams: vector_store_name: str; folder_path: str; query: str
+  class RAGParams: vector_store_name: str; folder_path: str; query: str
 
-  params = SearchParams(
+  params = RAGParams(
     vector_store_name="test_vector_store",
     folder_path="./RAGFiles/Batch01",
     query="Who is Arilena Drovik?"
