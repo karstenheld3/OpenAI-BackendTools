@@ -34,7 +34,7 @@ def get_answers_from_model_and_return_items(client, vector_store_id, model, item
 
   for idx, item in enumerate(items, 1):
     input = item['item']['input']
-    print(f"    [ {idx} / {len(items)} ] Query: {input}")
+    print(f"  [ {idx} / {len(items)} ] Query: {input}")
     response = retry_on_openai_errors(lambda: client.responses.create(
       model=model
       ,input=input
@@ -42,7 +42,7 @@ def get_answers_from_model_and_return_items(client, vector_store_id, model, item
       ,temperature=0
     ), indentation=4)
     output_text = response.output_text
-    print(f"      Response: {truncate_string(output_text,80)}")
+    print(f"    Response: {truncate_string(output_text,80)}")
     item['item']['output_text'] = output_text
 
   log_function_footer(function_name, start_time)
