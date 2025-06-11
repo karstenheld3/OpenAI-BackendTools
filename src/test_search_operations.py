@@ -27,7 +27,7 @@ Example answer format:
 
 Here is some information about the file:
 - filename: '<filename>'
-- file_last_modified_date: <file_last_modified_date>
+- last_modified: <last_modified>
 - source: '<source>'
 
 **Rules**:
@@ -64,7 +64,7 @@ Examples: 'Microsoft', 'Greenpeace', 'John Doe', 'M. Zhang, F. Xi'.
 
 ### doc_year
 What is the year that the document covers? If the document covers multiple years, return the most recent year.
-If the date can't be extracted, use the year from the file_last_modified_date.
+If the date can't be extracted, use the year from the last_modified.
 Return an answer in exactly 4 characters.
 Examples: '1981', '2022', '2022'
 
@@ -76,7 +76,7 @@ Return an answer in exactly 10 characters as ISO-Date or an empty string.
 Examples: '1981-01-01', '2022-09-01', '2022-12-31', ''
 
 ### doc_end_date
-What is the document's data or reporting end date? If the date can't be extracted, use the file_last_modified_date.
+What is the document's data or reporting end date? If the date can't be extracted, use the last_modified.
 Return an answer in exactly 10 characters as ISO-Date.
 If month or day are unknown, use month = 12, day = last day of the month.
 Examples: '1981-01-12', '2022-09-30', '2022-12-31'
@@ -125,14 +125,14 @@ def extract_and_add_metadata_to_vector_store_using_responses_api(client, test_ve
   print(f"  Extracting metadata for {len(test_vector_store_with_files.files)} files...")
   for idx, file_path in enumerate(test_vector_store_with_files.files, 1):
     file_id = test_vector_store_with_files.files_data[file_path]['file_id']
-    file_last_modified_date = test_vector_store_with_files.files_data[file_path]['file_last_modified_date']
+    last_modified = test_vector_store_with_files.files_data[file_path]['last_modified']
     source = test_vector_store_with_files.files_metadata[file_path]['source']
     filename = test_vector_store_with_files.files_metadata[file_path]['filename']
 
     # Add file to temporary vector store
     client.vector_stores.files.create(vector_store_id=temp_vector_store.id, file_id=file_id) 
 
-    prompt = metadata_extraction_prompt_template.replace("<filename>", filename).replace("<file_last_modified_date>", file_last_modified_date).replace("<source>", source)
+    prompt = metadata_extraction_prompt_template.replace("<filename>", filename).replace("<last_modified>", last_modified).replace("<source>", source)
 
     print(f"    [ {idx} / {len(test_vector_store_with_files.files)} ] Extracting metadata for '{file_path}'...")
 
@@ -198,7 +198,7 @@ def extract_and_add_metadata_to_vector_store_using_asssistants_api(client, test_
   print(f"  Extracting metadata for {len(test_vector_store_with_files.files)} files...")
   for idx, file_path in enumerate(test_vector_store_with_files.files, 1):
     file_id = test_vector_store_with_files.files_data[file_path]['file_id']
-    file_last_modified_date = test_vector_store_with_files.files_data[file_path]['file_last_modified_date']
+    last_modified = test_vector_store_with_files.files_data[file_path]['last_modified']
     source = test_vector_store_with_files.files_metadata[file_path]['source']
     filename = test_vector_store_with_files.files_metadata[file_path]['filename']
 
@@ -207,7 +207,7 @@ def extract_and_add_metadata_to_vector_store_using_asssistants_api(client, test_
     # Add file to temporary vector store
     client.vector_stores.files.create(vector_store_id=temp_vector_store.id, file_id=file_id) 
 
-    prompt = metadata_extraction_prompt_template.replace("<filename>", filename).replace("<file_last_modified_date>", file_last_modified_date).replace("<source>", source)
+    prompt = metadata_extraction_prompt_template.replace("<filename>", filename).replace("<last_modified>", last_modified).replace("<source>", source)
     
     # Run the assistant on the thread with retries
     max_attempts = 5; attempt = 1
@@ -374,7 +374,7 @@ if __name__ == '__main__':
   )
   
   # Step 1: Create vector store by uploading files
-  test_vector_store_with_files = create_test_vector_store_with_files(client,params.vector_store_name, params.folder_path)
+  test_vector_store_with_files = create_test_vector_store_from_folder_path(client,params.vector_store_name, params.folder_path)
 
   # Step 2: Extract metadata from files and re-add files with more metadata to the vector store
   extract_and_add_metadata_to_vector_store_using_asssistants_api(client, test_vector_store_with_files, metadata_extraction_prompt_template, openai_model_name, True)

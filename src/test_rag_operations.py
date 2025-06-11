@@ -8,6 +8,11 @@ import datetime
 
 load_dotenv()
 
+# Global variables
+# https://platform.openai.com/docs/assistants/tools/file-search/supported-files#supported-files
+default_filetypes_accepted_by_vector_stores = ["c", "cpp", "cs", "css", "doc", "docx", "go", "html", "java", "js", "json", "md", "pdf", "php", "pptx", "py", "rb", "sh", "tex", "ts", "txt"]
+
+
 # ----------------------------------------------------- START: Tests ----------------------------------------------------------
 
 class TestVectorStoreWithFiles:
@@ -17,41 +22,70 @@ class TestVectorStoreWithFiles:
     self.files_metadata = files_metadata
     self.files_data = files_data
 
-# Creates a vector store and uploads files from the given folder. Retries upload 3 times.
-def create_test_vector_store_with_files(client, vector_store_name, folder_path):
-  function_name = 'Create test vector store with files'
-  start_time = log_function_header(function_name)
+def collect_files_from_folder_path(folder_path, include_subfolders=True, include_file_types=["*"]):
+  """
+  Recursively collect files from folder_path and return file information.
+  
+  Args:
+    folder_path: Path to the folder to collect files from
+    include_subfolders: Whether to include files from subdirectories (default: True)
+    include_filetypes: List of file extensions to include (e.g., ["txt", "pdf", "docx"]) or ["*"] for all files (default: ["*"])
+  
+  Returns:
+    tuple: (files, files_metadata, files_data) where:
+      - files: list of file paths
+      - files_metadata: dict with file metadata for upload (key=file_path)
+      - files_data: dict with file data not for upload (key=file_path)
+  """
+  files = []; files_metadata = {}; files_data = {}
+  
+  # normalize folder path
+  folder_path = os.path.abspath(folder_path)
+  if not os.path.exists(folder_path):
+    raise Exception(f"File '{folder_path}' does not exist.")
+  
+  # Normalize file types for comparison (remove dots and convert to lowercase)
+  normalized_filetypes = []
+  include_all_files = "*" in include_file_types
+  if not include_all_files:
+    for filetype in include_file_types:
+      normalized_type = filetype.lower().lstrip('.')
+      normalized_filetypes.append(normalized_type)
+  
+  # Recursively walk through all subdirectories
+  for root, dirs, filenames in os.walk(folder_path):
+    # If include_subfolders is False, only process the root directory
+    if not include_subfolders and root != folder_path: continue
+      
+    for filename in filenames:
+      file_path = os.path.join(root, filename)
+      if os.path.isfile(file_path):
+        # Get file type from extension (handles multiple dots in filename)
+        file_type = filename.split('.')[-1].lower() if '.' in filename else ''
+        
+        # Check if file type should be included
+        if not include_all_files and file_type not in normalized_filetypes: continue
+          
+        # Extract year from file's last modification date
+        mod_timestamp = os.path.getmtime(file_path)
+        last_modified = datetime.datetime.fromtimestamp(mod_timestamp).strftime('%Y-%m-%d')
+        file_size = os.path.getsize(file_path)
+        # Store file source path and metadata
+        files.append(file_path)
+        files_metadata[file_path] = { 'source': file_path, 'filename': filename, 'file_type': file_type }
+        files_data[file_path] = { 'file_size': file_size, 'last_modified': last_modified}
+  
+  return files, files_metadata, files_data
+
+
+def create_test_vector_store_from_collected_files(client, vector_store_name, files, files_metadata, files_data, log_headers=True):
+  function_name = 'Create test vector store from collected files'
+  start_time = log_function_header(function_name) if log_headers else datetime.datetime.now()
 
   # Create vector store
   print(f"  Creating vector store '{vector_store_name}'...")
   vector_store = client.vector_stores.create(name=vector_store_name)
   print(f"    OK. ID={vector_store.id}") if vector_store.id else print("  FAIL.")
-
-
-  # Load RAG files and store
-  # file source paths in list 'files' 
-  # metadata to be uploaded in dict 'files_metadata' with key=file_path
-  # metadata to not be uploaded in dict 'files_data' with key=file_path
-  files = []; files_metadata = {}; files_data = {};
-  # normalize folder path
-  folder_path = os.path.abspath(folder_path)
-  if not os.path.exists(folder_path):
-    raise Exception(f"File '{folder_path}' does not exist.")
-  else:
-    for filename in os.listdir(folder_path):
-      file_path = os.path.join(folder_path, filename)
-      if os.path.isfile(file_path):
-        # Extract year from file's last modification date
-        mod_timestamp = os.path.getmtime(file_path)
-        file_last_modified_date = datetime.datetime.fromtimestamp(mod_timestamp).strftime('%Y-%m-%d')
-        # Get file type from extension (handles multiple dots in filename)
-        file_type = filename.split('.')[-1] if '.' in filename else ''
-        file_size = os.path.getsize(file_path)
-        # Store file source path and metadata
-        files.append(file_path)
-        files_metadata[file_path] = { 'source': file_path, 'filename': filename, 'file_type': file_type }
-        files_data[file_path] = { 'file_size': file_size, 'file_last_modified_date': file_last_modified_date}
-  
 
   # Upload RAG files
   max_retries = 3
@@ -150,8 +184,19 @@ def create_test_vector_store_with_files(client, vector_store_name, folder_path):
       del files_metadata[file_path]
       del files[files.index(file_path)]
 
-  log_function_footer(function_name, start_time)
+  if log_headers: log_function_footer(function_name, start_time)
   return TestVectorStoreWithFiles(vector_store, files, files_metadata, files_data)
+
+# Creates a vector store and uploads files from the given folder recursively
+def create_test_vector_store_from_folder_path(client, vector_store_name, folder_path, include_file_types=["*"]):
+  function_name = 'Create test vector store from folder path'
+  start_time = log_function_header(function_name)
+  files, files_metadata, files_data = collect_files_from_folder_path(folder_path, include_subfolders=True, include_file_types=include_file_types)
+  test_vector_store_with_files = create_test_vector_store_from_collected_files(client, vector_store_name, files, files_metadata, files_data, False)
+  log_function_footer(function_name, start_time)
+  return test_vector_store_with_files
+
+
 
 def test_rag_operations_using_responses_api(client, test_vector_store_with_files, openai_model_name, query):
   function_name = 'RAG operations using responses API'
@@ -221,7 +266,7 @@ if __name__ == '__main__':
   )
   
   # Step 1: Create vector store by uploading files
-  test_vector_store_with_files = create_test_vector_store_with_files(client, params.vector_store_name, params.folder_path)
+  test_vector_store_with_files = create_test_vector_store_from_folder_path(client, params.vector_store_name, params.folder_path)
 
   # Step 2: Test file RAG functionalities
   test_rag_operations_using_responses_api(client, test_vector_store_with_files, openai_model_name, params.query)
@@ -232,4 +277,3 @@ if __name__ == '__main__':
   delete_vector_store_by_name(client, params.vector_store_name, True)
 
 # ----------------------------------------------------- END: Main -------------------------------------------------------------
-

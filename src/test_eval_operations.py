@@ -192,7 +192,7 @@ if __name__ == '__main__':
   print("-"*140)
 
   # Step 1: Create vector store by uploading files
-  test_vector_store_with_files = create_test_vector_store_with_files(client,params.vector_store_name, params.folder_path)
+  test_vector_store_with_files = create_test_vector_store_from_folder_path(client,params.vector_store_name, params.folder_path)
 
   print("-"*140)
 
