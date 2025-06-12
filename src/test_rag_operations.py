@@ -2,7 +2,6 @@ from dataclasses import dataclass
 from dotenv import load_dotenv
 from openai_backendtools import *
 import time
-import json
 import os
 import datetime
 
@@ -15,12 +14,12 @@ default_filetypes_accepted_by_vector_stores = ["c", "cpp", "cs", "css", "doc", "
 
 # ----------------------------------------------------- START: Tests ----------------------------------------------------------
 
-class TestVectorStoreWithFiles:
-  def __init__(self, vector_store, files, files_metadata, files_data):
-    self.vector_store = vector_store
-    self.files = files
-    self.files_metadata = files_metadata
-    self.files_data = files_data
+@dataclass
+class VectorStoreFiles:
+  vector_store: any
+  files: any
+  files_metadata: any
+  files_data: any
 
 def collect_files_from_folder_path(folder_path, include_subfolders=True, include_file_types=["*"]):
   """
@@ -40,7 +39,7 @@ def collect_files_from_folder_path(folder_path, include_subfolders=True, include
   files = []; files_metadata = {}; files_data = {}
   
   # normalize folder path
-  folder_path = os.path.abspath(folder_path)
+  folder_path = os.path.abspath(folder_path) 
   if not os.path.exists(folder_path):
     raise Exception(f"File '{folder_path}' does not exist.")
   
@@ -185,7 +184,7 @@ def create_test_vector_store_from_collected_files(client, vector_store_name, fil
       del files[files.index(file_path)]
 
   if log_headers: log_function_footer(function_name, start_time)
-  return TestVectorStoreWithFiles(vector_store, files, files_metadata, files_data)
+  return VectorStoreFiles(vector_store, files, files_metadata, files_data)
 
 # Creates a vector store and uploads files from the given folder recursively
 def create_test_vector_store_from_folder_path(client, vector_store_name, folder_path, include_file_types=["*"]):
