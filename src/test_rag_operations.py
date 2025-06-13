@@ -146,13 +146,17 @@ def create_test_vector_store_from_collected_files(client, vector_store_name, fil
     # Ensure all files in the vector store are of status 'completed'
     # Otherwise delete them from vector store and add them to failed files
     print(f"  Verifying all vector store files are 'completed'...")
-    max_status_checks = 10; status_check = 0; in_progress_files_count=0
+    
+    # Calculate max wait time and max status checks:
+    # for < 11 files -> 10 checks with 3 secs; for > 10 files -> 15 checks with 10 secs; for > 100 files -> 20 checks with 20 secs
+    max_status_checks, wait_time = (10, 3) if len(files_to_upload) < 11 else (15, 10) if len(files_to_upload) <= 100 else (20, 20)
+    status_check = 0; in_progress_files_count=0
     while status_check < max_status_checks:
       temp_vector_store = client.vector_stores.retrieve(vector_store.id)
       in_progress_files_count = temp_vector_store.file_counts.in_progress
       if in_progress_files_count == 0: break
-      print(f"    Waiting 3 seconds ( {status_check + 1} / {max_status_checks} ) for {in_progress_files_count} files to complete...")
-      time.sleep(3)
+      print(f"    Waiting {wait_time} seconds ( {status_check + 1} / {max_status_checks} ) for {in_progress_files_count} files to complete...")
+      time.sleep(wait_time)
       status_check += 1
 
     vector_store_files = get_vector_store_files(client, vector_store)
@@ -187,10 +191,10 @@ def create_test_vector_store_from_collected_files(client, vector_store_name, fil
   return VectorStoreFiles(vector_store, files, files_metadata, files_data)
 
 # Creates a vector store and uploads files from the given folder recursively
-def create_test_vector_store_from_folder_path(client, vector_store_name, folder_path, include_file_types=["*"]):
+def create_test_vector_store_from_folder_path(client, vector_store_name, folder_path, include_subfolders=True, include_file_types=["*"]):
   function_name = 'Create test vector store from folder path'
   start_time = log_function_header(function_name)
-  files, files_metadata, files_data = collect_files_from_folder_path(folder_path, include_subfolders=True, include_file_types=include_file_types)
+  files, files_metadata, files_data = collect_files_from_folder_path(folder_path, include_subfolders=include_subfolders, include_file_types=include_file_types)
   test_vector_store_with_files = create_test_vector_store_from_collected_files(client, vector_store_name, files, files_metadata, files_data, False)
   log_function_footer(function_name, start_time)
   return test_vector_store_with_files
@@ -260,7 +264,7 @@ if __name__ == '__main__':
 
   params = RAGParams(
     vector_store_name="test_vector_store",
-    folder_path="./RAGFiles/Batch01",
+    folder_path="./RAGFiles/Batch03",
     query="Who is Arilena Drovik?"
   )
   
