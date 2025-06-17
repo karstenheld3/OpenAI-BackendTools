@@ -271,13 +271,15 @@ def delete_files(client, files):
     if not id: continue
     filename = getattr(file, 'filename', None)
     print(f"Deleting file ID={file_id} '{filename}'...")
-    client.files.delete(file_id)
+    try: client.files.delete(file_id)
+    except Exception as e: print(f"  WARNING: Failed to delete file file_id={file_id} '{filename}'. The file is probably already deleted in the global file storage.")
 
 # Deletes a list of file IDs
 def delete_file_ids(client, file_ids):
   for file_id in file_ids:
     print(f"Deleting file ID={file_id}...")
-    client.files.delete(file_id)
+    try: client.files.delete(file_id)
+    except Exception as e: print(f"  WARNING: Failed to delete file file_id={file_id}. The file is probably already deleted in the global file storage.")
 
 # returns dictionary with metrics for a list of files
 def get_filelist_metrics(files):
@@ -634,6 +636,15 @@ def format_file_attributes_table(vector_store_files):
   
   return '\n'.join(lines)
   
+def delete_failed_vector_store_files(client, vector_store_id):
+  files = get_vector_store_files(client, vector_store_id)
+  failed_files = [f for f in files if getattr(f, 'status', None) in ['failed', 'cancelled']]
+  for file in failed_files:
+    print(f"Deleting file ID={file.id} with status='{getattr(f, 'status', '')}'...")
+    try: client.vector_stores.files.delete(vector_store_id=vector_store_id, file_id=file.id)
+    except Exception as e: print(f"  WARNING: Failed to delete file_id='{file.id}' from vector_store_id='{vector_store_id}'. The file is probably already deleted in the global file storage.")
+    try: client.files.delete(file_id=file.id)
+    except Exception as e: print(f"  WARNING: Failed to delete file_id='{file.id}' from global file storage.")
 # ----------------------------------------------------- END: Vector stores ----------------------------------------------------
 
 
@@ -798,6 +809,25 @@ def delete_vector_stores_not_used_by_assistants(client, until_date_created):
     client.vector_stores.delete(vs.id)
 
   log_function_footer(function_name, start_time)
+
+def delete_vector_store_by_id(client, vector_store_id, delete_files=False):
+  vector_stores = get_all_vector_stores(client)
+  vs = [vs for vs in vector_stores if vs.id == vector_store_id]
+  if vs:
+    vs = vs[0]
+    name = vs.name
+    print(f"  Deleting vector store ID={vs.id} '{vs.name}' ({format_timestamp(vs.created_at)})...")
+    if delete_files:
+      files = get_vector_store_files(client, vs)
+      for file in files:
+        print(f"    Deleting file ID={file.id} ({format_timestamp(file.created_at)})...")
+        try: client.files.delete(file_id=file.id)
+        except Exception as e:
+          print(f"      WARNING: Failed to delete file ID={file.id} ({format_timestamp(file.created_at)}). The file is probably already deleted in the global file storage.")
+    client.vector_stores.delete(vs.id)
+  else:
+    print(f"  Vector store id='{vector_store_id}' not found.")
+
 
 def delete_vector_store_by_name(client, name, delete_files=False):
   vector_stores = get_all_vector_stores(client)
