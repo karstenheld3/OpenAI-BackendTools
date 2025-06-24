@@ -39,7 +39,7 @@ def list_vector_stores(client):
   
 # Display the files used by vector stores with top row showing total count and metrics
 def list_files_used_by_vector_stores(client):
-  files_used_by_vector_stores = get_files_used_by_vector_stores(client)
+  files_used_by_vector_stores = get_all_files_used_by_vector_stores(client)
   metrics = get_filelist_metrics(files_used_by_vector_stores)
   metrics_str = ", ".join([f"{v} {k}" for k, v in metrics.items()])
   print(f"Total files in vector stores: {len(files_used_by_vector_stores)} ({metrics_str})")
@@ -82,7 +82,7 @@ def list_files_used_by_assistants(client):
 
 # Display the files not used by assistants with top row showing total count
 def list_files_not_used_by_assistants(client, files_used_by_vector_stores):
-  if not files_used_by_vector_stores: files_used_by_vector_stores = get_files_used_by_vector_stores(client)
+  if not files_used_by_vector_stores: files_used_by_vector_stores = get_all_files_used_by_vector_stores(client)
   files_not_used_by_assistants = [f for f in all_files if f.id not in files_used_by_vector_stores]
   metrics = get_filelist_metrics(files_not_used_by_assistants)
   metrics_str = ", ".join([f"{v} {k}" for k, v in metrics.items()])
