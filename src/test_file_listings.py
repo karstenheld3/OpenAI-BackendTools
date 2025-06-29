@@ -31,7 +31,8 @@ def list_all_files(client):
 def list_vector_stores(client):
   all_vector_stores = get_all_vector_stores(client)
   all_vector_stores_expired = [v for v in all_vector_stores if getattr(v, 'status', None) == 'expired']
-  print(f"Total vector stores: {len(all_vector_stores)} ({len(all_vector_stores_expired)} expired)")
+  total_usage_bytes = sum([vs.usage_bytes for vs in all_vector_stores if hasattr(vs, 'usage_bytes')])
+  print(f"Total vector stores: {len(all_vector_stores)} ({len(all_vector_stores_expired)} expired, {format_filesize(total_usage_bytes)} total storage)")
   print("-"*140)
   print(format_vector_stores_table(truncate_list_if_too_long(all_vector_stores)))
   print("\n")

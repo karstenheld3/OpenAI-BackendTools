@@ -771,9 +771,9 @@ def print_vector_store_replication_summary(target_vector_store_ids, added_file_i
 #       {vector_store_id : <vector_store_id>; vector_store_name : <vector_store_name>}
 #     ]
 #   }
-def find_files_in_vector_stores_by_name(client, filenames, log_headers=True) -> dict:
-  function_name = 'Find files in vector stores by name'
-  start_time = log_headers(function_name) if log_headers else datetime.datetime.now()
+def find_files_in_all_vector_stores_by_filename(client, filenames, log_headers=True) -> dict:
+  function_name = 'Find files in all vector stores by filename'
+  start_time = log_function_header(function_name) if log_headers else datetime.datetime.now()
 
   # Create filename dict with filename as key and empty list as value. Eliminates duplicate filenames, empty strings.
   search_results = {filename: [] for filename in filenames if filename}
@@ -810,10 +810,10 @@ def find_files_in_vector_stores_by_name(client, filenames, log_headers=True) -> 
   if log_headers: log_function_footer(function_name, start_time)
   return search_results
 
-def delete_files_in_vector_store_by_filename(client, filenames, dry_run=False, delete_files_in_global_storage=False):
-  function_name = 'Delete files in vector stores by name'
+def delete_files_in_all_vector_stores_by_filename(client, filenames, dry_run=False, delete_files_in_global_storage=False):
+  function_name = 'Delete files in all vector stores by filename'
   start_time = log_function_header(function_name)
-  found_files = find_files_in_vector_stores_by_name(client, filenames, log_headers=False)
+  found_files = find_files_in_all_vector_stores_by_filename(client, filenames, log_headers=False)
 
   # if filenames is string, make list with single item
   if isinstance(filenames,str): filenames = [filenames]
@@ -1068,7 +1068,7 @@ def delete_duplicate_files_in_vector_stores(client):
 
 
 # deletes all files with status = 'failed', 'cancelled' and all files with purpose = 'assistants' that are not used by any vector store
-def delete_failed_and_unused_files(client):
+def delete_failed_and_unused_files(client, dry_run=False):
   function_name = 'Delete failed and unused files'
   start_time = log_function_header(function_name)
 
@@ -1088,8 +1088,9 @@ def delete_failed_and_unused_files(client):
   files_not_used_by_vector_stores = [f for f in all_files.values() if f.purpose == 'assistants' and f.id not in files_used_by_vector_stores]
   files_to_delete.extend(files_not_used_by_vector_stores)
 
-  for file in files_to_delete:
-    print(f"    Deleting file ID={file.id} '{file.filename}' ({format_timestamp(file.created_at)})...")
+  for i, file in enumerate(files_to_delete, 1):
+    print(f"    [ {i} / {len(files_to_delete)} ] Deleting file '{file.filename}' (ID={file.id}, {format_timestamp(file.created_at)})...")
+    if dry_run: continue
     client.files.delete(file_id=file.id)
 
   log_function_footer(function_name, start_time)

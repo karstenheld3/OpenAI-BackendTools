@@ -77,17 +77,12 @@ def collect_files_from_folder_path(folder_path, include_subfolders=True, include
   return files, files_metadata, files_data
 
 
-def create_test_vector_store_from_collected_files(client, vector_store_name, files, files_metadata, files_data, log_headers=True):
-  function_name = 'Create test vector store from collected files'
+def build_test_vector_store_by_adding_collected_files(client, vector_store, files, files_metadata, files_data, log_headers=True) -> VectorStoreFiles:
+  function_name = 'Update test vector store from collected files'
   start_time = log_function_header(function_name) if log_headers else datetime.datetime.now()
 
-  # Create vector store
-  print(f"  Creating vector store '{vector_store_name}'...")
-  vector_store = client.vector_stores.create(name=vector_store_name)
-  print(f"    OK. ID={vector_store.id}") if vector_store.id else print("  FAIL.")
-
   # Upload RAG files
-  max_retries = 3
+  max_retries = 1
   attempt = 0
   files_to_upload = files.copy()
   failed_files = []
@@ -109,10 +104,10 @@ def create_test_vector_store_from_collected_files(client, vector_store_name, fil
       if not file_id:    
         with open(file_path, 'rb') as f:
           try:
-            file = client.files.create(file=f, purpose="assistants")
-            if file.id:
+            vector_store_file = client.files.create(file=f, purpose="assistants")
+            if vector_store_file.id:
               status = f"OK: Upload"
-              files_data[file_path]['file_id'] = file.id
+              files_data[file_path]['file_id'] = vector_store_file.id
             else:
               status = f"FAIL: Upload"
               failed_files.append(file_path)
@@ -150,6 +145,16 @@ def create_test_vector_store_from_collected_files(client, vector_store_name, fil
     # Calculate max wait time and max status checks:
     # for < 11 files -> 10 checks with 3 secs; for > 10 files -> 15 checks with 10 secs; for > 100 files -> 20 checks with 20 secs
     max_status_checks, wait_time = (10, 3) if len(files_to_upload) < 11 else (15, 10) if len(files_to_upload) <= 100 else (20, 20)
+    # Exception: if HTML files are uploaded, adjust wait parameters based on HTML file count and size
+    # Reason: Large HTML files take much longer to process
+    html_files = [f for f in files_to_upload if f.lower().endswith('.html')]
+    if html_files:
+        html_count = len(html_files)
+        total_size_mb = sum(os.path.getsize(f) / (1024 * 1024) for f in html_files)
+        # Adjust max checks based on file count and size: at least number of HTML files, plus extra time for larger files
+        max_status_checks = max(max_status_checks, html_count + int(total_size_mb / 5))  # Add 1 check per 5MB
+        wait_time = max(wait_time, 10)  # Ensure at least 10 seconds wait for HTML files
+
     status_check = 0; in_progress_files_count=0
     while status_check < max_status_checks:
       temp_vector_store = client.vector_stores.retrieve(vector_store.id)
@@ -160,13 +165,21 @@ def create_test_vector_store_from_collected_files(client, vector_store_name, fil
       status_check += 1
 
     vector_store_files = get_vector_store_files(client, vector_store)
-    for file in vector_store_files:
-      if file.status != 'completed' and file.status != 'in_progress':
-        file_id = file.id
+    for vector_store_file in vector_store_files:
+      if vector_store_file.status != 'completed' and vector_store_file.status != 'in_progress':
+        file_id = vector_store_file.id
+        file_status = getattr(vector_store_file,"status","[UNKNOWN]")
+        error_msg = "UNKNOWN" if vector_store_file.last_error is None else vector_store_file.last_error.message
+        # Find file data by searching through files_data
+        file_path = None; file_size = None
+        for path, data in files_data.items():
+            if data['file_id'] == file_id:
+              file_path = path; file_size = data['file_size'];
+              break        
+        print(f"    WARNING: '{error_msg}' - status: '{file_status}', id: {file_id}, file_path: '{file_path}', size: {format_filesize(file_size)}.")
         # delete file from vector store
         client.vector_stores.files.delete(vector_store_id=vector_store.id, file_id=file_id)
-        # find file path from files_data
-        file_path = next((path for path, data in files_data.items() if data['file_id'] == file_id), None)
+
         if file_path:
           failed_files.append(file_path)
           
@@ -187,11 +200,25 @@ def create_test_vector_store_from_collected_files(client, vector_store_name, fil
       del files_metadata[file_path]
       del files[files.index(file_path)]
 
-  if log_headers: log_function_footer(function_name, start_time)
+  log_function_footer(function_name, start_time)
   return VectorStoreFiles(vector_store, files, files_metadata, files_data)
 
+def create_test_vector_store_from_collected_files(client, vector_store_name, files, files_metadata, files_data, log_headers=True) -> VectorStoreFiles:
+  function_name = 'Create test vector store from collected files'
+  start_time = log_function_header(function_name) if log_headers else datetime.datetime.now()
+
+  # Create vector store
+  print(f"  Creating vector store '{vector_store_name}'...")
+  vector_store = client.vector_stores.create(name=vector_store_name)
+  print(f"    OK. ID={vector_store.id}") if vector_store.id else print("  FAIL.")
+
+  vector_store_with_files = build_test_vector_store_by_adding_collected_files(client, vector_store, files, files_metadata, files_data, False)
+
+  if log_headers: log_function_footer(function_name, start_time)
+  return vector_store_with_files
+
 # Creates a vector store and uploads files from the given folder recursively
-def create_test_vector_store_from_folder_path(client, vector_store_name, folder_path, include_subfolders=True, include_file_types=["*"]):
+def create_test_vector_store_from_folder_path(client, vector_store_name, folder_path, include_subfolders=True, include_file_types=["*"]) -> VectorStoreFiles:
   function_name = 'Create test vector store from folder path'
   start_time = log_function_header(function_name)
   files, files_metadata, files_data = collect_files_from_folder_path(folder_path, include_subfolders=include_subfolders, include_file_types=include_file_types)
@@ -264,7 +291,7 @@ if __name__ == '__main__':
 
   params = RAGParams(
     vector_store_name="test_vector_store",
-    folder_path="./RAGFiles/Batch03",
+    folder_path="./RAGFiles/Batch01",
     query="Who is Arilena Drovik?"
   )
   

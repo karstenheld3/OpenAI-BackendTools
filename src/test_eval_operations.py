@@ -185,7 +185,7 @@ if __name__ == '__main__':
     folder_path="./RAGFiles/Batch01",
     model = openai_model_name,
     items = Batch01,
-    judge_model_name = "gpt-4o-mini",
+    judge_model_name = openai_model_name,
     min_score=4
   )
 

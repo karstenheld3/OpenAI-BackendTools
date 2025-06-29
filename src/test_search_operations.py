@@ -176,7 +176,7 @@ def extract_and_add_metadata_to_vector_store_using_responses_api(client, test_ve
   log_function_footer(function_name, start_time)
 
 # Extract metadata from files in vector store using assistants API and add it to the vector store
-def extract_and_add_metadata_to_vector_store_using_asssistants_api(client, test_vector_store_with_files, metadata_extraction_prompt_template, openai_model_name, logExtractedMetadata=False):
+def extract_and_add_metadata_to_vector_store_using_assistants_api(client, test_vector_store_with_files, metadata_extraction_prompt_template, openai_model_name, logExtractedMetadata=False):
   function_name = 'Extract and add metadata to vector store'
   start_time = log_function_header(function_name)
 
@@ -372,13 +372,13 @@ if __name__ == '__main__':
     ,search_query_2_filters = { "key": "file_type", "type": "eq", "value": "md" }
     ,search_query_3_with_query_rewrite="All files from year 2015."
   )
-  
+
   # Step 1: Create vector store by uploading files
   test_vector_store_with_files = create_test_vector_store_from_folder_path(client,params.vector_store_name, params.folder_path)
 
   # Step 2: Extract metadata from files and re-add files with more metadata to the vector store
-  extract_and_add_metadata_to_vector_store_using_asssistants_api(client, test_vector_store_with_files, metadata_extraction_prompt_template, openai_model_name, True)
-  # extract_and_add_metadata_to_vector_store_using_responses_api(client, test_vector_store_with_files, metadata_extraction_prompt_template, openai_model_name, True)
+  # extract_and_add_metadata_to_vector_store_using_assistants_api(client, test_vector_store_with_files, metadata_extraction_prompt_template, openai_model_name, True)
+  extract_and_add_metadata_to_vector_store_using_responses_api(client, test_vector_store_with_files, metadata_extraction_prompt_template, openai_model_name, True)
 
   print("\n")
 

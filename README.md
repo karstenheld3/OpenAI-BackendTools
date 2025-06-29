@@ -7,6 +7,8 @@ A collection of tools and demo code to test, operate and maintain Open AI and Az
 - [3. RAG operations](#3-rag-operations) - create vector store, add files to vector store, query vector store
 - [4. Search operations](#4-search-operations) - extract document metadata, search vector store, filter vector store, query rewrite
 - [5. Cleanup operations](#5-cleanup-operations) - delete expired and unused files, delete expired vector stores and unneeded assistants
+- [6. Vector store replication](#6-vector-store-replication) - replicate content between vector stores
+- [7. Evaluation operations](#7-evaluation-operations) - evaluate RAG responses with scoring and grading
 
 #### Files, Features, Demos
 - **Authentication Management**: Support for multiple authentication methods including Service Principals, Managed Identities, and API Keys, all configured in `.env` file. Functions to test authentication: `test_access_with_api_key.py` and `test_access_with_service_principal.py`.
@@ -14,6 +16,9 @@ A collection of tools and demo code to test, operate and maintain Open AI and Az
 - **Cleanup** with `test_cleanup_operations.py`: Tools for deleting expired and unused files to save cost, delete expired vector stores and unneeded assistants.
 - **RAG demos** with `test_rag_operations.py`: Code that demonstrates uploading files to vector stores with metadata extraction.
 - **Vector Store Search**: Code that demonstrates vector store search, filtering and query rewrite.
+- **Vector Store Replication** with `replicate_vector_store_content.py`: Tools for replicating files between vector stores.
+- **Evaluation Operations** with `test_eval_operations.py`: Tools for evaluating RAG responses using judge models with scoring and grading.
+- **File Crawling** with `test_file_crawling.py`: Data classes and utilities for file crawling operations.
 
 #### 👉 How to set up your Azure Open AI Service to use this toolkit: [AzureOpenAI.md](AzureOpenAI.md)
 - Creating your .env file and where to get the information from
@@ -33,7 +38,8 @@ A collection of tools and demo code to test, operate and maintain Open AI and Az
 | Open AI Docs<br />File search tool | [File search tool](https://platform.openai.com/docs/guides/tools-file-search) | [Retrieval customization](https://platform.openai.com/docs/guides/tools-file-search#retrieval-customization) | [Metadata filtering](https://platform.openai.com/docs/guides/tools-file-search#metadata-filtering) | [Supported files](https://platform.openai.com/docs/guides/tools-file-search#supported-files) |                                                              |
 | Open AI API                        | [Responses](https://platform.openai.com/docs/api-reference/responses) | [Completions](https://platform.openai.com/docs/api-reference/chat) | [Files](https://platform.openai.com/docs/api-reference/files) | [Vector stores](https://platform.openai.com/docs/api-reference/vector-stores) | [Assistants](https://platform.openai.com/docs/api-reference/assistants) |
 | Open AI API                        | [Evals](https://platform.openai.com/docs/api-reference/evals) | [Graders](https://platform.openai.com/docs/api-reference/graders) |                                                              |                                                              |                                                              |
-| Open AI Python                     | [OpenAI Agents SDK](https://openai.github.io/openai-agents-python/) |                                                              |                                                              |                                                              |                                                              |
+| Open AI Python                     | [REST API Docs](https://platform.openai.com/docs/api-reference/introduction) | [Python REST API GitHub](https://github.com/openai/openai-python) | [Python Agents SDK Docs](https://openai.github.io/openai-agents-python/) | [Python Agents SDK GitHub](https://github.com/openai/openai-agents-python) |                                                              |
+| Open AI JS / TS                    | [REST API Docs](https://platform.openai.com/docs/api-reference/introduction) | [JS REST API GitHub](https://github.com/openai/openai-node)  | [JS Agents SDK Docs](https://openai.github.io/openai-agents-js/) | [JS Agents SDK GitHub](https://github.com/openai/openai-agents-js) |                                                              |
 
 #### Requirements / Packages
 
@@ -53,7 +59,10 @@ A collection of tools and demo code to test, operate and maintain Open AI and Az
 │   ├── test_cleanup_operations.py             # Cleanup of files and vector stores
 │   ├── test_file_listings.py                  # Listing of assistants, vector stores, files, unused files, etc. 
 │   ├── test_rag_operations.py                 # RAG (Retrieval Augmented Generation) tests
-│   └── test_search_operations.py              # Search API tests
+│   ├── test_search_operations.py              # Search API tests
+│   ├── test_eval_operations.py                # Evaluation operations for RAG responses with scoring
+│   ├── test_file_crawling.py                  # File crawling utilities and data classes
+│   └── replicate_vector_store_content.py      # Vector store content replication tool
 ├── RAGFiles/                                  # Directory for RAG-related test files
 ├── .env                                       # Environment configuration for Azure and OpenAI
 ├── env-file-template.txt                      # Template for .env file (documented in AzureOpenAI.md)
@@ -354,6 +363,9 @@ client.files.delete(file.id)
 Functions and classes used to prepare test vector store and files:
 
 - Function `create_test_vector_store_with_files` - Creates a vector store and uploads files from the specified folder to it. Handles retries and verifies file processing completion.
+- Function `create_test_vector_store_from_folder_path` - Creates a vector store and uploads files from a folder path. Wrapper function that collects files and creates vector store.
+- Function `collect_files_from_folder_path` - Recursively collects files from a folder path with metadata and file information.
+- Function `build_test_vector_store_by_adding_collected_files` - Builds a vector store by adding collected files with retry logic and status verification.
 - Function `extract_and_add_metadata_to_vector_store_using_responses_api` - Extracts metadata from files and re-adds files with more metadata to the vector store using the responses API. Handles retries and verifies file processing completion.
 - Function `extract_and_add_metadata_to_vector_store_using_assistants_api` - Extracts metadata from files using the assistants API. Creates and deletes a temporary assistant to extract metadata.
 - Class `TestVectorStoreWithFiles` - Container class that holds information about a test vector store and its associated files. Used to pass vector store and file information between test functions.
@@ -395,6 +407,89 @@ Creates a vector store and uploads files from the specified folder to it. Handle
   Verifying all vector store files are 'completed'...
     Waiting 10 seconds ( 1 / 10 ) for 1 files to complete...
 [2025-06-09 12:39:55] END: Create test vector store with files (17 secs).
+```
+
+### Function: `create_test_vector_store_from_folder_path`
+
+Creates a vector store and uploads files from a folder path. This is a wrapper function that combines file collection and vector store creation.
+
+**Location:** `test_rag_operations.py`
+
+**Parameters:** 
+- `client`: The OpenAI client instance to use for API calls
+- `vector_store_name`: Name of the vector store to create
+- `folder_path`: Path to folder containing files to upload
+- `include_subfolders`: Boolean. Whether to include files from subdirectories (default: True)
+- `include_file_types`: List of file extensions to include (e.g., ["txt", "pdf"]) or ["*"] for all files (default: ["*"])
+
+**Returns:**
+- `TestVectorStoreWithFiles` object containing the vector store and file information
+
+**Example output:**
+```
+[2025-06-09 12:39:37] START: Create test vector store from folder path...
+[2025-06-09 12:39:55] END: Create test vector store from folder path (18 secs).
+```
+
+### Function: `collect_files_from_folder_path`
+
+Recursively collects files from a folder path and returns file information with metadata.
+
+**Location:** `test_rag_operations.py`
+
+**Parameters:** 
+- `folder_path`: Path to the folder to collect files from
+- `include_subfolders`: Boolean. Whether to include files from subdirectories (default: True)
+- `include_file_types`: List of file extensions to include (e.g., ["txt", "pdf"]) or ["*"] for all files (default: ["*"])
+
+**Returns:**
+- Tuple of `(files, files_metadata, files_data)` where:
+  - `files`: List of file paths
+  - `files_metadata`: Dictionary with metadata for each file (source, filename, file_type)
+  - `files_data`: Dictionary with additional file data (file_size, last_modified)
+
+**Example metadata:**
+```python
+files_metadata = {
+  '/path/to/file.pdf': {
+    'source': '/path/to/file.pdf',
+    'filename': 'file.pdf',
+    'file_type': 'pdf'
+  }
+}
+files_data = {
+  '/path/to/file.pdf': {
+    'file_size': 1024000,
+    'last_modified': '2025-06-09'
+  }
+}
+```
+
+### Function: `build_test_vector_store_by_adding_collected_files`
+
+Builds a vector store by adding collected files with retry logic and status verification.
+
+**Location:** `test_rag_operations.py`
+
+**Parameters:** 
+- `client`: The OpenAI client instance to use for API calls
+- `vector_store`: The vector store object to add files to
+- `files`: List of file paths to upload
+- `files_metadata`: Dictionary of metadata for each file
+- `files_data`: Dictionary of additional file data
+- `log_headers`: Boolean. Whether to log function headers (default: True)
+
+**Returns:**
+- Updated `TestVectorStoreWithFiles` object
+
+**Example output:**
+```
+[2025-06-09 12:40:00] START: Update test vector store from collected files...
+  Uploading 2 files...
+    [ 1 / 2 ] OK: Upload, OK: Add to vector store ID=file-abc123 'file1.pdf'
+    [ 2 / 2 ] OK: Upload, OK: Add to vector store ID=file-def456 'file2.md'
+  Verifying all vector store files are 'completed'...
+[2025-06-09 12:40:15] END: Update test vector store from collected files (15 secs).
 ```
 
 ### Function: `test_rag_operations_using_responses_api`
@@ -670,6 +765,8 @@ Functions used to clean up vector stores, files, and assistants in OpenAI/Azure 
 - Function `delete_failed_and_unused_files` – Deletes all files with status 'failed' or 'cancelled', and all assistant files not used by any vector store.
 - Function `delete_vector_store_by_name` – Deletes a vector store by name, and optionally deletes its files.
 - Function `delete_assistant_by_name` – Deletes an assistant by name.
+- Function `delete_files_in_all_vector_stores_by_filename` – Deletes files with specific filenames across all vector stores.
+- Function `delete_files_in_vector_store_by_file_type` – Deletes all files of specified file types from a specific vector store.
 
 ### Function: `delete_expired_vector_stores`
 
@@ -740,12 +837,13 @@ client.vector_stores.delete(vs.id)
 
 ### Function: `delete_failed_and_unused_files`
 
-Deletes all files with status 'failed', 'cancelled', and all assistant files not used by any vector store.
+Deletes all files with status 'failed', 'cancelled', and all assistant files not used by any vector store. Can be run in dry-run mode to preview what would be deleted.
 
 **Location:** `openai_backendtools.py`
 
 **Parameters:**
 - `client`: The OpenAI client instance to use for API calls
+- `dry_run`: Optional. If True, shows what would be deleted without actually deleting (default: False)
 
 **Example output:**
 ```
@@ -803,4 +901,474 @@ Deletes an assistant by name.
 **Open AI SDK code**
 ```python
 client.beta.assistants.delete(assistant.id)
+```
+
+### Function: `delete_vector_store_by_id`
+
+Deletes a vector store by ID. If `delete_files=True`, also deletes all files in the vector store.
+
+**Location:** `openai_backendtools.py`
+
+**Parameters:**
+- `client`: The OpenAI client instance to use for API calls
+- `vector_store_id`: ID of the vector store to delete
+- `delete_files`: Boolean. If `True`, also deletes all files in the vector store
+
+**Example output:**
+```
+  Deleting vector store 'test_vector_store' (ID=vs_123 , 2025-06-01 09:00:00)...
+    [ 1 / 2 ] Deleting file ID=assistant-6jDZApFZjEUQmJGeYYDHXG (2025-06-01 09:01:00)...
+    [ 2 / 2 ] Deleting file ID=assistant-67H79XiWBoV1XusDKJexxx (2025-06-01 09:02:00)...
+```
+
+**Open AI SDK code**
+```python
+client.files.delete(file_id=file.id)         # (when delete_files=True)
+client.vector_stores.delete(vs.id)
+```
+
+### Function: `get_vector_store_by_name`
+
+Retrieves a vector store by name.
+
+**Location:** `openai_backendtools.py`
+
+**Parameters:**
+- `client`: The OpenAI client instance to use for API calls
+- `vector_store_name`: Name of the vector store to retrieve
+
+**Returns:**
+- Vector store object if found, `None` otherwise
+
+**Open AI SDK code**
+```python
+vector_stores = get_all_vector_stores(client)
+for vector_store in vector_stores:
+  if vector_store.name == vector_store_name:
+    return vector_store
+return None
+```
+
+### Function: `get_vector_store_by_id`
+
+Retrieves a vector store by ID.
+
+**Location:** `openai_backendtools.py`
+
+**Parameters:**
+- `client`: The OpenAI client instance to use for API calls
+- `vector_store_id`: ID of the vector store to retrieve
+
+**Returns:**
+- Vector store object if found, `None` otherwise
+
+**Open AI SDK code**
+```python
+vector_stores = get_all_vector_stores(client)
+for vector_store in vector_stores:
+  if vector_store.id == vector_store_id:
+    return vector_store
+return None
+```
+
+### Function: `get_vector_store_files`
+
+Retrieves all files in a vector store with pagination support. Accepts vector store object, name, or ID.
+
+**Location:** `openai_backendtools.py`
+
+**Parameters:**
+- `client`: The OpenAI client instance to use for API calls
+- `vector_store`: Vector store object, name, or ID
+
+**Returns:**
+- List of files in the vector store with added attributes (index, vector_store_id, vector_store_name)
+
+**Open AI SDK code**
+```python
+first_page = client.vector_stores.files.list(vector_store_id=vector_store_id)
+has_more = hasattr(first_page, 'has_more') and first_page.has_more
+# ... pagination logic ...
+while has_more:
+  last_id = current_page.data[-1].id if current_page.data else None
+  next_page = client.vector_stores.files.list(vector_store_id=vector_store_id, after=last_id)
+```
+
+### Function: `delete_failed_vector_store_files`
+
+Deletes all files with status 'failed' or 'cancelled' from a specific vector store.
+
+**Location:** `openai_backendtools.py`
+
+**Parameters:**
+- `client`: The OpenAI client instance to use for API calls
+- `vector_store_id`: ID of the vector store to clean up
+
+**Example output:**
+```
+[ 1 / 3 ] Deleting file ID=file_123 with status='failed'...
+[ 2 / 3 ] Deleting file ID=file_456 with status='cancelled'...
+[ 3 / 3 ] Deleting file ID=file_789 with status='failed'...
+```
+
+**Open AI SDK code**
+```python
+client.vector_stores.files.delete(vector_store_id=vector_store_id, file_id=file.id)
+client.files.delete(file_id=file.id)
+```
+
+### Function: `delete_files_in_all_vector_stores_by_filename`
+
+Deletes files with specific filenames across all vector stores. Can optionally delete the files from global storage as well.
+
+**Location:** `openai_backendtools.py`
+
+**Parameters:**
+- `client`: The OpenAI client instance to use for API calls
+- `filenames`: List of filenames or single filename string to delete
+- `dry_run`: Optional. If True, shows what would be deleted without actually deleting (default: False)
+- `delete_files_in_global_storage`: Optional. If True, also deletes files from global storage (default: False)
+
+**Returns:**
+- Dictionary of found files organized by filename
+
+**Example output:**
+```
+[2025-06-29 14:50:56] START: Delete files in all vector stores by filename...
+  Loading all files...
+  Loading all files used by vector stores...
+  2 of 2 files found.
+  Deleting files from vector stores...
+    [ 1 / 2 ] Removing file 'ArilenaDrovikCV.pdf'...
+      Deleting file 'ArilenaDrovikCV.pdf' (ID=assistant-3oA4Zpi6aqpHpV4nm7kBhE) from vector store 'Batch01' (ID=vs_1iPc8a1Js8QqAW55Ld4BK1MY)
+    [ 2 / 2 ] Removing file 'Publications1.md'...
+      Deleting file 'Publications1.md' (ID=assistant-KLoF22efMNnSXFS7xC514E) from vector store 'Batch01' (ID=vs_1iPc8a1Js8QqAW55Ld4BK1MY)
+  Deleting files from global storage...
+    [ 1 / 2 ] Deleting file 'ArilenaDrovikCV.pdf' (ID=assistant-KLoF22efMNnSXFS7xC514E) from global storage...
+    [ 2 / 2 ] Deleting file 'Publications1.md' (ID=assistant-3oA4Zpi6aqpHpV4nm7kBhE) from global storage...
+[2025-06-29 14:51:02] END: Delete files in all vector stores by filename (5 secs).
+```
+
+**Open AI SDK code**
+```python
+# Remove file from vector stores
+client.vector_stores.files.delete(vector_store_id=vector_store_id, file_id=file_id)
+# Delete file from global storage
+client.files.delete(file_id=file_id)
+```
+
+### Function: `delete_files_in_vector_store_by_file_type`
+
+Deletes all files of specified file types from a specific vector store. Can optionally delete the files from global storage as well.
+
+**Location:** `openai_backendtools.py`
+
+**Parameters:**
+- `client`: The OpenAI client instance to use for API calls
+- `vector_store_id`: ID of the vector store to clean up
+- `file_types`: List of file extensions to delete (e.g., ["pdf", "md"])
+- `dry_run`: Optional. If True, shows what would be deleted without actually deleting (default: False)
+- `delete_files_in_global_storage`: Optional. If True, also deletes files from global storage (default: False)
+
+**Returns:**
+- List of found files that match the specified file types
+
+**Example output:**
+```
+[2025-06-29 14:54:28] START: Delete files in vector stores by file type...
+  Loading files of vector store 'Batch01' (ID=vs_1iPc8a1Js8QqAW55Ld4BK1MY)...
+  Loading global files...
+  Deleting 2 files from vector store...
+    [ 1 / 2 ] File 'Publications1.md'...
+      Removing file 'Publications1.md' (ID=assistant-KLoF22efMNnSXFS7xC514E) from vector store 'Batch01' (ID=vs_1iPc8a1Js8QqAW55Ld4BK1MY)...
+      Deleting file 'Publications1.md' (ID=assistant-KLoF22efMNnSXFS7xC514E) from global files...
+    [ 2 / 2 ] File 'ArilenaDrovikCV.pdf'...
+      Removing file 'ArilenaDrovikCV.pdf' (ID=assistant-3oA4Zpi6aqpHpV4nm7kBhE) from vector store 'Batch01' (ID=vs_1iPc8a1Js8QqAW55Ld4BK1MY)...
+      Deleting file 'ArilenaDrovikCV.pdf' (ID=assistant-3oA4Zpi6aqpHpV4nm7kBhE) from global files...
+[2025-06-29 14:54:33] END: Delete files in vector stores by file type (5 secs).
+```
+
+**Open AI SDK code**
+```python
+# Remove file from vector store
+client.vector_stores.files.delete(vector_store_id=vector_store_id, file_id=file_id)
+# Delete file from global storage
+client.files.delete(file_id=file_id)
+```
+
+### Demo Script: `test_cleanup_operations.py`
+
+Example usage of the cleanup functions with safety features.
+
+**Location:** `test_cleanup_operations.py`
+
+**Example usage:**
+```python
+  delete_expired_vector_stores(client)
+
+  delete_duplicate_files_in_vector_stores(client)
+
+  # USE WITH CAUTION! This will delete all non-assistant vector stores older than 10 days. Including those used in current conversations.
+  # -------------------------------------------------------------------------------------------------
+  delete_vector_stores_not_used_by_assistants(client, datetime.datetime.now() - datetime.timedelta(days=10))
+
+  # Run this after you have deleted vector stores to remove unused files
+  # -------------------------------------------------------------------------------------------------
+  delete_failed_and_unused_files(client)
+
+  delete_vector_store_by_name(client, "test_vector_store", True)
+  # client.vector_stores.delete("vs_67b0ca3da1fc819186fc791943fce1a3")
+  # delete_vector_store_by_id(client, "vs_67b0ca3da1fc819186fc791943fce1a3", True)
+
+  delete_assistant_by_name(client, "test_assistant")
+  # client.beta.assistants.delete("asst_bImGzB7olqLzO177ydqvRQNE")
+
+  # USE WITH CAUTION! This will delete all stored files. Including those used in current conversations.
+  # -------------------------------------------------------------------------------------------------
+  # delete_files(client, get_all_files(client))
+
+  # Example: Find files with specific filename across all vector stores
+  # -------------------------------------------------------------------------------------------------
+  filename = "ArilenaDrovikCV.pdf"
+  files_found = find_files_in_all_vector_stores_by_filename(client, [filename])
+  print("-"*140)
+  print(f"{len(files_found)} files found with name '{filename}':")
+  if filename in files_found and files_found[filename]:
+    for file in files_found[filename]:
+      for vs in file['vector_stores']:
+        print(f"  Vector store '{vs['vector_store_name']}' (ID={vs['vector_store_id']}), File ID={file['file_id']}")
+  else:
+    print("No files found.")
+  print("-"*140)
+
+  # USE WITH CAUTION! This will delete all files with specific filename across all vector stores. 
+  # If dry_run is True, it will only show what files would be deleted.
+  # If delete_files_in_global_storage is True, it will also delete the files from global storage.
+  # -------------------------------------------------------------------------------------------------
+  filenames = ["ArilenaDrovikCV.pdf", "Publications1.md"]
+  files_deleted = delete_files_in_all_vector_stores_by_filename(client, filenames, dry_run=True, delete_files_in_global_storage=True)
+
+  # USE WITH CAUTION! This will delete all files of a specific type in a vector store.
+  # If dry_run is True, it will only show what files would be deleted.
+  # If delete_files_in_global_storage is True, it will also delete the files from global storage.
+  # -------------------------------------------------------------------------------------------------
+  vector_store_id = "vs_1iPc8a1Js8QqAW55Ld4BK1MY"
+  files_deleted = delete_files_in_vector_store_by_file_type(client, vector_store_id, ["pdf","md"], dry_run=True, delete_files_in_global_storage=True)
+```
+
+
+
+## 6. Vector Store Replication
+
+Functions used to replicate content between vector stores:
+- Function `replicate_vector_store_content` – Replicates files from source vector stores to target vector stores.
+- Function `print_vector_store_replication_summary` – Prints a summary of replication operations.
+
+### Function: `replicate_vector_store_content`
+
+Replicates files from source vector stores to target vector stores. Can add missing files and optionally remove extra files from target stores.
+
+**Location:** `openai_backendtools.py`
+
+**Parameters:**
+- `client`: The OpenAI client instance to use for API calls
+- `source_vector_store_ids`: List of source vector store IDs (or single ID as string)
+- `target_vector_store_ids`: List of target vector store IDs (or single ID as string)
+- `remove_target_files_not_in_sources`: Boolean. If `True`, removes files from target that don't exist in sources
+
+**Returns:**
+- Tuple of `(added_file_ids, removed_file_ids, errors)` where each is a list corresponding to target stores
+
+**Example output:**
+```
+[2025-06-09 18:00:00] START: Replicate vector store content...
+  [ 1 / 1 ] Replicating to target vector store 'target_store' (ID=vs_target123)...
+    Adding file ID=file_abc to target vector store...
+    Adding file ID=file_def to target vector store...
+[2025-06-09 18:00:15] END: Replicate vector store content (15 secs).
+```
+
+**Open AI SDK code**
+```python
+# Get files from source vector stores
+source_files = get_vector_store_files(client, source_vs_id)
+# Get files from target vector store
+target_files = get_vector_store_files(client, target_vs_id)
+# Add missing files to target
+client.vector_stores.files.create(vector_store_id=target_vs_id, file_id=file_id)
+# Remove extra files from target (if enabled)
+client.vector_stores.files.delete(vector_store_id=target_vs_id, file_id=file_id)
+```
+
+### Function: `print_vector_store_replication_summary`
+
+Prints a summary of vector store replication operations.
+
+**Location:** `openai_backendtools.py`
+
+**Parameters:**
+- `target_vector_store_ids`: List of target vector store IDs
+- `added_file_ids`: List of lists containing added file IDs for each target store
+- `removed_file_ids`: List of lists containing removed file IDs for each target store
+- `errors`: List of lists containing error tuples for each target store
+
+**Example output:**
+```
+Replication summary:
+  [ 1 / 1 ] Vector store ID=vs_target123: 2 files added, 0 removed, 0 errors.
+```
+
+### Demo Script: `replicate_vector_store_content.py`
+
+Demonstrates vector store content replication functionality.
+
+**Location:** `replicate_vector_store_content.py`
+
+**Example usage:**
+```python
+source_vector_store_ids = ["vs_source1", "vs_source2", "vs_source3"]
+target_vector_store_ids = ["vs_target1"]
+added_files, removed_files, errors = replicate_vector_store_content(client, source_vector_store_ids, target_vector_store_ids)
+print_vector_store_replication_summary(target_vector_store_ids, added_files, removed_files, errors)
+```
+
+
+
+## 7. Evaluation Operations
+
+Functions and classes used to evaluate RAG (Retrieval Augmented Generation) responses using judge models with scoring:
+- Function `get_answers_from_model_and_return_items` – Gets RAG answers from model for evaluation items.
+- Function `test_prompt_evaluation_and_return_items` – Evaluates answers using judge model with scoring.
+- Class `EvalParams` – Container class for evaluation parameters.
+
+### Class: `EvalParams`
+
+Container class for evaluation parameters used in RAG evaluation tests.
+
+**Location:** `test_eval_operations.py`
+
+**Fields:**
+- `vector_store_name`: Name of the vector store to use for evaluation
+- `folder_path`: Path to folder containing files to upload for evaluation
+- `model`: Name of the model to evaluate (e.g., "gpt-4o-mini")
+- `items`: List of evaluation items with input/reference pairs
+- `judge_model_name`: Name of the judge model for scoring (e.g., "gpt-4o-mini")
+- `min_score`: Minimum score threshold for considering an answer correct
+
+### Function: `get_answers_from_model_and_return_items`
+
+Gets RAG answers from the model for evaluation items and stores them in the items.
+
+**Location:** `test_eval_operations.py`
+
+**Parameters:**
+- `client`: The OpenAI client instance to use for API calls
+- `vector_store_id`: ID of the vector store to search
+- `model`: Name of the model to use for generating answers
+- `items`: List of evaluation items with input queries
+
+**Returns:**
+- Updated items list with `output_text` added to each item
+
+**Example output:**
+```
+[2025-06-09 12:00:00] START: Get answers from model and add in items...
+  [ 1 / 3 ] Query: Who is Arilena Drovik?
+    Response: Arilena Drovik is a highly accomplished molecular biologist and geneticist...
+  [ 2 / 3 ] Query: What was the title of Arilena Drovik's dissertation?
+    Response: The title of Arilena Drovik's dissertation was "Epigenetic Modulators of Gene...
+[2025-06-09 12:00:15] END: Get answers from model and add in items (15 secs).
+```
+
+**Open AI SDK code**
+```python
+response = client.responses.create(
+  model=model,
+  input=input,
+  tools=[{ "type": "file_search", "vector_store_ids": [vector_store_id] }],
+  temperature=0
+)
+output_text = response.output_text
+```
+
+### Function: `test_prompt_evaluation_and_return_items`
+
+Evaluates answers using a judge model with scoring based on a prompt template. Uses a 0-5 scoring system.
+
+**Location:** `test_eval_operations.py`
+
+**Parameters:**
+- `client`: The OpenAI client instance to use for API calls
+- `items`: List of evaluation items with input, reference, and output_text
+- `prompt_template`: Template for evaluation prompt with placeholders [REFERENCE] and [MODEL_OUTPUT]
+- `judge_model_name`: Name of the judge model to use for scoring
+
+**Returns:**
+- Updated items list with `score` and `rationale` added to each item
+
+**Example output:**
+```
+[2025-06-09 12:01:00] START: Test prompt evaluation and add in items...
+  [ 1 / 3 ] Evaluating: Who is Arilena Drovik?
+    Reference    : Arilena Drovik is molecular biologist and geneticist. She is a Professor...
+    Model output : Arilena Drovik is a highly accomplished molecular biologist and geneticist...
+    Score: 5
+    - Fact: 3 of 3 correctly matched. 1 additional facts in output.
+    - Conclusion: 2 of 2 correctly matched. 0 additional conclusions in output.
+    - Terminology: 0 deviating terms found.
+    - Organization: matched
+[2025-06-09 12:01:30] END: Test prompt evaluation and add in items (30 secs).
+```
+
+**Scoring Rubric:**
+- **Score 0**: No matching facts or conclusions; terminology and structure unrelated
+- **Score 1**: Uses similar terminology but no correct facts or conclusions
+- **Score 2**: At least one fact present but misrepresented; no correct conclusions
+- **Score 3**: Some facts and conclusions correct, but significant gaps; structure and terminology differ
+- **Score 4**: All facts and conclusions correct; minor deviations in terminology or organization
+- **Score 5**: Perfect alignment: all facts and conclusions correct; matching terminology and structure
+
+**Open AI SDK code**
+```python
+response = client.chat.completions.create(
+  model=judge_model_name,
+  messages=[{"role": "user", "content": prompt}],
+  response_format={"type": "json_object"},
+  temperature=0
+)
+evaluation = json.loads(response.choices[0].message.content)
+score = evaluation.get('score')
+rationale = evaluation.get('rationale')
+```
+
+### Demo Script: `test_eval_operations.py`
+
+Demonstrates RAG evaluation functionality with scoring and grading.
+
+**Location:** `test_eval_operations.py`
+
+**Example evaluation results:**
+```
+Prompt evaluation result: 2 of 3 answers correct (67%). Average score: 4.33 (87%).
+```
+
+**Example usage:**
+```python
+params = EvalParams(
+  vector_store_name="test_vector_store",
+  folder_path="./RAGFiles/Batch01",
+  model="gpt-4o-mini",
+  items=evaluation_items,
+  judge_model_name="gpt-4o-mini",
+  min_score=4
+)
+
+# Step 1: Create vector store and upload files
+test_vector_store_with_files = create_test_vector_store_from_folder_path(client, params.vector_store_name, params.folder_path)
+
+# Step 2: Get answers from model
+params.items = get_answers_from_model_and_return_items(client, test_vector_store_with_files.vector_store.id, params.model, params.items)
+
+# Step 3: Evaluate answers using judge model
+params.items = test_prompt_evaluation_and_return_items(client, params.items, answer_rating_prompt_template, params.judge_model_name)
 ```
