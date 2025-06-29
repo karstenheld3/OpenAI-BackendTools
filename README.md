@@ -1236,6 +1236,8 @@ print_vector_store_replication_summary(target_vector_store_ids, added_files, rem
 
 ## 7. Evaluation Operations
 
+![Demo](./assets/OpenAI-BackendTools05.gif)
+
 Functions and classes used to evaluate RAG (Retrieval Augmented Generation) responses using judge models with scoring:
 - Function `get_answers_from_model_and_return_items` – Gets RAG answers from model for evaluation items.
 - Function `test_prompt_evaluation_and_return_items` – Evaluates answers using judge model with scoring.
