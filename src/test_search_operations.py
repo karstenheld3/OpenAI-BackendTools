@@ -353,12 +353,12 @@ def test_file_search_functionalities(client, vector_store_id, params):
 
 if __name__ == '__main__':
   openai_service_type = os.getenv("OPENAI_SERVICE_TYPE", "openai")
-  azure_openai_use_key_authentication = os.getenv("AZURE_OPENAI_USE_KEY_AUTHENTICATION", "false").lower() in ['true']
-  openai_model_name = os.getenv("AZURE_OPENAI_MODEL_DEPLOYMENT_NAME", "gpt-4o-mini")
-
   if openai_service_type == "openai":
+    eval_model_name = "gpt-4o-mini"
     client = create_openai_client()
   elif openai_service_type == "azure_openai":
+    eval_model_name = os.getenv("AZURE_OPENAI_MODEL_DEPLOYMENT_NAME", "gpt-4o-mini")
+    azure_openai_use_key_authentication = os.getenv("AZURE_OPENAI_USE_KEY_AUTHENTICATION", "false").lower() in ['true']
     client = create_azure_openai_client(azure_openai_use_key_authentication)
 
   @dataclass
@@ -378,7 +378,7 @@ if __name__ == '__main__':
 
   # Step 2: Extract metadata from files and re-add files with more metadata to the vector store
   # extract_and_add_metadata_to_vector_store_using_assistants_api(client, test_vector_store_with_files, metadata_extraction_prompt_template, openai_model_name, True)
-  extract_and_add_metadata_to_vector_store_using_responses_api(client, test_vector_store_with_files, metadata_extraction_prompt_template, openai_model_name, True)
+  extract_and_add_metadata_to_vector_store_using_responses_api(client, test_vector_store_with_files, metadata_extraction_prompt_template, eval_model_name, True)
 
   print("\n")
 

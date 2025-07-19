@@ -277,13 +277,12 @@ def test_rag_operations_using_responses_api(client, test_vector_store_with_files
 
 if __name__ == '__main__':
   openai_service_type = os.getenv("OPENAI_SERVICE_TYPE", "openai")
-  azure_openai_use_key_authentication = os.getenv("AZURE_OPENAI_USE_KEY_AUTHENTICATION", "false").lower() in ['true']
-  # In Azure, the model name is the deployment name
-  openai_model_name = os.getenv("AZURE_OPENAI_MODEL_DEPLOYMENT_NAME", "gpt-4o-mini")
-
   if openai_service_type == "openai":
+    eval_model_name = "gpt-4o-mini"
     client = create_openai_client()
   elif openai_service_type == "azure_openai":
+    eval_model_name = os.getenv("AZURE_OPENAI_MODEL_DEPLOYMENT_NAME", "gpt-4o-mini")
+    azure_openai_use_key_authentication = os.getenv("AZURE_OPENAI_USE_KEY_AUTHENTICATION", "false").lower() in ['true']
     client = create_azure_openai_client(azure_openai_use_key_authentication)
 
   @dataclass
@@ -299,7 +298,7 @@ if __name__ == '__main__':
   test_vector_store_with_files = create_test_vector_store_from_folder_path(client, params.vector_store_name, params.folder_path)
 
   # Step 2: Test file RAG functionalities
-  test_rag_operations_using_responses_api(client, test_vector_store_with_files, openai_model_name, params.query)
+  test_rag_operations_using_responses_api(client, test_vector_store_with_files, eval_model_name, params.query)
 
   print("-"*140)
 

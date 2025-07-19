@@ -91,6 +91,7 @@ AZURE_TENANT_ID=aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa
 AZURE_CLIENT_ID=bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb
 AZURE_CLIENT_SECRET=xxxxxxxxxxxxxxxxxxxxxx
 AZURE_OPENAI_MODEL_DEPLOYMENT_NAME=gpt-4o-mini
+AZURE_OPENAI_EVAL_MODEL_DEPLOYMENT_NAME=gpt-4o
 AZURE_OPENAI_API_VERSION=2025-04-01-preview
 ```
 
