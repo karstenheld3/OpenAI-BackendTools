@@ -2,14 +2,38 @@ from dataclasses import dataclass
 from dotenv import load_dotenv
 from openai_backendtools import *
 from test_rag_operations import *
-import time
 import json
 import os
-import datetime
+import numpy as np
 
 load_dotenv()
 
-answer_rating_prompt_template = """
+# A very simple judge model prompt
+judge_model_prompt_template_1 = """
+You are an expert evaluator for a QA system. Compare the generated model output to the reference answer. Score on a 1-5 scale where:
+1 = completely incorrect, 3 = partially correct, 5 = completely correct
+Also explain your reasoning. Return exactly:
+
+```json
+{
+  "score": <0-5>,
+  "rationale": [ "<reasoning>" ]
+}
+```
+
+Reference answer:
+<reference>
+[REFERENCE]
+</reference>
+
+Model output:
+<model_output>
+[MODEL_OUTPUT]
+</model_output>
+"""
+
+# A detailed judge model prompt using multiple criteria
+judge_model_prompt_template_2 = """
 ## Task
 
 You are an evaluator. Compare a GPT model's output (`output_text`) against a reference answer (`reference`) and assign an **integer score from 0 to 5**. Also provide a brief bullet-point rationale tying each point in your score back to the criteria below.
@@ -54,6 +78,7 @@ Return exactly:
     "Organization: matched/mismatched"
   ]
 }
+```
 
 ### 4. Example
 
@@ -98,7 +123,7 @@ Batch01 = [
 
 # Gets all answers for the 'input' in all items using response models and stores them in 'output_text' of each items
 def get_answers_from_model_and_return_items(client, vector_store_id, model, items):
-  function_name = 'Get answers from model and add in items'
+  function_name = 'Get answers from model and add to items'
   start_time = log_function_header(function_name)
 
   for idx, item in enumerate(items, 1):
@@ -117,8 +142,8 @@ def get_answers_from_model_and_return_items(client, vector_store_id, model, item
   log_function_footer(function_name, start_time)
   return items
 
-# Gets evaluations for all items using the provided prompt template and adds score and rationale to each item
-def test_prompt_evaluation_and_return_items(client, items, prompt_template, judge_model_name):
+# Gets scores for all items using the provided prompt template and add score and rationale to each item
+def score_answers_using_judge_model_and_return_items(client, items, prompt_template, judge_model_name):
   function_name = 'Evaluate answers and add scores in items'
   start_time = log_function_header(function_name)
 
@@ -153,7 +178,7 @@ def test_prompt_evaluation_and_return_items(client, items, prompt_template, judg
       
       print(f"    Score: {score}")
       for r in rationale:
-        print(f"    - {r}")
+        print(f"    - {truncate_string(r,120) }")
     except json.JSONDecodeError:
       print(f"    Error: Could not parse JSON response: {response.choices[0].message.content}")
       item['item']['score'] = None
@@ -161,6 +186,75 @@ def test_prompt_evaluation_and_return_items(client, items, prompt_template, judg
 
   log_function_footer(function_name, start_time)
   return items
+
+def score_answers_using_cosine_similarity_and_return_items(client, items, embedding_model="text-embedding-3-small"):
+  function_name = 'Evaluate answers using cosine similarity'
+  start_time = log_function_header(function_name)
+
+  def cosine_similarity(a, b):
+    return float(np.dot(a, b) / (np.linalg.norm(a) * np.linalg.norm(b)))
+
+  def embed_text(text):
+    response = retry_on_openai_errors(lambda: client.embeddings.create(
+      model=embedding_model,
+      input=[text]
+    ), indentation=4)
+    return response.data[0].embedding
+
+  for idx, item in enumerate(items, 1):
+    input = item['item']['input']
+    reference = item['item']['reference']
+    output_text = item['item'].get('output_text', '')
+    print(f"  [ {idx} / {len(items)} ] Query: {truncate_string(input.replace('\n', ' '),120)}")
+    print(f"    Reference    : {truncate_string(reference.replace('\n', ' '),100)}")
+    print(f"    Model output : {truncate_string(output_text.replace('\n', ' '),100)}")
+
+    try:
+      # Get embeddings and calculate similarity
+      reference_embedding = embed_text(reference)
+      output_embedding = embed_text(output_text)
+      similarity = cosine_similarity(reference_embedding, output_embedding)
+      
+      # Convert similarity score (0-1) to evaluation score (1-5)
+      score = int(round(similarity * 4)) + 1
+      
+      # Add score and rationale to the item
+      item['item']['score'] = score
+      item['item']['rationale'] = [f"Cosine similarity: {similarity:.3f} (mapped to score {score})"] 
+      
+      print(f"    Score: {score} (similarity: {similarity:.3f})")
+    except Exception as e:
+      print(f"    Error: Could not calculate embedding similarity: {str(e)}")
+      item['item']['score'] = None
+      item['item']['rationale'] = [f"Error: {str(e)}"]
+
+  log_function_footer(function_name, start_time)
+  return items
+
+def summarize_item_scores(items, min_score: int, indentation: int = 0) -> str:
+  # calculate average score
+  scores = [item['item']['score'] for item in items if item['item'].get('score') is not None]
+  # count all answers as correct that have min_score
+  questions_answered_correctly = sum(1 for item in items if item['item'].get('score', 0) >= min_score)
+  questions_answered_correctly_percent = questions_answered_correctly / len(items)
+  average_score = sum(scores) / len(scores) if scores else 0
+  average_score_in_percent = average_score / 5
+  indentation_string = " " * indentation
+  
+  max_chars_question = 20; max_chars_reference = 30; max_chars_answer = 30; max_chars_score = 6
+  # Create output table
+  table = "\n" + indentation_string + f"{'Question':{max_chars_question}} | {'Reference':{max_chars_reference}} | {'Answer':{max_chars_answer}} | {'Score':<{max_chars_score}}\n"
+  table += indentation_string + "-" * (max_chars_question+max_chars_reference+max_chars_answer+max_chars_score+10)
+  
+  for item in items:
+    question = item['item']['input'][:max_chars_question]
+    reference = item['item']['reference'][:max_chars_reference]
+    answer = item['item'].get('output_text', '')[:max_chars_answer]
+    score = item['item'].get('score', 'N/A')
+    table += "\n" + indentation_string + f"{question:{max_chars_question}} | {reference:{max_chars_reference}} | {answer:{max_chars_answer}} | {score:<{max_chars_score}}"
+  
+  summary = indentation_string + f"{questions_answered_correctly} of {len(items)} answers correct ({questions_answered_correctly_percent:.0%}). Average score: {average_score:.2f} ({average_score_in_percent:.0%})."
+  return  summary + table
 
 # ----------------------------------------------------- END: Tests ------------------------------------------------------------
 
@@ -178,7 +272,7 @@ if __name__ == '__main__':
     client = create_azure_openai_client(azure_openai_use_key_authentication)
 
   @dataclass
-  class EvalParams: vector_store_name: str; folder_path: str; model: str; items: list; judge_model_name: str; min_score: int
+  class EvalParams: vector_store_name: str; folder_path: str; model: str; items: list; judge_model_name: str; embedding_model: str; min_score: int
 
   params = EvalParams(
     vector_store_name="test_vector_store",
@@ -186,35 +280,34 @@ if __name__ == '__main__':
     model = openai_model_name,
     items = Batch01,
     judge_model_name = openai_model_name,
+    embedding_model="text-embedding-3-small",
     min_score=4
   )
 
+  delete_vector_store_by_name(client, params.vector_store_name, True)
   print("-"*140)
-
   # Step 1: Create vector store by uploading files
   test_vector_store_with_files = create_test_vector_store_from_folder_path(client,params.vector_store_name, params.folder_path)
-
   print("-"*140)
-
   # Step 2: Get answers from model and store in items
   params.items = get_answers_from_model_and_return_items(client, test_vector_store_with_files.vector_store.id, params.model, params.items)
-
   print("-"*140)
 
-  # Step 3: Test eval using graders
-  params.items = test_prompt_evaluation_and_return_items(client, params.items, answer_rating_prompt_template, params.judge_model_name)
-
-  # calculate average score
-  scores = [item['item']['score'] for item in params.items if item['item'].get('score') is not None]
-
+  # Step 3C: Test eval using embedding and cosine similarity
+  params.items = score_answers_using_cosine_similarity_and_return_items(client, params.items, params.embedding_model)
+  print("."*100 + f"\n    Evaluation results using embedding with '{params.embedding_model} and cosine similiarity:")
+  print(summarize_item_scores(params.items, params.min_score, 4))
   print("-"*140)
-  # count all answers as correct that have min_score
-  questions_answered_correctly = sum(1 for item in params.items if item['item'].get('score', 0) >= params.min_score)
-  questions_answered_correctly_percent = questions_answered_correctly / len(params.items)
-  average_score = sum(scores) / len(scores) if scores else 0
-  average_score_in_percent =  average_score / 5
-  print(f"Prompt evaluation result: {questions_answered_correctly} of {len(params.items)} answers correct ({questions_answered_correctly_percent:.0%}). Average score: {average_score:.2f} ({average_score_in_percent:.0%}).")
 
+  # Step 3A: Test eval using judge model with prompt template 1
+  params.items = score_answers_using_judge_model_and_return_items(client, params.items, judge_model_prompt_template_1, params.judge_model_name)
+  print("."*100 + f"\n    Evaluation results using judge model '{params.judge_model_name}' with prompt template 1:")
+  print(summarize_item_scores(params.items, params.min_score, 4) )
+  print("-"*140)
+  # Step 3B: Test eval using judge model with prompt template 2
+  params.items = score_answers_using_judge_model_and_return_items(client, params.items, judge_model_prompt_template_2, params.judge_model_name)
+  print("."*100 + f"\n    Evaluation results using judge model '{params.judge_model_name}' with prompt template 2:")
+  print(summarize_item_scores(params.items, params.min_score, 4))
   print("-"*140)
 
   # Step 4: Delete vector store including all files
