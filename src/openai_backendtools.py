@@ -165,13 +165,11 @@ def get_all_files(client):
   
   # If only one page, add 'index' and return
   if not has_more:
-    for idx, file in enumerate(first_page.data):
-      setattr(file, 'index', idx)
+    for idx, file in enumerate(first_page.data): setattr(file, 'index', idx)
     return first_page.data
   
   # Initialize collection with first page data
   all_files = list(first_page.data)
-  page_count = 1
   total_files = len(all_files)
   
   # Continue fetching pages while there are more results
@@ -180,15 +178,13 @@ def get_all_files(client):
     last_id = current_page.data[-1].id if current_page.data else None    
     if not last_id: break
     next_page = client.files.list(after=last_id)
-    page_count += 1
     all_files.extend(next_page.data)
     total_files += len(next_page.data)
     current_page = next_page
     has_more = hasattr(next_page, 'has_more') and next_page.has_more
   
   # Add index attribute to all files
-  for idx, file in enumerate(all_files):
-    setattr(file, 'index', idx)
+  for idx, file in enumerate(all_files): setattr(file, 'index', idx)
     
   return all_files
 
@@ -202,10 +198,11 @@ def truncate_row_data(row_data, max_widths, except_indices=[0,1]):
     truncated_data.append(cell_str)
   return truncated_data
 
-def format_files_table(file_list_page):
-  # file_list_page: SyncCursorPage[FileObject] or similar
-  files = getattr(file_list_page, 'data', None)
-  if files is None: files = file_list_page  # fallback if just a list
+def format_files_table(file_list):
+  # Check if input object is raw API response and if yes, extract list of items
+  # file_list: either SyncCursorPage[FileObject] or list of FileObject
+  files = getattr(file_list, 'data', None)
+  if files is None: files = file_list  # fallback if just a list
   if not files or len(files) == 0: return '(No files found)'
   
   # Define headers and max column widths
@@ -338,7 +335,6 @@ def get_all_assistants(client):
   
   # Initialize collection with first page data
   all_assistants = list(first_page.data)
-  page_count = 1
   total_assistants = len(all_assistants)
   
   # Continue fetching pages while there are more results
@@ -347,7 +343,6 @@ def get_all_assistants(client):
     last_id = current_page.data[-1].id if current_page.data else None    
     if not last_id: break
     next_page = client.beta.assistants.list(after=last_id)
-    page_count += 1
     all_assistants.extend(next_page.data)
     total_assistants += len(next_page.data)
     current_page = next_page
@@ -430,13 +425,11 @@ def get_all_vector_stores(client):
   
   # If only one page, add 'index' and return
   if not has_more:
-    for idx, vector_store in enumerate(first_page.data):
-      setattr(vector_store, 'index', idx)
+    for idx, vector_store in enumerate(first_page.data): setattr(vector_store, 'index', idx)
     return first_page.data
   
   # Initialize collection with first page data
   all_vector_stores = list(first_page.data)
-  page_count = 1
   total_vector_stores = len(all_vector_stores)
   
   # Continue fetching pages while there are more results
@@ -445,15 +438,13 @@ def get_all_vector_stores(client):
     last_id = current_page.data[-1].id if current_page.data else None    
     if not last_id: break
     next_page = client.vector_stores.list(after=last_id)
-    page_count += 1
     all_vector_stores.extend(next_page.data)
     total_vector_stores += len(next_page.data)
     current_page = next_page
     has_more = hasattr(next_page, 'has_more') and next_page.has_more
   
   # Add index attribute to all vector stores
-  for idx, vector_store in enumerate(all_vector_stores):
-    setattr(vector_store, 'index', idx)
+  for idx, vector_store in enumerate(all_vector_stores): setattr(vector_store, 'index', idx)
     
   return all_vector_stores
 
@@ -536,8 +527,9 @@ def get_vector_store_file_metrics(vector_store):
   return metrics
 
 # Format a list of vector stores into a table
-def format_vector_stores_table(vector_store_list):
-  # vector_store_list: SyncCursorPage[VectorStoreObject] or similar
+def format_evals_table(vector_store_list):
+  # Check if input object is raw API response and if yes, extract list of items
+  # vector_store_list: SyncCursorPage[VectorStoreObject] or list of VectorStoreObject
   vector_stores = getattr(vector_store_list, 'data', None)
   if vector_stores is None: vector_stores = vector_store_list  # fallback if just a list
   if not vector_stores: return '(No vector stores found)'
@@ -925,7 +917,7 @@ def delete_vector_store_by_id(client, vector_store_id, delete_files=False):
   else:
     print(f"  Vector store id='{vector_store_id}' not found.")
 
-def delete_vector_store_by_name(client, name, delete_files=False):
+def delete_eval_by_name(client, name, delete_files=False):
   vector_stores = get_all_vector_stores(client)
   vs = [vs for vs in vector_stores if vs.name == name]
   if vs:
@@ -941,7 +933,6 @@ def delete_vector_store_by_name(client, name, delete_files=False):
     client.vector_stores.delete(vs.id)
   else:
     print(f"  Vector store '{name}' not found.")
-
   
 # ----------------------------------------------------- END: Vector stores ----------------------------------------------------
 
@@ -1005,6 +996,161 @@ def format_search_results_table(search_results):
 
 
 # ----------------------------------------------------- END: Search results ---------------------------------------------------
+
+# ----------------------------------------------------- START: Evals ----------------------------------------------------------
+
+# Gets all evals from Azure OpenAI with pagination handling.
+# Adds a zero-based 'index' attribute to each eval.
+def get_all_evals(client):
+  first_page = client.evals.list()
+  has_more = hasattr(first_page, 'has_more') and first_page.has_more
+  
+  # If only one page, add 'index' and return
+  if not has_more:
+    for idx, eval in enumerate(first_page.data): setattr(eval, 'index', idx)
+    return first_page.data
+  
+  # Initialize collection with first page data
+  all_evals = list(first_page.data)
+  total_evals = len(all_evals)
+  
+  # Continue fetching pages while there are more results
+  current_page = first_page
+  while has_more:
+    last_id = current_page.data[-1].id if current_page.data else None
+    if not last_id: break
+    next_page = client.evals.list(after=last_id)
+    all_evals.extend(next_page.data)
+    total_evals += len(next_page.data)
+    current_page = next_page
+    has_more = hasattr(next_page, 'has_more') and next_page.has_more
+  
+  # Add index attribute to all evals
+  for idx, eval in enumerate(all_evals): setattr(eval, 'index', idx)
+    
+  return all_evals
+
+# Creates a table containing 'Name' , 'Data source' (type), 'Tests' (number), 'Test Types' (comma separated), 'Created' (timestamp) 
+def format_evals_table(evals_list):
+  # Check if input object is raw API response and if yes, extract list of items
+  # evals_list: either SyncCursorPage[EvalObject] or list of EvalObject
+  evals = getattr(evals_list, 'data', None)
+  if evals is None: evals = evals_list  # fallback if just a list
+  if not evals: return '(No evals found)'
+  
+  # Define headers and max column widths
+  headers = ['Name', 'ID', 'Data Source', 'Tests', 'Test Types', 'Created']
+  max_widths = [60, 40, 20, 8, 50, 19]  # Maximum width for each column
+  
+  # Initialize column widths with header lengths, but respect max widths
+  col_widths = [min(len(h), max_widths[i]) for i, h in enumerate(headers)]
+  
+  rows = []
+  for item in evals:
+    # Get test types from testing criteria
+    test_types = []
+    testing_criteria = getattr(item, 'testing_criteria', [])
+    for criterion in testing_criteria:
+      test_type = getattr(criterion, 'type', None)
+      if test_type and test_type not in test_types:
+        test_types.append(test_type)
+    
+    # Get data source type
+    data_source_config = getattr(item, 'data_source_config', {})
+    data_source_type = getattr(data_source_config, 'type', '...')
+    
+    # Prepare row data
+    name = getattr(item, 'name', '')
+    id = getattr(item, 'id', '')
+    if name and len(name) > max_widths[0]:
+      name = name[:max_widths[0]-3] + '...'
+    
+    row_data = [
+      name,
+      id,
+      data_source_type,
+      str(len(testing_criteria)),
+      ', '.join(test_types) if test_types else '...',
+      format_timestamp(getattr(item, 'created_at', ''))
+    ]
+    
+    # Truncate cells and update column widths
+    row_data = truncate_row_data(row_data, max_widths)
+    for i, cell_str in enumerate(row_data):
+      col_widths[i] = min(max(col_widths[i], len(cell_str)), max_widths[i])
+    
+    rows.append(row_data)
+  
+  # Build table as string
+  lines = []
+  header_line = ' | '.join(h.ljust(col_widths[i]) for i, h in enumerate(headers))
+  sep_line = ' | '.join('-'*col_widths[i] for i in range(len(headers)))
+  lines.append(header_line)
+  lines.append(sep_line)
+  
+  for row in rows:
+    lines.append(' | '.join(str(cell).ljust(col_widths[i]) for i, cell in enumerate(row)))
+  
+  return '\n'.join(lines)
+
+# Gets all eval runs from Azure OpenAI with pagination handling.
+def get_all_eval_runs(client, eval_id):
+  runs_page = client.evals.runs.list(eval_id=eval_id)
+  all_runs = list(runs_page.data)
+  
+  # Get additional pages if they exist
+  has_more = hasattr(runs_page, 'has_more') and runs_page.has_more
+  current_page = runs_page
+  
+  while has_more:
+    last_id = current_page.data[-1].id if current_page.data else None
+    if not last_id: break
+    
+    next_page = client.evals.runs.list(eval_id=eval_id, after=last_id)
+    all_runs.extend(next_page.data)
+    current_page = next_page
+    has_more = hasattr(next_page, 'has_more') and next_page.has_more
+  
+  # Add index and eval_id attributes to all runs
+  for idx, run in enumerate(all_runs):
+    setattr(run, 'index', idx)
+    setattr(run, 'eval_id', eval_id)
+  
+  return all_runs
+
+def delete_all_evals(client, dry_run=False):
+  function_name = 'Delete all evals'
+  start_time = log_function_header(function_name)
+
+  all_evals = get_all_evals(client)
+  for i, eval in enumerate(all_evals):
+    print(f"  [ {i+1} / {len(all_evals)} ] Deleting eval '{eval.name}' (ID={eval.id})...")
+    if dry_run: continue
+    try: client.evals.delete(eval_id=eval.id)
+    except Exception as e: print(f"    WARNING: Failed to delete '{eval.name}' (ID={eval.id}). Error: {str(e)}")
+
+  log_function_footer(function_name, start_time)
+
+def delete_eval_by_id(client, eval_id):
+  try:
+    print(f"  Deleting eval ID={eval_id}...")
+    response = client.evals.delete(eval_id=eval_id)
+    return response
+  except Exception as e:
+    print(f"  WARNING: Failed to delete eval ID={eval_id}. Error: {str(e)}")
+    return None
+
+def delete_eval_by_name(client, name):
+  evals = get_all_evals(client)
+  eval_list = [e for e in evals if e.name == name]
+  if eval_list:
+    eval_obj = eval_list[0]
+    print(f"  Deleting eval '{eval_obj.name}' (ID={eval_obj.id}, {format_timestamp(eval_obj.created_at)})...")
+    client.evals.delete(eval_obj.id)
+  else:
+    print(f"  Eval '{name}' not found.")
+
+# ----------------------------------------------------- END: Evals ------------------------------------------------------------
 
 
 # ----------------------------------------------------- START: Cleanup --------------------------------------------------------

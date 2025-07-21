@@ -28,13 +28,13 @@ def list_all_files(client):
   return all_files
 
 # Display the vector stores with top row showing total count and expired count
-def list_vector_stores(client):
+def list_evals(client):
   all_vector_stores = get_all_vector_stores(client)
   all_vector_stores_expired = [v for v in all_vector_stores if getattr(v, 'status', None) == 'expired']
   total_usage_bytes = sum([vs.usage_bytes for vs in all_vector_stores if hasattr(vs, 'usage_bytes')])
   print(f"Total vector stores: {len(all_vector_stores)} ({len(all_vector_stores_expired)} expired, {format_filesize(total_usage_bytes)} total storage)")
   print("-"*140)
-  print(format_vector_stores_table(truncate_list_if_too_long(all_vector_stores)))
+  print(format_evals_table(truncate_list_if_too_long(all_vector_stores)))
   print("\n")
   return all_vector_stores
   
@@ -92,6 +92,16 @@ def list_files_not_used_by_assistants(client, files_used_by_vector_stores):
   print(format_files_table(truncate_list_if_too_long(files_not_used_by_assistants)))
   print("\n")
   return files_not_used_by_assistants
+
+# Display all evals
+def list_evals(client):
+  all_evals = get_all_evals(client)
+  print(f"Evals: {len(all_evals)}")
+  print("-"*140)
+  print(format_evals_table(truncate_list_if_too_long(all_evals)))
+  print("\n")
+  return all_evals
+
 # ----------------------------------------------------- END: Listings ---------------------------------------------------------
 
 
@@ -104,7 +114,9 @@ if __name__ == '__main__':
   if openai_service_type == "openai": client = create_openai_client()
   elif openai_service_type == "azure_openai": client = create_azure_openai_client(azure_openai_use_key_authentication)
 
-  all_vector_stores = list_vector_stores(client)
+  all_files = list_all_files(client)
+
+  all_vector_stores = list_evals(client)
 
   all_assistants = list_assistants(client)
 
@@ -117,6 +129,8 @@ if __name__ == '__main__':
   files_used_by_assistants = list_files_used_by_assistants(client)
 
   list_files_not_used_by_assistants(client, files_used_by_vector_stores)
+
+  all_evals = list_evals(client)
 
 
 # ----------------------------------------------------- END: Main -------------------------------------------------------------

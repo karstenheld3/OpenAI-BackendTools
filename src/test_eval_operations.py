@@ -5,14 +5,15 @@ from test_rag_operations import *
 import json
 import os
 import numpy as np
+import re
 
 load_dotenv()
 
 # ----------------------------------------------------- START: Evals ----------------------------------------------------------
-# Item 01: FAIL - 0% correct
-# Item 02: FAIL - 20% correct, 1 similarity ("gene expression")
-# Item 03: FAIL - 60% correct, 1 incorrect fact (year "2012" instead of "2015")
-# Item 04: PASS - 100% correct, 1 additional fact ("at least three researchers")
+# Item 01: FAIL - 0% correct, score = 0 (completely unrelated, incorrect)
+# Item 02: FAIL - 20% correct, score = 1 (related but completely incorrect), 1 similarity ("gene expression")
+# Item 03: FAIL - 60% correct, score = 3 (partially correct), 1 incorrect fact (year "2012" instead of "2015")
+# Item 04: PASS - 100% correct, score = 5 (correct), 1 additional fact ("at least three researchers")
 # Expected result: 1 of 4 questions correctly answered, 25% correct
 Batch01 = [
   { "item" : {
@@ -49,30 +50,72 @@ Batch01 = [
   }
 ]
 
+# Items 01-04: FAIL - score = 0 (completely unrelated, incorrect)
+# Items 05-09: FAIL - score = 1 (related but completely incorrect)
+# Items 10-12: FAIL - score = 2 (at least 1 fact correct)
+# Items 13-16: FAIL - score = 3 (some facts correct, significant gaps)
+# Items 17-20: FAIL - score = 4 (facts correct but differences in terminology or organization)
+# Items 21-24: FAIL - score = 5 (correct in all aspects)
+
+Batch02 = [
+  { "item" : {"input": "What was the first Roman emperor's name?","reference": "Augustus","output_text": "" } }
+  ,{ "item" : {"input": "What was the first Roman emperor's name?","reference": "Augustus","output_text": "Bla Bla" } }
+  ,{ "item" : {"input": "What was the first Roman emperor's name?","reference": "Augustus","output_text": "August 12, 2001" } }
+  ,{ "item" : {"input": "What was the first Roman emperor's name?","reference": "Augustus","output_text": "Socrates" } }
+
+  ,{ "item" : {"input": "Spell out TL/DR without explainantion","reference": "Too Long / Didn't Read","output_text": "Long" } }
+  ,{ "item" : {"input": "Spell out TL/DR without explainantion","reference": "Too Long / Didn't Read","output_text": "Very Long" } }
+  ,{ "item" : {"input": "Spell out TL/DR without explainantion","reference": "Too Long / Didn't Read","output_text": "Can't Read" } }
+  ,{ "item" : {"input": "Spell out TL/DR without explainantion","reference": "Too Long / Didn't Read","output_text": "No time to read" } }
+
+  ,{ "item" : {"input": "Name Donald Duck's nephews as comma-separated text","reference": "Huey, Dewey, Louie","output_text": "Huey, Hank, Louis" } }
+  ,{ "item" : {"input": "Name Donald Duck's nephews as comma-separated text","reference": "Huey, Dewey, Louie","output_text": "Louie" } }
+  ,{ "item" : {"input": "Name Donald Duck's nephews as comma-separated text","reference": "Huey, Dewey, Louie","output_text": "Donald, Daisy, Dewey, Ronald" } }
+  ,{ "item" : {"input": "Name Donald Duck's nephews as comma-separated text","reference": "Huey, Dewey, Louie","output_text": "Huey Duck" } }
+
+  ,{ "item" : {"input": "What are the steps of the scientific method?","reference": "Making observations, forming a hypothesis, conducting experiments, and drawing conclusions.","output_text": "The scientific method starts by observing something, then doing an experiment and trying to make sense of the results." } }
+  ,{ "item" : {"input": "What are the steps of the scientific method?","reference": "Making observations, forming a hypothesis, conducting experiments, and drawing conclusions.","output_text": "Scientists begin with observations, test ideas, and then interpret what they've found." } }
+  ,{ "item" : {"input": "What are the steps of the scientific method?","reference": "Making observations, forming a hypothesis, conducting experiments, and drawing conclusions.","output_text": "The steps include observing, hypothesizing, and checking if your results match your guess." } }
+  ,{ "item" : {"input": "What are the steps of the scientific method?","reference": "Making observations, forming a hypothesis, conducting experiments, and drawing conclusions.","output_text": "Scientists look at something carefully, come up with an idea, and try it out to see what happens." } }
+
+  ,{ "item" : {"input": "How many countries signed the Abraham Accords in 2020?","reference": "Four countries signed Abraham Accords agreements during the calendar year 2020: the United Arab Emirates, Bahrain, Sudan, and Morocco.","output_text": "In 2020, Bahrain, the UAE, Morocco, and Sudan joined the Abraham Accords, making a total of four signatories that year." } }
+  ,{ "item" : {"input": "How many countries signed the Abraham Accords in 2020?","reference": "Four countries signed Abraham Accords agreements during the calendar year 2020: the United Arab Emirates, Bahrain, Sudan, and Morocco.","output_text": "The UAE, Sudan, Bahrain, and Morocco entered into normalization deals with Israel, signing the the Abraham Accords." } }
+  ,{ "item" : {"input": "How many countries signed the Abraham Accords in 2020?","reference": "Four countries signed Abraham Accords agreements during the calendar year 2020: the United Arab Emirates, Bahrain, Sudan, and Morocco.","output_text": "Four contries: United Arab Emirates and Bahrain — both signed the the Abraham Accords on September 15, 2020. Sudan in October 2020. Marocco signed it on December 22, 2020" } }
+  ,{ "item" : {"input": "How many countries signed the Abraham Accords in 2020?","reference": "Four countries signed Abraham Accords agreements during the calendar year 2020: the United Arab Emirates, Bahrain, Sudan, and Morocco.","output_text": "The Abraham Accords were signed in 2020 by Morocco, Bahrain, the UAE, and Sudan - bringing the total number of signatory nations that year to four." } }
+
+  ,{ "item" : {"input": "Give me the date of the Fukushima incident","reference": "2011-03-11","output_text": "2011-03-11" } }
+  ,{ "item" : {"input": "Give me the date of the Fukushima incident","reference": "2011-03-11","output_text": "March 11, 2011." } }
+  ,{ "item" : {"input": "Give me the date of the Fukushima incident","reference": "2011-03-11","output_text": "11th of March, 2011." } }
+  ,{ "item" : {"input": "Give me the date of the Fukushima incident","reference": "2011-03-11","output_text": "The Fukushima Daiichi nuclear disaster occurred on March 11, 2011." } }
+]
+
+
 # ----------------------------------------------------- END: Evals ------------------------------------------------------------
 
 # ----------------------------------------------------- START: Prompts --------------------------------------------------------
 # A very simple judge model prompt
 judge_model_prompt_template_1 = """
-You are an expert evaluator for a QA system. Compare the generated model output to the reference answer. Score on a 1-5 scale where:
-1 = completely incorrect, 3 = partially correct, 5 = completely correct
+You are an expert evaluator for a QA system. Compare the generated model output ('model_output' tag) to the reference answer ('reference' tag). Score on a 0-5 scale where:
+0 = completely unrelated and incorrect, 1 = related but completely incorrect, 3 = partially correct, 5 = completely correct
 Also explain your reasoning. Return exactly:
 
 ```json
 {
-  "score": <1-5>,
+  "score": <0-5>,
   "rationale": [ "<reasoning>" ]
 }
 ```
 
-Reference answer:
+<input>
+{{ item.input }}
+</input>
+
 <reference>
-[REFERENCE]
+{{ item.reference }}
 </reference>
 
-Model output:
 <model_output>
-[MODEL_OUTPUT]
+{{ item.output_text }}
 </model_output>
 """
 
@@ -134,16 +177,18 @@ Return exactly:
 - **Score 4:** The European Union has 27 member states, of which 8 do not use the Euro.
 - **Score 5:** The European Union has 27 member states, and 8 of them use their own national currencies instead of the Euro.
 
-### 5. Reference answer
+### 5. Data
+
+<input>
+{{ item.input }}
+</input>
 
 <reference>
-[REFERENCE]
+{{ item.reference }}
 </reference>
 
-### 6. Model output
-
 <model_output>
-[MODEL_OUTPUT]
+{{ item.output_text }}
 </model_output>
 """
 # ----------------------------------------------------- END: Prompts ----------------------------------------------------------
@@ -172,7 +217,7 @@ def get_answers_from_model_and_return_items(client, vector_store_id, model, item
   return items
 
 # Gets scores for all items using the provided prompt template and add score and rationale to each item
-def score_answers_using_judge_model_and_return_items(client, items, prompt_template, judge_model_name):
+def score_answers_using_judge_model_and_return_items(client, items, prompt_template, judge_model_name, remove_input_from_prompt: bool = False):
   function_name = 'Evaluate answers and add scores in items'
   start_time = log_function_header(function_name)
 
@@ -185,7 +230,13 @@ def score_answers_using_judge_model_and_return_items(client, items, prompt_templ
     print(f"    Model output : {truncate_string(output_text.replace('\n', ' '),100)}")
    
     # Replace placeholders in the prompt template
-    prompt = prompt_template.replace('[REFERENCE]', reference).replace('[MODEL_OUTPUT]', output_text)
+    prompt = re.sub(r'{{\s*item.reference\s*}}', reference, prompt_template)
+    prompt = re.sub(r'{{\s*item.output_text\s*}}', output_text, prompt)
+    if remove_input_from_prompt:
+      # remove tags <input></input> and everything in between
+      prompt = re.sub(r'<input>.*?</input>', '', prompt)
+    else:
+      prompt = re.sub(r'{{\s*item.input\s*}}', input, prompt)
     
     # Call the OpenAI API to evaluate the answer
     response = retry_on_openai_errors(lambda: client.chat.completions.create(
@@ -261,105 +312,105 @@ def score_answers_using_cosine_similarity_and_return_items(client, items, embedd
   return items
 
 
-def score_answers_using_score_model_grader_and_return_items(client, items, prompt_template, eval_model):
+def score_answers_using_score_model_grader_and_return_items(client, items, eval_name, prompt_template, eval_model, remove_input_from_prompt: bool, delete_eval_after_run: bool = False):
   function_name = 'Evaluate answers using score model grader'
   start_time = log_function_header(function_name)
 
+  # Reset 'score' and 'rationale' for each item
+  for item in items: item['item']['score'] = -1; item['item']['rationale'] = ""
+
+  if remove_input_from_prompt:
+    # remove tags <input></input> and everything in between
+    prompt_template = re.sub(r'<input>.*?</input>', '', prompt_template)
+
   # Create evaluation configuration with custom graders
+  # https://platform.openai.com/docs/api-reference/graders/score-model
   eval_cfg = client.evals.create(
-    name="answer_quality_evaluation",
+    name=eval_name,
     data_source_config={
-      "type": "custom",
-      "item_schema": {
-        "type": "object",
-        "properties": {
-          "input": {"type": "string"},
-          "reference": {"type": "string"},
-          "output_text": {"type": "string"}
-        },
-        "required": ["input", "reference", "output_text"]
+      "type": "custom"
+      ,"item_schema": {
+        "type": "object"
+        ,"properties": { "input": {"type": "string"}, "reference": {"type": "string"}, "output_text": {"type": "string"} }
+        ,"required": ["input", "reference", "output_text"]
       },
       "include_sample_schema": False
     },
     testing_criteria=[
       {
-        "type": "score_model",
-        "name": "Answer Quality Score",
-        "model": eval_model,
-        "input": [
-          {"role": "system", "content": "You are an expert evaluator. Your task is to evaluate the quality and accuracy of an answer compared to a reference answer."},
-          {"role": "user", "content": """
-            Question: {{ item.input }}
-            Reference Answer: {{ item.reference }}
-            Model Answer: {{ item.output_text }}
-            
-            Rate the answer on a scale of 1-5 where:
-            1: Completely incorrect or irrelevant
-            2: Mostly incorrect with some valid points
-            3: Partially correct with significant gaps
-            4: Mostly correct with minor issues
-            5: Perfectly correct and complete
-            
-            Respond with ONLY the score number.
-            """
-          }
-        ],
-        "range": [1, 5],
-        "pass_threshold": 4
+        "type": "score_model", "name": "Answer Quality Score", "model": eval_model
+        ,"sampling_params": { "temperature": 0 }
+        ,"input": [
+          {"role": "system", "content": "You are an expert evaluator. Your task is to evaluate the quality and accuracy of an answer compared to a reference answer."}
+          ,{"role": "user", "content": prompt_template }
+        ]
+        ,"range": [0, 5], "pass_threshold": 4
       }
     ]
   )
 
-  # Prepare evaluation data
-  eval_data = [{
-    "input": item['item']['input'],
-    "reference": item['item']['reference'],
-    "output_text": item['item'].get('output_text', '')
-  } for item in items]
-
   # Create and run evaluation
   eval_run = client.evals.runs.create(
-    name="answer_quality_run",
+    name=eval_name.lower().replace(" ", "_") + "_run",
     eval_id=eval_cfg.id,
     data_source={
-      "type": "jsonl",
-      "source": {
-        "type": "file_content",
-        "content": eval_data
-      }
+      "type": "jsonl", "source": { "type": "file_content", "content": items }
     }
   )
   print(f"  Created evaluation run with ID: {eval_run.id}")
   print(f"  View results at: {eval_run.report_url}")
 
   # Poll for completion
-  attempts = 0; max_attempts = 20
+  attempts = 0; max_attempts = 20; sleep_time_in_seconds = 5
   while attempts < max_attempts:
     status = client.evals.runs.retrieve(eval_run.id, eval_id=eval_cfg.id).status
-    if status == "completed": 
-      print("  Evaluation completed.")
-      break
-    elif status == "failed": 
-      raise RuntimeError("Evaluation failed.")
+    if status == "completed": print("  Evaluation completed."); break
+    elif status == "failed": print("  ERROR: Evaluation failed.");
     else:
       attempts += 1
-      print(f"  Waiting for completion... (attempt {attempts} / {max_attempts})")
-      time.sleep(5)
+      print(f"  [ {attempts} / {max_attempts} ] Waiting {sleep_time_in_seconds} seconds for completion...")
+      time.sleep(sleep_time_in_seconds)
   
   if attempts >= max_attempts:
     raise TimeoutError(f"Evaluation timed out after {max_attempts} attempts")
 
   # Get results and update items
-  results = client.evals.runs.list_results(eval_run.id, eval_id=eval_cfg.id)
-  for idx, (item, result) in enumerate(zip(items, results.data), 1):
-    score = result.score
-    reasoning = result.reasoning or "No reasoning provided"
-    
-    item['item']['score'] = score
-    item['item']['rationale'] = [reasoning]
-    
-    print(f"  [ {idx} / {len(items)} ] Score: {score} ({reasoning})")
+  results = client.evals.runs.retrieve(eval_run.id, eval_id=eval_cfg.id)
+  total_count, passed_count, failed_count, errored_count = results.result_counts.total, results.result_counts.passed, results.result_counts.failed, results.result_counts.errored
+  run_output = client.evals.runs.output_items.list(run_id=eval_run.id, eval_id=eval_cfg.id)
+  output_items = run_output.data
 
+  # Run over all items and update their score and rationale from the evaluation results
+  for idx, item in enumerate(items, 1):
+    print(f"  [ {idx} / {len(items)} ] Query: {truncate_string(item['item']['input'].replace('\n', ' '),120)}")
+    # Find matching output item for this input item
+    output_item = next(o for o in output_items 
+                      if o.datasource_item['input'] == item['item']['input'] 
+                      and o.datasource_item['reference'] == item['item']['reference'])
+    # combined_item_status = output_item.status # 'fail' or 'pass'
+
+    # first result is the only one with 1 grader; if we have multiple graders, we will get multiple results
+    first_test_result = output_item.results[0]
+    # first_test_passed = first_test_result['passed'] # True or False
+    # Scores from 0.0 to 5.0 as defined in the testing criteria and the prompt 
+    score = first_test_result['score']
+    model_output_content = first_test_result['sample']['output'][0]['content']
+    
+    # Parse the JSON output and create rationale string from the steps, each providing a 'description' and a 'conclusion'
+    try:
+      output_json = json.loads(model_output_content)
+      steps = output_json.get('steps', [])
+      rationale = ["Conclusion: " + step['conclusion'].replace('\n', ' ') + " Description: " + step['description'].replace('\n', ' ') for step in steps]
+    except json.JSONDecodeError:
+      rationale = ["Error parsing model output"]
+    item['item']['score'] = score
+    item['item']['rationale'] = rationale
+    print(f"    Score: {score}")
+    for r in rationale:
+      print(f"    - {truncate_string(r, 140)}")
+
+  if delete_eval_after_run:
+    client.evals.delete(eval_id=eval_cfg.id)
 
   log_function_footer(function_name, start_time)
   return items
@@ -369,7 +420,7 @@ def summarize_item_scores(items, min_score: int, indentation: int = 0) -> str:
   # calculate average score
   scores = [item['item']['score'] for item in items if item['item'].get('score') is not None]
   # count all answers as correct that have min_score
-  questions_answered_correctly = sum(1 for item in items if item['item'].get('score', 0) >= min_score)
+  questions_answered_correctly = sum(1 for item in items if item['item'].get('score') is not None and item['item']['score'] >= min_score)
   questions_answered_correctly_percent = questions_answered_correctly / len(items)
   average_score = sum(scores) / len(scores) if scores else 0
   average_score_in_percent = average_score / 5
@@ -385,7 +436,7 @@ def summarize_item_scores(items, min_score: int, indentation: int = 0) -> str:
     reference = item['item']['reference'][:max_chars_reference]
     answer = item['item'].get('output_text', '')[:max_chars_answer]
     score = item['item'].get('score', 'N/A')
-    table += "\n" + indentation_string + f"{question:{max_chars_question}} | {reference:{max_chars_reference}} | {answer:{max_chars_answer}} | {score:<{max_chars_score}}"
+    table += "\n" + indentation_string + f"{question:{max_chars_question}} | {reference:{max_chars_reference}} | {answer:{max_chars_answer}} | {str(score):<{max_chars_score}}"
   
   summary = indentation_string + f"{questions_answered_correctly} of {len(items)} answers correct ({questions_answered_correctly_percent:.0%}). Average score: {average_score:.2f} ({average_score_in_percent:.0%})."
   return  summary + table
@@ -408,7 +459,7 @@ if __name__ == '__main__':
     client = create_azure_openai_client(azure_openai_use_key_authentication)
 
   @dataclass
-  class EvalParams: vector_store_name: str; folder_path: str; items: list; answer_model: str; eval_model: str; embedding_model: str; grader_name: str; min_score: int
+  class EvalParams: vector_store_name: str; folder_path: str; items: list; answer_model: str; eval_model: str; embedding_model: str; min_score: int; remove_input_from_prompt: bool
 
   params = EvalParams(
     vector_store_name="test_vector_store"
@@ -417,8 +468,11 @@ if __name__ == '__main__':
     ,answer_model = answer_model_name
     ,eval_model = eval_model_name
     ,embedding_model="text-embedding-3-small"
-    ,grader_name="modelgraded.correctness.v1"
     ,min_score=4
+    # By removing the input from the evaluation prompt templates we can demonstrate that evaluation needs the input to be able to provide a correct evaluation
+    # CORRECT   -> reference="Jupiter" vs. output="Zeus" for input="Who is the master of the olympian gods?"
+    # INCORRECT -> reference="Jupiter" vs. output="Zeus" for input="What is largest planet in our solar system?"
+    ,remove_input_from_prompt=False
   )
 
   # If use_predefined_model_outputs is set to False, create vector store and get answers from model
@@ -432,29 +486,33 @@ if __name__ == '__main__':
     params.items = get_answers_from_model_and_return_items(client, test_vector_store_with_files.vector_store.id, params.answer_model, params.items)
     print("-"*140) 
 
-  # Step 3D: Test eval using score model grader
-  params.items = score_answers_using_score_model_grader_and_return_items(client, params.items, judge_model_prompt_template_1, params.eval_model)
-  print("."*100 + f"\n    Evaluation results using score model grader:")
+  # Step 3A: Test eval using judge model with prompt template 1
+  params.items = score_answers_using_judge_model_and_return_items(client, params.items, judge_model_prompt_template_1, params.eval_model, params.remove_input_from_prompt)
+  print("."*100 + f"\n    Evaluation results using judge model '{params.eval_model}' with prompt template 1:")
+  print(summarize_item_scores(params.items, params.min_score, 4) )
+  print("-"*140)
+  # Step 3B: Test eval using judge model with prompt template 2
+  params.items = score_answers_using_judge_model_and_return_items(client, params.items, judge_model_prompt_template_2, params.eval_model, params.remove_input_from_prompt)
+  print("."*100 + f"\n    Evaluation results using judge model '{params.eval_model}' with prompt template 2:")
+  print(summarize_item_scores(params.items, params.min_score, 4))
+  print("-"*140)
+  # Step 3C: Test eval using embedding and cosine similarity
+  params.items = score_answers_using_cosine_similarity_and_return_items(client, params.items, params.embedding_model)
+  print("."*100 + f"\n    Evaluation results using embedding with '{params.embedding_model}' and cosine similiarity:")
+  print(summarize_item_scores(params.items, params.min_score, 4))
+  print("-"*140)
+  # Step 3D: Test eval using score model grader with prompt template 1
+  params.items = score_answers_using_score_model_grader_and_return_items(client, params.items, "test_eval", judge_model_prompt_template_1, params.eval_model,True)
+  print("."*100 + f"\n    Evaluation results using 'score_model' grader and prompt template 1:")
+  print(summarize_item_scores(params.items, params.min_score, 4))
+  print("-"*140)
+  # Step 3E: Test eval using score model grader with prompt template 2
+  params.items = score_answers_using_score_model_grader_and_return_items(client, params.items, "test_eval", judge_model_prompt_template_2, params.eval_model,True)
+  print("."*100 + f"\n    Evaluation results using 'score_model' grader and prompt template 2:")
   print(summarize_item_scores(params.items, params.min_score, 4))
   print("-"*140)
 
-  # # Step 3A: Test eval using judge model with prompt template 1
-  # params.items = score_answers_using_judge_model_and_return_items(client, params.items, judge_model_prompt_template_1, params.eval_model)
-  # print("."*100 + f"\n    Evaluation results using judge model '{params.eval_model}' with prompt template 1:")
-  # print(summarize_item_scores(params.items, params.min_score, 4) )
-  # print("-"*140)
-  # # Step 3B: Test eval using judge model with prompt template 2
-  # params.items = score_answers_using_judge_model_and_return_items(client, params.items, judge_model_prompt_template_2, params.eval_model)
-  # print("."*100 + f"\n    Evaluation results using judge model '{params.eval_model}' with prompt template 2:")
-  # print(summarize_item_scores(params.items, params.min_score, 4))
-  # print("-"*140)
-  # # Step 3C: Test eval using embedding and cosine similarity
-  # params.items = score_answers_using_cosine_similarity_and_return_items(client, params.items, params.embedding_model)
-  # print("."*100 + f"\n    Evaluation results using embedding with '{params.embedding_model} and cosine similiarity:")
-  # print(summarize_item_scores(params.items, params.min_score, 4))
-  # print("-"*140)
-
   # Step 4: Delete vector store including all files
-  if not use_predefined_model_outputs: delete_vector_store_by_name(client, params.vector_store_name, True)
+  if not use_predefined_model_outputs: delete_eval_by_name(client, params.vector_store_name, True)
 
 # ----------------------------------------------------- END: Main -------------------------------------------------------------

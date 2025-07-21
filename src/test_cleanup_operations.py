@@ -63,4 +63,14 @@ if __name__ == '__main__':
   # vector_store_id = "vs_1iPc8a1Js8QqAW55Ld4BK1MY"
   # files_deleted = delete_files_in_vector_store_by_file_type(client, vector_store_id, ["pdf","md"], dry_run=True, delete_files_in_global_storage=True)
 
+  # Deleting evals
+  # -------------------------------------------------------------------------------------------------
+  # delete_eval_by_name(client, "answer_quality_evaluation")
+  # delete_eval_by_id(client, "eval_687e23a614508191bf7abb6ee384e166")
+
+  # USE WITH CAUTION! This will delete all evals including all runs.
+  # If dry_run is True, it will only show what evals would be deleted.
+  # -------------------------------------------------------------------------------------------------
+  # delete_all_evals(client, dry_run=True)
+
 # ----------------------------------------------------- END: Main -------------------------------------------------------------

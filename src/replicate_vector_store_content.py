@@ -33,9 +33,9 @@ if __name__ == '__main__':
   print("-"*140)
 
   # Step 4: Delete vector stores and used files
-  delete_vector_store_by_name(client, target_vector_store_name)
-  delete_vector_store_by_name(client, source_1.vector_store.name, True)
-  delete_vector_store_by_name(client, source_2.vector_store.name, True)
+  delete_eval_by_name(client, target_vector_store_name)
+  delete_eval_by_name(client, source_1.vector_store.name, True)
+  delete_eval_by_name(client, source_2.vector_store.name, True)
   print("-"*140)
 
 # ----------------------------------------------------- END: Main -------------------------------------------------------------
