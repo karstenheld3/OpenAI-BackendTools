@@ -3,99 +3,157 @@ from dotenv import load_dotenv
 from openai_backendtools import *
 from test_rag_operations import *
 import json
-import os
+import time
+import math
 import numpy as np
 import re
 
 load_dotenv()
 
 # ----------------------------------------------------- START: Evals ----------------------------------------------------------
-# Item 01: FAIL - 0% correct, score = 0 (completely unrelated, incorrect)
-# Item 02: FAIL - 20% correct, score = 1 (related but completely incorrect), 1 similarity ("gene expression")
-# Item 03: FAIL - 60% correct, score = 3 (partially correct), 1 incorrect fact (year "2012" instead of "2015")
-# Item 04: PASS - 100% correct, score = 5 (correct), 1 additional fact ("at least three researchers")
+# Item 01: FAIL - score = 0 (completely unrelated, incorrect)
+# Item 02: FAIL - score = 1 (related but completely incorrect), 1 similarity ("gene expression")
+# Item 03: FAIL - score = 3 (partially correct)
+# Item 04: PASS - score = 5 (correct), 1 additional fact ("at least three researchers")
 # Expected result: 1 of 4 questions correctly answered, 25% correct
 Batch01 = [
-  { "item" : {
-    "input": "Who is Arilena Drovik?"
-    ,"reference": "Arilena Drovik is molecular biologist and geneticist. She is a Professor of Molecular Genetics and principal investigator at the Department of Molecular Biology, Lund University, Sweden. She holds a PhD in Molecular Biology from University of Cambridge, UK."
-    ,"output_text": "Arilena Drovik is a singer from Albania."
-    }
+  { "item": {
+      "input": "Who is Arilena Drovik?"
+      ,"reference": "Arilena Drovik is molecular biologist and geneticist. She is a Professor of Molecular Genetics and principal investigator at the Department of Molecular Biology, Lund University, Sweden. She holds a PhD in Molecular Biology from University of Cambridge, UK."
+      ,"output_text": "Arilena Drovik is a singer from Albania."
+      }
   }
-  ,{ "item" : {
+  ,{ "item": {
     "input": "What was the title of Arilena Drovik's dissertation?"
     ,"reference": "Epigenetic Modulators of Gene Expression in Early Development"
-    ,"output_text": "Structural Components of Gene Expression in Latent Mutations"
+    ,"output_text": "Epigenetic modulators, gene expression, and early development are major topics in biology."
     }
   }
-  ,{ "item" : {
+  ,{ "item": {
     "input": "What was the title of Arilena Drovik's first scientific publication and where and when was it published?"
     ,"reference": "The title of Arilena Drovik's first scientific article was 'CRISPR-Cas9: Revolutionizing Genome Editing in Modern Molecular Biology'. It was published by the 'The CRISPR Journal' in 2015."
-    ,"output_text": "The title of Arilena Drovik's first scientific article was 'CRISPR-Cas9: Revolutionizing Genome Editing in Modern Molecular Biology'. It was published by the 'The CRISPR Journal' in 2012."
+    ,"output_text": "The title of Arilena Drovik's first scientific article was 'CRISPR-Cas9: Revolutionizing Genome Editing in Modern Molecular Biology'. It was published in 2015."
     }
   }
-  ,{ "item" : {
+  ,{ "item": {
     "input": "With whom did Arilena Drovik collaborate on scientific publications?"
-    ,"reference":
-"""Between 2018 and 2020 Arilena Drovik collaborated with the following researchers:
-- L. Fernandez and H.S. Wong on the 2018 article 'CRISPR Screening for Essential Non-Coding Elements'
-- R. Novak and other authors on the 2020 article 'Next-Generation CRISPR Tools for Precision Genome Engineering'
-"""
-    ,"output_text":
-"""Arilena Drovik has collaborated with at least three researchers between 2018 and 2020:
-- on the article 'CRISPR Screening for Essential Non-Coding Elements', published in 2018, with H.S. Wong and L. Fernandez 
-- on the article 'Next-Generation CRISPR Tools for Precision Genome Engineering', published in 2020, with R. Novak and other authors
-"""
+    ,"reference": "Between 2018 and 2020 Arilena Drovik collaborated with the following researchers:\n- L. Fernandez and H.S. Wong on the 2018 article 'CRISPR Screening for Essential Non-Coding Elements'\n- R. Novak and other authors on the 2020 article 'Next-Generation CRISPR Tools for Precision Genome Engineering'\n"
+    ,"output_text": "Arilena Drovik has collaborated with at least three researchers between 2018 and 2020:\n- on the article 'CRISPR Screening for Essential Non-Coding Elements', published in 2018, with H.S. Wong and L. Fernandez \n- on the article 'Next-Generation CRISPR Tools for Precision Genome Engineering', published in 2020, with R. Novak and other authors\n"
     }
   }
 ]
 
-# Items 01-04: FAIL - score = 0 (completely unrelated, incorrect)
-# Items 05-09: FAIL - score = 1 (related but completely incorrect)
-# Items 10-12: FAIL - score = 2 (at least 1 fact correct)
-# Items 13-16: FAIL - score = 3 (some facts correct, significant gaps)
-# Items 17-20: FAIL - score = 4 (facts correct but differences in terminology or organization)
-# Items 21-24: FAIL - score = 5 (correct in all aspects)
+# How to create calibration test cases using Chat GPT 4.1:
+# -----------------------------------------------------------------
+# PROMPT:
+# I have the following AI evaluation prompt
+# <prompt>
+# [INSERT PROMPT HERE]
+# </prompt>
+# Here is the format of my test items 
+# <items>
+# { "item": { "input": "<question 1>", "reference": "<reference 1>", "output_text": "<output 2>" } }
+# ,{ "item": { "input": "<question 2>", "reference": "<reference 2>", "output_text": "<output 2>" } }
+# </items>
+# Construct 20 new test items with score = [SCORE]. Make a detailed plan first how to construct the calculation of the intended score.
+# Then add some variety so that not all test cases use the same score calculation scheme.
+# Choose questions that predictably lead to the used reference answers. 
+# Return items together in the given JSON format, but 1 item per line.
+# -----------------------------------------------------------------
+# 2) Copy items into source code
+# -----------------------------------------------------------------
+# 3) Then let the script run 3 times with params: items = Batch02, log_rationale=False, remove_input_from_prompt=False. Copy the console output.
+# -----------------------------------------------------------------
+# PROMPT:
+# I have these test items:
+# <items>
+# [INSERT ITEMS HERE]
+# </items>
+# Target score = [SCORE].
+# From these logs, drop all but 10 items that yield the most stable scores around the target score.
+# <log>
+# [INSERT LOG HERE]
+# </log>
+# Return the remaining items together in the given JSON format. One item per line.
+# Give an explainantion for the dropped items.
+# -----------------------------------------------------------------
+# 4) Copy final 10 items into code
 
+# Calibration batch with 60 test cases, with 10 cases for each score: 0, 1, 2, 3, 4, 5
 Batch02 = [
-  { "item" : {"input": "What was the first Roman emperor's name?","reference": "Augustus","output_text": "" } }
-  ,{ "item" : {"input": "What was the first Roman emperor's name?","reference": "Augustus","output_text": "Bla Bla" } }
-  ,{ "item" : {"input": "What was the first Roman emperor's name?","reference": "Augustus","output_text": "August 12, 2001" } }
-  ,{ "item" : {"input": "What was the first Roman emperor's name?","reference": "Augustus","output_text": "Socrates" } }
+  { "item": { "input": "Who was the first President of the United States?", "reference": "George Washington", "output_text": "Abraham Lincoln" } }
+  ,{ "item": { "input": "What is the chemical symbol for gold?", "reference": "Au", "output_text": "Silver" } }
+  ,{ "item": { "input": "Name the process by which plants make food using sunlight.", "reference": "Photosynthesis", "output_text": "Digestion" } }
+  ,{ "item": { "input": "Capital of Spain?", "reference": "Madrid.", "output_text": "Blue." } }
+  ,{ "item": { "input": "What is H2O?", "reference": "Water.", "output_text": "" } }
+  ,{ "item": { "input": "Largest mammal?", "reference": "Blue whale.", "output_text": "Elephant." } }
+  ,{ "item": { "input": "Main language of Brazil?", "reference": "Portuguese.", "output_text": "Spanish." } }
+  ,{ "item": { "input": "Currency of Japan?", "reference": "Yen.", "output_text": "Dollar." } }
+  ,{ "item": { "input": "Who painted the Mona Lisa?", "reference": "Leonardo da Vinci.", "output_text": "Picasso." } }
+  ,{ "item": { "input": "Chemical formula for salt?", "reference": "NaCl.", "output_text": "HCl." } }
 
-  ,{ "item" : {"input": "Spell out TL/DR without explainantion","reference": "Too Long / Didn't Read","output_text": "Long" } }
-  ,{ "item" : {"input": "Spell out TL/DR without explainantion","reference": "Too Long / Didn't Read","output_text": "Very Long" } }
-  ,{ "item" : {"input": "Spell out TL/DR without explainantion","reference": "Too Long / Didn't Read","output_text": "Can't Read" } }
-  ,{ "item" : {"input": "Spell out TL/DR without explainantion","reference": "Too Long / Didn't Read","output_text": "No time to read" } }
+  ,{ "item": { "input": "Explain five functions of the liver in the human body.", "reference": "The liver produces bile, metabolizes nutrients, detoxifies harmful substances, stores vitamins, and regulates blood clotting.", "output_text": "The liver produces bile." } }
+  ,{ "item": { "input": "Describe five major features of the Amazon rainforest.", "reference": "The Amazon rainforest is home to diverse wildlife, spans nine countries, influences global weather, contains the world's largest river by discharge, and is threatened by deforestation.", "output_text": "The Amazon rainforest is threatened by deforestation." } }
+  ,{ "item": { "input": "Name five functions performed by the roots of a plant.", "reference": "Roots absorb water, anchor the plant, store nutrients, transport minerals, and interact with soil microbes.", "output_text": "Roots anchor the plant." } }
+  ,{ "item": { "input": "Describe five notable aspects of Paris, France.", "reference": "Paris is the capital of France, is known for the Eiffel Tower, is a center of fashion, has a rich history, and hosts the Louvre Museum.", "output_text": "Paris is a center of fashion." } }
+  ,{ "item": { "input": "Describe five features and five societal effects of inflation.", "reference": "Inflation is characterized by rising prices, decreasing currency value, higher production costs, increased wages, and reduced purchasing power. Its effects include eroded savings, uncertainty in investment, wage-price spirals, redistribution of wealth, and social unrest.", "output_text": "Inflation is characterized by rising prices, leading to eroded savings." } }
+  ,{ "item": { "input": "State five symptoms and five possible complications of untreated diabetes.", "reference": "Symptoms of untreated diabetes include excessive thirst, frequent urination, blurred vision, fatigue, and slow wound healing. Complications can be nerve damage, kidney failure, heart disease, blindness, and infections.", "output_text": "Untreated diabetes can cause excessive thirst, leading to nerve damage." } }
+  ,{ "item": { "input": "List five colors of the rainbow.", "reference": "Red, orange, yellow, green, blue, indigo, and violet are the colors of the rainbow.", "output_text": "Red is a color of the rainbow." } }
+  ,{ "item": { "input": "List five elements essential for plant growth.", "reference": "Nitrogen, phosphorus, potassium, calcium, and magnesium are essential elements for plant growth.", "output_text": "Nitrogen is essential for plant growth." } }
+  ,{ "item": { "input": "State five causes of World War I.", "reference": "The main causes of World War I were nationalism, imperialism, militarism, alliances, and the assassination of Archduke Franz Ferdinand.", "output_text": "Nationalism was a cause of World War I." } }
+  ,{ "item": { "input": "Name five human senses.", "reference": "Sight, hearing, smell, taste, and touch are the five human senses.", "output_text": "Hearing is a human sense." } }
 
-  ,{ "item" : {"input": "Name Donald Duck's nephews as comma-separated text","reference": "Huey, Dewey, Louie","output_text": "Huey, Hank, Louis" } }
-  ,{ "item" : {"input": "Name Donald Duck's nephews as comma-separated text","reference": "Huey, Dewey, Louie","output_text": "Louie" } }
-  ,{ "item" : {"input": "Name Donald Duck's nephews as comma-separated text","reference": "Huey, Dewey, Louie","output_text": "Donald, Daisy, Dewey, Ronald" } }
-  ,{ "item" : {"input": "Name Donald Duck's nephews as comma-separated text","reference": "Huey, Dewey, Louie","output_text": "Huey Duck" } }
+  ,{ "item": { "input": "List five causes and five effects of deforestation.", "reference": "Deforestation is caused by logging, agriculture, urbanization, mining, and wildfires. Its effects include loss of biodiversity, increased greenhouse gases, soil erosion, disruption of water cycles, and climate change.", "output_text": "Logging and agriculture cause deforestation, leading to increased greenhouse gases and loss of biodiversity." } }
+  ,{ "item": { "input": "List five features and five global impacts of the Himalayas.", "reference": "The Himalayas feature the world's highest peaks, vast glaciers, deep valleys, unique biodiversity, and spiritual significance. Their global impacts include regulating climate, supplying freshwater, influencing monsoons, supporting livelihoods, and attracting tourism.", "output_text": "The Himalayas have the world's highest peaks and vast glaciers, influencing monsoons and attracting tourism." } }
+  ,{ "item": { "input": "Identify five motifs and five effects found in 'Macbeth.'", "reference": "'Macbeth' features motifs of blood, darkness, supernatural elements, prophecy, and ambition. Effects include psychological torment, moral deterioration, disrupted order, guilt, and fear.", "output_text": "'Macbeth' contains the motifs of blood and ambition, leading to psychological torment and guilt." } }
+  ,{ "item": { "input": "List five principles and five challenges of democracy.", "reference": "Principles of democracy include free elections, equality before the law, separation of powers, protection of rights, and majority rule. Challenges include voter apathy, corruption, misinformation, polarization, and inequality.", "output_text": "Free elections and equality before the law are democratic principles, with challenges such as voter apathy and corruption." } }
+  ,{ "item": { "input": "List five properties and five uses of carbon.", "reference": "Carbon is nonmetallic, forms four bonds, is found in all living things, exists in several allotropes, and conducts electricity (in graphite). Uses include steel production, filters, fuels, nanotechnology, and as a reducing agent.", "output_text": "Carbon is nonmetallic and forms four bonds; it is used in steel production and as a reducing agent." } }
+  ,{ "item": { "input": "Describe five causes and five effects of World War I.", "reference": "World War I was caused by nationalism, alliances, militarism, imperialism, and the assassination of Archduke Ferdinand. Effects included the Treaty of Versailles, the League of Nations, major loss of life, redrawn borders, and political upheaval.", "output_text": "World War I was caused by militarism and alliances, leading to the Treaty of Versailles and major loss of life." } }
+  ,{ "item": { "input": "Name four major greenhouse gases and four effects of global warming.", "reference": "Major greenhouse gases include carbon dioxide, methane, nitrous oxide, and fluorinated gases. Effects of global warming are sea level rise, more extreme weather, ocean acidification, and loss of biodiversity.", "output_text": "Carbon dioxide and methane are greenhouse gases; global warming causes sea level rise and more extreme weather." } }
+  ,{ "item": { "input": "List four properties of water and their significance.", "reference": "Properties of water include high specific heat (temperature regulation), solvent ability (dissolves substances), cohesion (surface tension), and density anomaly (ice floats).", "output_text": "Water has high specific heat and acts as a solvent." } }
+  ,{ "item": { "input": "List four major contributions of Isaac Newton.", "reference": "Newton contributed the laws of motion, law of universal gravitation, calculus, and work on optics.", "output_text": "Newton is known for the laws of motion and gravity." } }
+  ,{ "item": { "input": "Name four types of economic systems and a characteristic of each.", "reference": "Economic systems include capitalism (private ownership), socialism (public ownership), mixed economy (blend), and traditional economy (custom-based).", "output_text": "Capitalism and socialism are economic systems." } }
 
-  ,{ "item" : {"input": "What are the steps of the scientific method?","reference": "Making observations, forming a hypothesis, conducting experiments, and drawing conclusions.","output_text": "The scientific method starts by observing something, then doing an experiment and trying to make sense of the results." } }
-  ,{ "item" : {"input": "What are the steps of the scientific method?","reference": "Making observations, forming a hypothesis, conducting experiments, and drawing conclusions.","output_text": "Scientists begin with observations, test ideas, and then interpret what they've found." } }
-  ,{ "item" : {"input": "What are the steps of the scientific method?","reference": "Making observations, forming a hypothesis, conducting experiments, and drawing conclusions.","output_text": "The steps include observing, hypothesizing, and checking if your results match your guess." } }
-  ,{ "item" : {"input": "What are the steps of the scientific method?","reference": "Making observations, forming a hypothesis, conducting experiments, and drawing conclusions.","output_text": "Scientists look at something carefully, come up with an idea, and try it out to see what happens." } }
+  ,{ "item": { "input": "List five causes and five effects of ocean pollution.", "reference": "Ocean pollution is caused by plastic waste, oil spills, agricultural runoff, untreated sewage, and chemical dumping. Effects include harm to marine life, bioaccumulation of toxins, destruction of coral reefs, reduction in fish stocks, and contamination of seafood.", "output_text": "Ocean pollution is caused by plastic waste, oil spills, and agricultural runoff, which harm marine life, cause bioaccumulation of toxins, and destroy coral reefs." } }
+  ,{ "item": { "input": "Describe five events and five outcomes of the Industrial Revolution.", "reference": "Key events included the invention of the steam engine, the rise of factories, development of railways, urbanization, and mass production. Outcomes were economic growth, social inequality, child labor, environmental pollution, and advances in technology.", "output_text": "The invention of the steam engine, rise of factories, and mass production were events of the Industrial Revolution, leading to economic growth, child labor, and advances in technology." } }
+  ,{ "item": { "input": "List five amendments and five impacts of the U.S. Constitution's Bill of Rights.", "reference": "The Bill of Rights includes the First, Second, Fourth, Fifth, and Eighth Amendments. Impacts include protection of free speech, right to bear arms, prevention of unreasonable searches, due process of law, and ban on cruel punishment.", "output_text": "The First, Second, and Fifth Amendments are included in the Bill of Rights, which protects free speech, the right to bear arms, and ensures due process of law." } }
+  ,{ "item": { "input": "List five chemical properties and five uses of oxygen.", "reference": "Oxygen is highly reactive, supports combustion, forms oxides, is colorless, and is paramagnetic. Uses include respiration, medical therapy, welding, water treatment, and rocket fuel.", "output_text": "Oxygen supports combustion, forms oxides, and is colorless. It is used in respiration, medical therapy, and welding." } }
+  ,{ "item": { "input": "Describe five features and five roles of the Amazon River.", "reference": "The Amazon River is the second longest river, has the largest drainage basin, features extensive wetlands, is home to diverse species, and has seasonal flooding. Its roles include supporting transportation, providing water, influencing climate, sustaining fisheries, and enabling trade.", "output_text": "The Amazon River is the second longest river, has the largest drainage basin, and features extensive wetlands. It supports transportation, provides water, and sustains fisheries." } }
+  ,{ "item": { "input": "Describe five goals and five achievements of the United Nations.", "reference": "The UN's goals include promoting peace, protecting human rights, fostering development, combating climate change, and providing humanitarian aid. Achievements include peacekeeping missions, Universal Declaration of Human Rights, eradication of diseases, disaster relief, and sustainable development programs.", "output_text": "The United Nations promotes peace, fosters development, and provides humanitarian aid, and has carried out peacekeeping missions, disaster relief, and sustainable development programs." } }
+  ,{ "item": { "input": "State five major inventions and five impacts of the 20th century.", "reference": "Major inventions: airplane, computer, television, antibiotic drugs, and nuclear power. Impacts: increased global communication, longer life expectancy, rapid information exchange, new warfare, and energy transformation.", "output_text": "The airplane and the computer were major 20th-century inventions, leading to increased global communication, longer life expectancy, rapid information exchange, new warfare, and energy transformation." } }
+  ,{ "item": { "input": "List five forms of renewable energy and five challenges associated with their adoption.", "reference": "Forms: solar, wind, hydro, geothermal, tidal. Challenges: cost, intermittency, storage, land use, and grid integration.", "output_text": "Solar, wind, hydro, and geothermal are renewable energy forms, facing challenges like cost and intermittency." } }
+  ,{ "item": { "input": "Describe five major battles and five outcomes of World War II.", "reference": "Battles: Stalingrad, Midway, Normandy, El Alamein, Bulge. Outcomes: Allied victory, end of the Holocaust, UN formation, Europe's division, start of Cold War.", "output_text": "Stalingrad, Midway, and Normandy were major battles of World War II, which resulted in Allied victorly, end of the Holocaust, UN formation, Europe's division, and start of the Cold War." } }
+  ,{ "item": { "input": "List five composers and five genres they influenced.", "reference": "Composers: Bach, Mozart, Beethoven, Tchaikovsky, Stravinsky. Genres: Baroque, Classical, Romantic, Ballet, Modern.", "output_text": "Bach and Mozart were influential composers in Baroque and Classical music, along with Beethoven, who influenced Romantic, Ballet, and Modern genres." } }
 
-  ,{ "item" : {"input": "How many countries signed the Abraham Accords in 2020?","reference": "Four countries signed Abraham Accords agreements during the calendar year 2020: the United Arab Emirates, Bahrain, Sudan, and Morocco.","output_text": "In 2020, Bahrain, the UAE, Morocco, and Sudan joined the Abraham Accords, making a total of four signatories that year." } }
-  ,{ "item" : {"input": "How many countries signed the Abraham Accords in 2020?","reference": "Four countries signed Abraham Accords agreements during the calendar year 2020: the United Arab Emirates, Bahrain, Sudan, and Morocco.","output_text": "The UAE, Sudan, Bahrain, and Morocco entered into normalization deals with Israel, signing the the Abraham Accords." } }
-  ,{ "item" : {"input": "How many countries signed the Abraham Accords in 2020?","reference": "Four countries signed Abraham Accords agreements during the calendar year 2020: the United Arab Emirates, Bahrain, Sudan, and Morocco.","output_text": "Four contries: United Arab Emirates and Bahrain — both signed the the Abraham Accords on September 15, 2020. Sudan in October 2020. Marocco signed it on December 22, 2020" } }
-  ,{ "item" : {"input": "How many countries signed the Abraham Accords in 2020?","reference": "Four countries signed Abraham Accords agreements during the calendar year 2020: the United Arab Emirates, Bahrain, Sudan, and Morocco.","output_text": "The Abraham Accords were signed in 2020 by Morocco, Bahrain, the UAE, and Sudan - bringing the total number of signatory nations that year to four." } }
+  ,{ "item": { "input": "List five features and five benefits of a market economy.", "reference": "Features: competition, private property, voluntary exchange, consumer choice, limited government intervention. Benefits: efficiency, innovation, variety, lower prices, higher quality.", "output_text": "A market economy features competition, private property, voluntary exchange, and consumer choice. It results in efficiency, innovation, variety, and lower prices."} }
+  ,{ "item": { "input": "Describe five features and five global impacts of the Sahara Desert.", "reference": "Features: world's largest hot desert, vast sand dunes, extreme temperatures, scarce water, unique flora and fauna. Impacts: climate influence, migration patterns, trade routes, mineral resources, tourism.", "output_text": "The Sahara is the world's largest hot desert, with vast sand dunes, extreme temperatures, and scarce water. Its impacts include climate influence, migration patterns, trade routes, and mineral resources."} }
+  ,{ "item": { "input": "List five symptoms and five possible complications of untreated diabetes.", "reference": "Symptoms: excessive thirst, frequent urination, fatigue, blurred vision, slow wound healing. Complications: nerve damage, kidney failure, heart disease, blindness, infections.", "output_text": "Untreated diabetes can cause excessive thirst, frequent urination, fatigue, and blurred vision, and may lead to nerve damage, kidney failure, heart disease, and blindness."} }
+  ,{ "item": { "input": "Describe five features and five advantages of electric cars.", "reference": "Features: battery-powered, regenerative braking, silent operation, instant torque, remote monitoring. Advantages: zero emissions, lower operating cost, quiet ride, fast acceleration, reduced maintenance.", "output_text": "Electric cars have battery power, regenerative braking, silent operation, and instant torque. They offer zero emissions, lower operating cost, quiet ride, and fast acceleration."} }
+  ,{ "item": { "input": "List five ancient civilizations and five of their achievements.", "reference": "Civilizations: Sumer, Egypt, Indus Valley, China, Mesoamerica. Achievements: writing, monumental architecture, irrigation, mathematics, astronomy.", "output_text": "Sumer, Egypt, Indus Valley, and China were ancient civilizations. Their achievements included writing, monumental architecture, irrigation, and mathematics."} }
+  ,{ "item": { "input": "List five endangered species and five conservation efforts to protect them.", "reference": "Endangered species: Amur leopard, Sumatran orangutan, Javan rhino, Hawksbill turtle, Vaquita. Efforts: habitat protection, anti-poaching laws, captive breeding, pollution control, international agreements.", "output_text": "The Amur leopard, Sumatran orangutan, Javan rhino, and Hawksbill turtle are endangered species. Conservation efforts include habitat protection, anti-poaching laws, captive breeding, pollution control, and international agreements."} }
+  ,{ "item": { "input": "List five major world religions and four of their core beliefs.", "reference": "Religions: Christianity, Islam, Hinduism, Buddhism, Judaism. Core beliefs: monotheism, afterlife, compassion, ritual, reincarnation.", "output_text": "Christianity, Islam, Hinduism, Buddhism, and Judaism are major world religions. They share beliefs in monotheism, afterlife, compassion, and ritual."} }
+  ,{ "item": { "input": "List five world capitals and describe three of their cultural contributions.", "reference": "Capitals: London, Paris, Tokyo, Cairo, Sydney. Contributions: art, fashion, cuisine, literature, festivals.", "output_text": "London, Paris, Tokyo, Cairo, and Sydney are world capitals, famous for art, fashion, and cuisine."} }
+  ,{ "item": { "input": "Describe five major U.S. Supreme Court cases and four of their legal precedents.", "reference": "Cases: Marbury v. Madison, Brown v. Board, Roe v. Wade, Miranda v. Arizona, Obergefell v. Hodges. Precedents: judicial review, desegregation, abortion rights, self-incrimination, marriage equality.", "output_text": "Marbury v. Madison, Brown v. Board, Roe v. Wade, and Miranda v. Arizona are major cases that established judicial review, desegregation, abortion rights, and self-incrimination rights."} }
+  ,{ "item": { "input": "Identify five symbols and five meanings in 'The Lord of the Flies.'", "reference": "Symbols: conch shell, Piggys glasses, the fire, the beast, the Lord of the Flies. Meanings: order, knowledge, hope, fear, savagery.", "output_text": "The conch shell, Piggy's glasses, the fire, and the beast are symbols in 'The Lord of the Flies.' They represent order, knowledge, hope, and fear."} }
 
-  ,{ "item" : {"input": "Give me the date of the Fukushima incident","reference": "2011-03-11","output_text": "2011-03-11" } }
-  ,{ "item" : {"input": "Give me the date of the Fukushima incident","reference": "2011-03-11","output_text": "March 11, 2011." } }
-  ,{ "item" : {"input": "Give me the date of the Fukushima incident","reference": "2011-03-11","output_text": "11th of March, 2011." } }
-  ,{ "item" : {"input": "Give me the date of the Fukushima incident","reference": "2011-03-11","output_text": "The Fukushima Daiichi nuclear disaster occurred on March 11, 2011." } }
+  ,{ "item": { "input": "List five components and five functions of the human circulatory system.", "reference": "The circulatory system includes the heart, arteries, veins, capillaries, and blood. Its functions are transporting oxygen, removing waste, delivering nutrients, regulating temperature, and supporting immune response.", "output_text": "Key components of the circulatory system are blood, capillaries, arteries, heart, and veins. Its main functions include delivering nutrients, regulating body temperature, supporting immune response, transporting oxygen, and removing waste." } }
+  ,{ "item": { "input": "List five symptoms and five possible complications of untreated diabetes.", "reference": "Symptoms of untreated diabetes include excessive thirst, frequent urination, fatigue, blurred vision, and slow wound healing. Complications can be nerve damage, kidney failure, heart disease, blindness, and infections.", "output_text": "Untreated diabetes symptoms include blurred vision, excessive thirst, fatigue, slow wound healing, and frequent urination. Possible complications are infections, blindness, heart disease, nerve damage, and kidney failure." } }
+  ,{ "item": { "input": "Identify five Impressionist painters and five hallmarks of the movement.", "reference": "Impressionist painters include Monet, Renoir, Degas, Pissarro, and Sisley. Hallmarks of Impressionism are loose brushwork, vibrant color, focus on light, open composition, and modern life subjects.", "output_text": "Among Impressionist painters are Pissarro, Monet, Degas, Renoir, and Sisley. Impressionism is noted for vibrant color, open composition, loose brushwork, a focus on light, and modern life subjects." } }
+  ,{ "item": { "input": "List five Nobel Prize categories and five notable recipients for each.", "reference": "Categories: Peace, Literature, Physics, Chemistry, Medicine. Notable recipients: Mother Teresa, Ernest Hemingway, Albert Einstein, Marie Curie, Alexander Fleming.", "output_text": "Nobel Prize categories are Medicine, Chemistry, Peace, Literature, and Physics. Notable winners include Ernest Hemingway, Albert Einstein, Mother Teresa, Marie Curie, and Alexander Fleming." } }
+  ,{ "item": { "input": "List five branches of biology and five research focuses for each.", "reference": "Branches: zoology, botany, microbiology, genetics, ecology. Focuses: animal life, plant life, microorganisms, heredity, ecosystems.", "output_text": "Five branches of biology are genetics, botany, zoology, ecology, and microbiology. Their focuses are animal life, plant life, heredity, ecosystems, and microorganisms." } }
+  ,{ "item": { "input": "List five fundamental forces of nature and their five main effects.", "reference": "Forces: gravity, electromagnetism, strong nuclear, weak nuclear, friction. Effects: planetary orbits, electricity, atomic stability, radioactive decay, resistance to motion.", "output_text": "The five fundamental forces are strong nuclear, gravity, weak nuclear, friction, and electromagnetism. Their main effects include electricity, resistance to motion, atomic stability, planetary orbits, and radioactive decay." } }
+  ,{ "item": { "input": "List five elements of the periodic table and five ways each is used in industry.", "reference": "Elements: hydrogen, oxygen, carbon, iron, copper. Uses: fuel, water treatment, steel, construction, electrical wiring.", "output_text": "Oxygen, hydrogen, carbon, iron, and copper are elements of the periodic table. They are used in water treatment, fuel, steel, construction, and electrical wiring." } }
+  ,{ "item": { "input": "List five continents and five distinctive geographic features of each.", "reference": "Continents: Africa, Asia, Europe, North America, South America. Features: Sahara Desert, Himalayas, Alps, Rocky Mountains, Amazon River.", "output_text": "Asia, Africa, North America, South America, and Europe are continents. Their features include the Himalayas, Sahara Desert, Rocky Mountains, Amazon River, and Alps." } }
+  ,{ "item": { "input": "Name five Shakespearean tragedies and five central themes present in each.", "reference": "Tragedies: Hamlet, Macbeth, Othello, King Lear, Romeo and Juliet. Themes: ambition, betrayal, fate, madness, love.", "output_text": "Central Shakespearean tragedies include Macbeth, King Lear, Romeo and Juliet, Hamlet, and Othello. Common themes are ambition, love, madness, betrayal, and fate." } }
+  ,{ "item": { "input": "List five major mountain ranges and five countries in which they are found.", "reference": "Ranges: Andes, Alps, Himalayas, Rockies, Appalachians. Countries: Chile, Switzerland, Nepal, United States, Canada.", "output_text": "Major mountain ranges are the Rockies, Andes, Himalayas, Alps, and Appalachians. Countries where these are found include United States, Nepal, Canada, Chile, and Switzerland." } }
 ]
-
 
 # ----------------------------------------------------- END: Evals ------------------------------------------------------------
 
 # ----------------------------------------------------- START: Prompts --------------------------------------------------------
 # A very simple judge model prompt
 judge_model_prompt_template_1 = """
-You are an expert evaluator for a QA system. Compare the generated model output ('model_output' tag) to the reference answer ('reference' tag). Score on a 0-5 scale where:
+You are an expert evaluator for a QA system. Compare the generated model output ('model_output' tag) to the reference answer ('reference' tag). Assign an **integer score from 0 to 5** where:
 0 = completely unrelated and incorrect, 1 = related but completely incorrect, 3 = partially correct, 5 = completely correct
 Also explain your reasoning. Return exactly:
 
@@ -127,31 +185,51 @@ You are an evaluator. Compare a GPT model's output (`output_text`) against a ref
 
 ### 1. Criteria to check
 
+For each evaluation, first list each fact, conclusion, and key term from the reference.
+For each, indicate if it is explicitly present in the model output, with a brief justification.
+Then calculate ratios as required.
+
 - **Facts (40%)**  
-  - Identify each discrete fact in the reference.  
-  - Check whether the same fact appears correctly in the model output.  
+  - Identify each discrete fact in the reference.
+  - Check whether the same fact appears correctly in the model output.
+  - Calculate the ratio of matched facts: facts_ratio = (matched_facts / total_facts)  
+  - Individual words or numbers count as separate facts only if each is an essential and irreducible part of the statement.
+  - Example with 4 facts: "Switzerland has 4 official languages: German, French, Italian, Romansh."
+  - Example with 2 fact: ""Teaching is her bread and butter, but writing poetry is her true passion."
 - **Conclusions (30%)**  
   - Identify key conclusions or judgments in the reference.
   - Check whether the model output reaches the same conclusions.
-  - If the reference answer contains no conclusions, the model output is also not required to contain conclusions.
+  - Calculate the ratio of matched conclusions: conclusions_ratio = (matched_conclusions / total_conclusions)
+  - All conclusions have to be explicitly stated in the model output. Implicit conclusions do not count as matched.
 - **Terminology (20%)**  
-  - List each key term in the reference.  
-  - Check whether the model output uses the same terms.  
-- **Organization (10%)**  
-  - Compare the high-level structure (sections, ordering) of the model output and reference.  
+  - List each key term in the reference.
+  - Check whether the model output uses the same terms.
+  - Calculate the ratio of matched terms: terms_ratio = (matched_terms / total_terms)
+    - If total_terms > 0, then terms_ratio = (matched_terms / total_terms)
+    - If total_terms == 0, set terms_ratio = 1
+    - If no terms are matched, terms_ratio = 0
+- **Organization (10%)**
+  - Compare the high-level structure (sections, ordering) of the model output and reference.
+  - Calculate the ratio of matched organization (0 or 1): organization_ratio = 0 for different, 1 for same
+  - organization_ratio = 0 facts_ratio < 1
+  - if total_conclusions == 0, then organization_ratio = 0
 
-### 2. Scoring rubric
 
-| Score | Description                                                                                       |
-|:-----:|:--------------------------------------------------------------------------------------------------|
-| 0     | No matching facts or conclusions; terminology and structure unrelated.                            |
-| 1     | Uses similar terminology but no correct facts or conclusions.                                     |
-| 2     | At least one fact present but misrepresented; no correct conclusions.                             |
-| 3     | Some facts and conclusions correct, but significant gaps; structure and terminology differ.       |
-| 4     | All facts and conclusions correct; minor deviations in terminology or organization.               |
-| 5     | Perfect alignment: all facts and conclusions correct; matching terminology and structure.         |
+### 2. Scoring model
 
-### 3. Output format
+- **If total_conclusions > 0:**
+  - score = 5 * ( (facts_ratio * 0.4) + (conclusions_ratio * 0.3) + (terms_ratio * 0.2) + (organization_ratio * 0.1) )
+- **If total_conclusions == 0:**
+  - score = 5 * ( (facts_ratio * 0.7) + (terms_ratio * 0.2) + (organization_ratio * 0.1) )
+- **If matched_facts < 1:**
+  - score = 5 * ( (facts_ratio * 0.7) + (terms_ratio * 0.2) )
+- IMPORTANT: Round the score to the nearest integer number
+
+### 3. Score verification
+
+Verify that the score calculation is correct by breaking it down to smaller steps.
+
+### 4. Output format
 
 Return exactly:
 
@@ -159,25 +237,28 @@ Return exactly:
 {
   "score": <0-5>,
   "rationale": [
-    "Fact: <number_of_output_facts> of <number_of_reference_facts> correctly matched. <number_of_additional_output_facts> additional facts in output.",
-    "Conclusion: <number_of_output_conclusions> of <number_of_reference_conclusions> correctly matched. <number_of_additional_output_conclusions> additional conclusions in output.",
-    "Terminology: <number_of_deviating_terms> deviating terms found.",
-    "Organization: matched/mismatched"
+    "Fact: <number_of_output_facts> of <number_of_reference_facts> correctly matched.",
+    "Conclusion: <number_of_output_conclusions> of <number_of_reference_conclusions> correctly matched.",
+    "Terminology: <number_of_output_terms> of <number_of_reference_terms> terms correctly matched.",
+    "Organization: matched/mismatched",
+    "Score: <score> = <score_calculation>"
   ]
 }
 ```
 
-### 4. Example
+### 5. Examples
 
 - **Reference:** There are 27 member states in the European Union, and 8 of them use their own national currencies instead of the Euro.
-- **Score 0:** Bla bla.
-- **Score 1:** Some member states use their own national currencies.
-- **Score 2:** 27 member states use their own national currencies.
-- **Score 3:** The European Union has 27 member states.
-- **Score 4:** The European Union has 27 member states, of which 8 do not use the Euro.
-- **Score 5:** The European Union has 27 member states, and 8 of them use their own national currencies instead of the Euro.
+- 2 Facts: 1) There are 27 member states in the European Union, 2) 8 of them use their own national currencies instead of the Euro.
+- 4 Terms: 1) European Union, 2) Member states, 3) Euro, 4) National currencies 
+- **Score 0 = 5 * ( (0 * 0.7) + (0 * 0.2) + (0 * 0.1) ):** Bla bla.
+- **Score 1 = 5 * ( (0 * 0.7) + (1 * 0.2) + (0 * 0.1) ):** The Euro is the currency of the European Union. But some member states use their own national currencies.
+- **Score 2 = 5 * ( (0.5 * 0.7) + (0.25 * 0.2) + (0 * 0.1) ):** There are 27 member states.
+- **Score 3 = 5 * ( (0.5 * 0.7) + (1 * 0.2) + (1 * 0.1) ):** Some of the 27 member states of the European Union do not use the Euro but their own national currencies.
+- **Score 4 = 5 * ( (1 * 0.7) + (0.5 * 0.2) + (0 * 0.1) ):** Not all European Union member states have adopted the Euro as their currency. Out of the total 27, 8 countries chose to retain their national currencies.
+- **Score 5 = 5 * ( (1 * 0.7) + (1 * 0.2) + (1 * 0.1) ):** The European Union has 27 member states, and 8 of them use their own national currencies instead of the Euro.
 
-### 5. Data
+### 6. Data
 
 <input>
 {{ item.input }}
@@ -217,7 +298,7 @@ def get_answers_from_model_and_return_items(client, vector_store_id, model, item
   return items
 
 # Gets scores for all items using the provided prompt template and add score and rationale to each item
-def score_answers_using_judge_model_and_return_items(client, items, prompt_template, judge_model_name, remove_input_from_prompt: bool = False):
+def score_answers_using_judge_model_and_return_items(client, items, prompt_template, judge_model_name, remove_input_from_prompt: bool = False, log_items: bool = True):
   function_name = 'Evaluate answers and add scores in items'
   start_time = log_function_header(function_name)
 
@@ -226,8 +307,9 @@ def score_answers_using_judge_model_and_return_items(client, items, prompt_templ
     reference = item['item']['reference']
     output_text = item['item'].get('output_text', '')
     print(f"  [ {idx} / {len(items)} ] Query: {truncate_string(input.replace('\n', ' '),120)}")
-    print(f"    Reference    : {truncate_string(reference.replace('\n', ' '),100)}")
-    print(f"    Model output : {truncate_string(output_text.replace('\n', ' '),100)}")
+    if log_items:
+      print(f"    Reference    : {truncate_string(reference.replace('\n', ' '),100)}")
+      print(f"    Model output : {truncate_string(output_text.replace('\n', ' '),100)}")
    
     # Replace placeholders in the prompt template
     prompt = re.sub(r'{{\s*item.reference\s*}}', reference, prompt_template)
@@ -256,9 +338,11 @@ def score_answers_using_judge_model_and_return_items(client, items, prompt_templ
       item['item']['score'] = score
       item['item']['rationale'] = rationale
       
-      print(f"    Score: {score}")
-      for r in rationale:
-        print(f"    - {truncate_string(r,120) }")
+      if log_items:
+        print(f"    Score: {score}")
+        for r in rationale:
+          print(f"    - {truncate_string(r,120) }")
+    
     except json.JSONDecodeError:
       print(f"    Error: Could not parse JSON response: {response.choices[0].message.content}")
       item['item']['score'] = None
@@ -267,7 +351,7 @@ def score_answers_using_judge_model_and_return_items(client, items, prompt_templ
   log_function_footer(function_name, start_time)
   return items
 
-def score_answers_using_cosine_similarity_and_return_items(client, items, embedding_model="text-embedding-3-small"):
+def score_answers_using_cosine_similarity_and_return_items(client, items, embedding_model="text-embedding-3-small", log_items: bool = True):
   function_name = 'Evaluate answers using cosine similarity'
   start_time = log_function_header(function_name)
 
@@ -286,8 +370,9 @@ def score_answers_using_cosine_similarity_and_return_items(client, items, embedd
     reference = item['item']['reference']
     output_text = item['item'].get('output_text', '')
     print(f"  [ {idx} / {len(items)} ] Query: {truncate_string(input.replace('\n', ' '),120)}")
-    print(f"    Reference    : {truncate_string(reference.replace('\n', ' '),100)}")
-    print(f"    Model output : {truncate_string(output_text.replace('\n', ' '),100)}")
+    if log_items:
+      print(f"    Reference    : {truncate_string(reference.replace('\n', ' '),100)}")
+      print(f"    Model output : {truncate_string(output_text.replace('\n', ' '),100)}")
 
     try:
       # Get embeddings and calculate similarity
@@ -302,17 +387,19 @@ def score_answers_using_cosine_similarity_and_return_items(client, items, embedd
       item['item']['score'] = score
       item['item']['rationale'] = [f"Cosine similarity: {similarity:.3f} (mapped to score {score})"] 
       
-      print(f"    Score: {score} (similarity: {similarity:.3f})")
+      if log_items:
+        print(f"    Score: {score}")
+        print(f"    - Similarity: {similarity:.3f}")
     except Exception as e:
       print(f"    Error: Could not calculate embedding similarity: {str(e)}")
-      item['item']['score'] = None
-      item['item']['rationale'] = [f"Error: {str(e)}"]
+      item['item']['score'] = 0
+      item['item']['rationale'] = [f"Error calculating similarity score: {str(e)}"]
 
   log_function_footer(function_name, start_time)
   return items
 
 
-def score_answers_using_score_model_grader_and_return_items(client, items, eval_name, prompt_template, eval_model, remove_input_from_prompt: bool, delete_eval_after_run: bool = False):
+def score_answers_using_score_model_grader_and_return_items(client, items, eval_name, prompt_template, eval_model, remove_input_from_prompt: bool, delete_eval_after_run: bool = False, log_items: bool = True):
   function_name = 'Evaluate answers using score model grader'
   start_time = log_function_header(function_name)
 
@@ -361,7 +448,7 @@ def score_answers_using_score_model_grader_and_return_items(client, items, eval_
   print(f"  View results at: {eval_run.report_url}")
 
   # Poll for completion
-  attempts = 0; max_attempts = 20; sleep_time_in_seconds = 5
+  attempts = 0; sleep_time_in_seconds = 5; max_attempts = math.ceil((2 * len(items)) / sleep_time_in_seconds) + 5 # 2 seconds per item + 5 additional retries
   while attempts < max_attempts:
     status = client.evals.runs.retrieve(eval_run.id, eval_id=eval_cfg.id).status
     if status == "completed": print("  Evaluation completed."); break
@@ -375,19 +462,26 @@ def score_answers_using_score_model_grader_and_return_items(client, items, eval_
     raise TimeoutError(f"Evaluation timed out after {max_attempts} attempts")
 
   # Get results and update items
-  results = client.evals.runs.retrieve(eval_run.id, eval_id=eval_cfg.id)
-  total_count, passed_count, failed_count, errored_count = results.result_counts.total, results.result_counts.passed, results.result_counts.failed, results.result_counts.errored
-  run_output = client.evals.runs.output_items.list(run_id=eval_run.id, eval_id=eval_cfg.id)
-  output_items = run_output.data
+  # results = client.evals.runs.retrieve(eval_run.id, eval_id=eval_cfg.id)
+  # total_count, passed_count, failed_count, errored_count = results.result_counts.total, results.result_counts.passed, results.result_counts.failed, results.result_counts.errored
+  
+  # Get all output items with pagination handling
+  output_items = get_all_eval_run_output_items(client, run_id=eval_run.id, eval_id=eval_cfg.id)
 
   # Run over all items and update their score and rationale from the evaluation results
   for idx, item in enumerate(items, 1):
     print(f"  [ {idx} / {len(items)} ] Query: {truncate_string(item['item']['input'].replace('\n', ' '),120)}")
     # Find matching output item for this input item
-    output_item = next(o for o in output_items 
-                      if o.datasource_item['input'] == item['item']['input'] 
-                      and o.datasource_item['reference'] == item['item']['reference'])
-    # combined_item_status = output_item.status # 'fail' or 'pass'
+    try:
+      output_item = next(o for o in output_items 
+                        if o.datasource_item['input'] == item['item']['input'] 
+                        and o.datasource_item['reference'] == item['item']['reference'])
+      # combined_item_status = output_item.status # 'fail' or 'pass'
+    except StopIteration:
+      print(f"    ERROR: No matching output found for input: {truncate_string(item['item']['input'], 80)}")
+      item['item']['score'] = -1
+      item['item']['rationale'] = ["Error: No matching evaluation output found"]
+      continue
 
     # first result is the only one with 1 grader; if we have multiple graders, we will get multiple results
     first_test_result = output_item.results[0]
@@ -405,16 +499,19 @@ def score_answers_using_score_model_grader_and_return_items(client, items, eval_
       rationale = ["Error parsing model output"]
     item['item']['score'] = score
     item['item']['rationale'] = rationale
-    print(f"    Score: {score}")
-    for r in rationale:
-      print(f"    - {truncate_string(r, 140)}")
+    if log_items:
+      print(f"    Reference: {truncate_string(item['item']['reference'], 120)}")
+      print(f"    Model output: {truncate_string(item['item']['output_text'], 120)}")
+      print(f"    Score: {score}")
+      for r in rationale:
+        print(f"      - {truncate_string(r, 140)}")
 
+  # Delete evaluation after run if requested
   if delete_eval_after_run:
     client.evals.delete(eval_id=eval_cfg.id)
 
   log_function_footer(function_name, start_time)
   return items
-
 
 def summarize_item_scores(items, min_score: int, indentation: int = 0) -> str:
   # calculate average score
@@ -459,7 +556,7 @@ if __name__ == '__main__':
     client = create_azure_openai_client(azure_openai_use_key_authentication)
 
   @dataclass
-  class EvalParams: vector_store_name: str; folder_path: str; items: list; answer_model: str; eval_model: str; embedding_model: str; min_score: int; remove_input_from_prompt: bool
+  class EvalParams: vector_store_name: str; folder_path: str; items: list; answer_model: str; eval_model: str; embedding_model: str; min_score: int; remove_input_from_prompt: bool; delete_eval_after_run: bool; log_items: bool
 
   params = EvalParams(
     vector_store_name="test_vector_store"
@@ -468,11 +565,13 @@ if __name__ == '__main__':
     ,answer_model = answer_model_name
     ,eval_model = eval_model_name
     ,embedding_model="text-embedding-3-small"
-    ,min_score=4
+    ,min_score=3
     # By removing the input from the evaluation prompt templates we can demonstrate that evaluation needs the input to be able to provide a correct evaluation
     # CORRECT   -> reference="Jupiter" vs. output="Zeus" for input="Who is the master of the olympian gods?"
     # INCORRECT -> reference="Jupiter" vs. output="Zeus" for input="What is largest planet in our solar system?"
     ,remove_input_from_prompt=False
+    ,delete_eval_after_run=True
+    ,log_items=True
   )
 
   # If use_predefined_model_outputs is set to False, create vector store and get answers from model
@@ -487,32 +586,32 @@ if __name__ == '__main__':
     print("-"*140) 
 
   # Step 3A: Test eval using judge model with prompt template 1
-  params.items = score_answers_using_judge_model_and_return_items(client, params.items, judge_model_prompt_template_1, params.eval_model, params.remove_input_from_prompt)
+  params.items = score_answers_using_judge_model_and_return_items(client, params.items, judge_model_prompt_template_1, params.eval_model, params.remove_input_from_prompt, params.log_items)
   print("."*100 + f"\n    Evaluation results using judge model '{params.eval_model}' with prompt template 1:")
   print(summarize_item_scores(params.items, params.min_score, 4) )
   print("-"*140)
   # Step 3B: Test eval using judge model with prompt template 2
-  params.items = score_answers_using_judge_model_and_return_items(client, params.items, judge_model_prompt_template_2, params.eval_model, params.remove_input_from_prompt)
+  params.items = score_answers_using_judge_model_and_return_items(client, params.items, judge_model_prompt_template_2, params.eval_model, params.remove_input_from_prompt, params.log_items)
   print("."*100 + f"\n    Evaluation results using judge model '{params.eval_model}' with prompt template 2:")
   print(summarize_item_scores(params.items, params.min_score, 4))
   print("-"*140)
   # Step 3C: Test eval using embedding and cosine similarity
-  params.items = score_answers_using_cosine_similarity_and_return_items(client, params.items, params.embedding_model)
+  params.items = score_answers_using_cosine_similarity_and_return_items(client, params.items, params.embedding_model, params.log_items)
   print("."*100 + f"\n    Evaluation results using embedding with '{params.embedding_model}' and cosine similiarity:")
   print(summarize_item_scores(params.items, params.min_score, 4))
   print("-"*140)
   # Step 3D: Test eval using score model grader with prompt template 1
-  params.items = score_answers_using_score_model_grader_and_return_items(client, params.items, "test_eval", judge_model_prompt_template_1, params.eval_model,True)
+  params.items = score_answers_using_score_model_grader_and_return_items(client, params.items, "test_eval - prompt_template_1", judge_model_prompt_template_1, params.eval_model, params.remove_input_from_prompt, params.delete_eval_after_run, params.log_items)
   print("."*100 + f"\n    Evaluation results using 'score_model' grader and prompt template 1:")
   print(summarize_item_scores(params.items, params.min_score, 4))
   print("-"*140)
   # Step 3E: Test eval using score model grader with prompt template 2
-  params.items = score_answers_using_score_model_grader_and_return_items(client, params.items, "test_eval", judge_model_prompt_template_2, params.eval_model,True)
+  params.items = score_answers_using_score_model_grader_and_return_items(client, params.items, "test_eval - prompt_template_2", judge_model_prompt_template_2, params.eval_model, params.remove_input_from_prompt, params.delete_eval_after_run, params.log_items)
   print("."*100 + f"\n    Evaluation results using 'score_model' grader and prompt template 2:")
   print(summarize_item_scores(params.items, params.min_score, 4))
   print("-"*140)
 
   # Step 4: Delete vector store including all files
-  if not use_predefined_model_outputs: delete_eval_by_name(client, params.vector_store_name, True)
+  if not use_predefined_model_outputs: delete_eval_by_name(client, params.vector_store_name)
 
 # ----------------------------------------------------- END: Main -------------------------------------------------------------

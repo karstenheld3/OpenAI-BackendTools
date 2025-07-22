@@ -1118,6 +1118,40 @@ def get_all_eval_runs(client, eval_id):
   
   return all_runs
 
+def get_all_eval_run_output_items(client, run_id, eval_id):
+  """Gets all output items from an eval run with pagination handling.
+
+  Args:
+      client: The OpenAI client instance
+      run_id: The ID of the run to get output items from
+      eval_id: The ID of the evaluation the run belongs to
+
+  Returns:
+      list: All output items from the run across all pages
+  """
+  output_items_page = client.evals.runs.output_items.list(eval_id=eval_id, run_id=run_id)
+  all_output_items = list(output_items_page.data)
+  
+  # Get additional pages if they exist
+  has_more = hasattr(output_items_page, 'has_more') and output_items_page.has_more
+  current_page = output_items_page
+  
+  while has_more:
+    last_id = current_page.data[-1].id if current_page.data else None
+    if not last_id: break
+    
+    next_page = client.evals.runs.output_items.list(eval_id=eval_id, run_id=run_id, after=last_id)
+    all_output_items.extend(next_page.data)
+    current_page = next_page
+    has_more = hasattr(next_page, 'has_more') and next_page.has_more
+  
+  # Add index and run_id attributes to all output items
+  for idx, item in enumerate(all_output_items):
+    setattr(item, 'index', idx)
+    setattr(item, 'run_id', run_id)
+  
+  return all_output_items
+
 def delete_all_evals(client, dry_run=False):
   function_name = 'Delete all evals'
   start_time = log_function_header(function_name)
@@ -1149,6 +1183,7 @@ def delete_eval_by_name(client, name):
     client.evals.delete(eval_obj.id)
   else:
     print(f"  Eval '{name}' not found.")
+
 
 # ----------------------------------------------------- END: Evals ------------------------------------------------------------
 
