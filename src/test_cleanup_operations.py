@@ -71,6 +71,6 @@ if __name__ == '__main__':
   # USE WITH CAUTION! This will delete all evals including all runs.
   # If dry_run is True, it will only show what evals would be deleted.
   # -------------------------------------------------------------------------------------------------
-  # delete_all_evals(client, dry_run=True)
+  # delete_all_evals(client, dry_run=False)
 
 # ----------------------------------------------------- END: Main -------------------------------------------------------------

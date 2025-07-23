@@ -47,6 +47,7 @@ A collection of tools and demo code to test, operate and maintain Open AI and Az
 - requests 2.32.3 ([Package](https://pypi.org/project/requests/))
 - python-dotenv 1.1.0 ([Package](https://pypi.org/project/python-dotenv/))
 - openai 1.79.0 ([Package](https://pypi.org/project/openai/))
+- numpy 1.3.1 ([Package](https://pypi.org/project/numpy/))
 
 #### Project structure
 
@@ -60,7 +61,7 @@ A collection of tools and demo code to test, operate and maintain Open AI and Az
 │   ├── test_file_listings.py                  # Listing of assistants, vector stores, files, unused files, etc. 
 │   ├── test_rag_operations.py                 # RAG (Retrieval Augmented Generation) tests
 │   ├── test_search_operations.py              # Search API tests
-│   ├── test_eval_operations.py                # Evaluation operations for RAG responses with scoring
+│   ├── test_eval_operations.py                # Evaluations of predefined and RAG responses with scoring
 │   ├── test_file_crawling.py                  # File crawling utilities and data classes
 │   └── replicate_vector_store_content.py      # Vector store content replication tool
 ├── RAGFiles/                                  # Directory for RAG-related test files
@@ -1239,62 +1240,39 @@ print_vector_store_replication_summary(target_vector_store_ids, added_files, rem
 
 ![Demo](./assets/OpenAI-BackendTools05.gif)
 
-Functions and classes used to evaluate RAG (Retrieval Augmented Generation) responses using judge models with scoring:
-- Function `get_answers_from_model_and_return_items` – Gets RAG answers from model for evaluation items.
-- Function `test_prompt_evaluation_and_return_items` – Evaluates answers using judge model with scoring.
-- Class `EvalParams` – Container class for evaluation parameters.
+Functions and classes used to evaluate RAG (Retrieval Augmented Generation) responses using various evaluation methods including judge models, cosine similarity, and OpenAI's evaluation API:
 
-### Class: `EvalParams`
+### Core Functions:
+- `get_answers_from_model_and_return_items` – Gets RAG answers from model for evaluation items
+- `score_answers_using_judge_model_and_return_items` – Evaluates answers using judge model with scoring
+- `score_answers_using_cosine_similarity_and_return_items` – Evaluates answers using cosine similarity
+- `score_answers_using_score_model_grader_and_return_items` – Evaluates answers using OpenAI's evaluation API
+- `test_prompt_evaluation_and_return_items` – Complete evaluation pipeline with reporting
 
-Container class for evaluation parameters used in RAG evaluation tests.
+### Evaluation Test Batches:
+- `Batch01` – Sample evaluation items with expected scores (4 items)
+- `Batch02` – Calibration batch with 60 test cases across all score levels (0-5)
 
-**Location:** `test_eval_operations.py`
+### Judge Model Prompt Templates:
 
-**Fields:**
-- `vector_store_name`: Name of the vector store to use for evaluation
-- `folder_path`: Path to folder containing files to upload for evaluation
-- `model`: Name of the model to evaluate (e.g., "gpt-4o-mini")
-- `items`: List of evaluation items with input/reference pairs
-- `judge_model_name`: Name of the judge model for scoring (e.g., "gpt-4o-mini")
-- `min_score`: Minimum score threshold for considering an answer correct
+#### Template 1: Simple Judge Model
+- **Variable:** `judge_model_prompt_template_1`
+- **Description:** Basic 0-5 scoring with simple rationale
+- **Scoring:** 0=unrelated, 1=related but incorrect, 3=partially correct, 5=completely correct
 
-### Function: `get_answers_from_model_and_return_items`
+#### Template 2: Detailed Multi-Criteria Judge Model
+- **Variable:** `judge_model_prompt_template_2`
+- **Description:** Comprehensive evaluation using facts, conclusions, terminology, and organization
+- **Scoring Formula:** 
+  - With conclusions: `score = 5 * ((facts_ratio * 0.4) + (conclusions_ratio * 0.3) + (terms_ratio * 0.21) + (organization_ratio * 0.09))`
+  - Without conclusions: `score = 5 * ((facts_ratio * 0.7) + (terms_ratio * 0.21) + (organization_ratio * 0.09))`
 
-Gets RAG answers from the model for evaluation items and stores them in the items.
+#### Template 3: LangChain OpenEvals Correctness
+- **Variable:** `judge_model_prompt_template_3`
+- **Description:** Based on LangChain's OpenEvals correctness evaluation prompt
+- **Focus:** Factual accuracy, completeness, and logical consistency
 
-**Location:** `test_eval_operations.py`
-
-**Parameters:**
-- `client`: The OpenAI client instance to use for API calls
-- `vector_store_id`: ID of the vector store to search
-- `model`: Name of the model to use for generating answers
-- `items`: List of evaluation items with input queries
-
-**Returns:**
-- Updated items list with `output_text` added to each item
-
-**Example output:**
-```
-[2025-06-09 12:00:00] START: Get answers from model and add in items...
-  [ 1 / 3 ] Query: Who is Arilena Drovik?
-    Response: Arilena Drovik is a highly accomplished molecular biologist and geneticist...
-  [ 2 / 3 ] Query: What was the title of Arilena Drovik's dissertation?
-    Response: The title of Arilena Drovik's dissertation was "Epigenetic Modulators of Gene...
-[2025-06-09 12:00:15] END: Get answers from model and add in items (15 secs).
-```
-
-**Open AI SDK code**
-```python
-response = client.responses.create(
-  model=model,
-  input=input,
-  tools=[{ "type": "file_search", "vector_store_ids": [vector_store_id] }],
-  temperature=0
-)
-output_text = response.output_text
-```
-
-### Function: `test_prompt_evaluation_and_return_items`
+### Function: `score_answers_using_judge_model_and_return_items`
 
 Evaluates answers using a judge model with scoring based on a prompt template. Uses a 0-5 scoring system.
 
@@ -1303,75 +1281,241 @@ Evaluates answers using a judge model with scoring based on a prompt template. U
 **Parameters:**
 - `client`: The OpenAI client instance to use for API calls
 - `items`: List of evaluation items with input, reference, and output_text
-- `prompt_template`: Template for evaluation prompt with placeholders [REFERENCE] and [MODEL_OUTPUT]
+- `prompt_template`: Template for evaluation prompt with placeholders `{{ item.input }}`, `{{ item.reference }}`, `{{ item.output_text }}`
 - `judge_model_name`: Name of the judge model to use for scoring
+- `remove_input_from_prompt`: Whether to remove input from evaluation prompt (default: False)
+- `log_details`: Whether to log detailed evaluation information (default: True)
 
 **Returns:**
 - Updated items list with `score` and `rationale` added to each item
 
 **Example output:**
 ```
-[2025-06-09 12:01:00] START: Test prompt evaluation and add in items...
-  [ 1 / 3 ] Evaluating: Who is Arilena Drovik?
+[2025-06-09 12:01:00] START: Evaluate answers and add scores in items...
+  [ 1 / 4 ] Query: Who is Arilena Drovik?
     Reference    : Arilena Drovik is molecular biologist and geneticist. She is a Professor...
-    Model output : Arilena Drovik is a highly accomplished molecular biologist and geneticist...
-    Score: 5
-    - Fact: 3 of 3 correctly matched. 1 additional facts in output.
-    - Conclusion: 2 of 2 correctly matched. 0 additional conclusions in output.
-    - Terminology: 0 deviating terms found.
-    - Organization: matched
-[2025-06-09 12:01:30] END: Test prompt evaluation and add in items (30 secs).
+    Model output : Arilena Drovik is a singer from Albania.
+    Score: 0
+    - The model output is completely unrelated to the reference answer.
+[2025-06-09 12:01:30] END: Evaluate answers and add scores in items (30 secs).
 ```
 
-**Scoring Rubric:**
-- **Score 0**: No matching facts or conclusions; terminology and structure unrelated
-- **Score 1**: Uses similar terminology but no correct facts or conclusions
-- **Score 2**: At least one fact present but misrepresented; no correct conclusions
-- **Score 3**: Some facts and conclusions correct, but significant gaps; structure and terminology differ
-- **Score 4**: All facts and conclusions correct; minor deviations in terminology or organization
-- **Score 5**: Perfect alignment: all facts and conclusions correct; matching terminology and structure
-
-**Open AI SDK code**
+**OpenAI SDK code:**
 ```python
-response = client.chat.completions.create(
-  model=judge_model_name,
-  messages=[{"role": "user", "content": prompt}],
-  response_format={"type": "json_object"},
-  temperature=0
+response = client.responses.create(
+  model=judge_model_name
+  ,input=prompt
+  ,text={ "format": { "type": "json_object" } }
+  ,temperature=0
 )
-evaluation = json.loads(response.choices[0].message.content)
+evaluation = json.loads(response.output_text)
 score = evaluation.get('score')
 rationale = evaluation.get('rationale')
 ```
 
-### Demo Script: `test_eval_operations.py`
+### Function: `score_answers_using_cosine_similarity_and_return_items`
 
-Demonstrates RAG evaluation functionality with scoring and grading.
+Evaluates answers using cosine similarity between reference and output embeddings.
+Not recommended to compare answers because it can't evaluate higher level meanings like facts and conclusions.
 
 **Location:** `test_eval_operations.py`
 
-**Example evaluation results:**
+**Parameters:**
+- `client`: The OpenAI client instance to use for API calls
+- `items`: List of evaluation items with reference and output_text
+- `embedding_model`: Model to use for embeddings (default: "text-embedding-3-small")
+- `log_details`: Whether to log detailed evaluation information (default: True)
+
+**Returns:**
+- Updated items list with `score` and `rationale` added to each item
+
+**Scoring:** Converts cosine similarity (0-1) to evaluation score (1-5) using: `score = int(round(similarity * 4)) + 1`
+
+### Function: `score_answers_using_score_model_grader_and_return_items`
+
+Evaluates answers using OpenAI's evaluation API with score model graders.
+
+**Location:** `test_eval_operations.py`
+
+**Parameters:**
+- `client`: The OpenAI client instance
+- `items`: List of evaluation items
+- `eval_name`: Name for the evaluation run
+- `prompt_template`: Template for evaluation prompt
+- `eval_model`: Model to use for evaluation
+- `min_score`: Minimum score threshold
+- `remove_input_from_prompt`: Whether to remove input from prompt
+- `delete_eval_after_run`: Whether to delete evaluation after completion (default: False)
+- `log_details`: Whether to log detailed information (default: True)
+
+**Returns:**
+- Updated items list with scores and rationales
+
+**OpenAI SDK code:**
+```python
+eval_name = "Test Evaluation"
+eval_model = "gpt-4o"
+items = [
+  { "item": { "input": "What is H2O?", "reference": "Water.", "output_text": "Wine" } }
+  ,{ "item": { "input": "Currency of USA?", "reference": "Dollar.", "output_text": "USD" } }
+  ,{ "item": { "input": "Largest mammal?", "reference": "Blue whale.", "output_text": "The Blue Whale" } }
+]
+
+prompt_template = """
+You are an expert evaluator for a QA system. Compare the generated model output ('model_output' tag) to the reference answer ('reference' tag).
+Assign an **integer score from 0 to 5** where:
+0 = completely unrelated and incorrect, 1 = related but completely incorrect, 3 = partially correct, 4 = mainly correct, 5 = completely correct
+<input> {{ item.input }} </input>
+<reference> {{ item.reference }} </reference>
+<model_output> {{ item.output_text }} </model_output>
+"""
+# Create evaluation configuration
+eval_cfg = client.evals.create(
+  name=eval_name,
+  data_source_config={
+    "type": "custom"
+    ,"item_schema": {
+      "type": "object"
+      ,"properties": { "input": {"type": "string"}, "reference": {"type": "string"}, "output_text": {"type": "string"} }
+      ,"required": ["input", "reference", "output_text"]
+    },
+    "include_sample_schema": False
+  },
+  testing_criteria=[
+    {
+      "type": "score_model", "name": "Answer Quality Score", "model": eval_model
+      ,"sampling_params": { "temperature": 0 }
+      ,"input": [
+        {"role": "system", "content": "You are an expert evaluator. Your task is to evaluate the quality and accuracy of an answer compared to a reference answer."}
+        ,{"role": "user", "content": prompt_template }
+      ]
+      ,"range": [0, 5], "pass_threshold": 4
+    }
+  ]
+)
+
+# Run evaluation
+eval_run = client.evals.runs.create(
+  eval_id=eval_cfg.id,
+  data_source={"type": "jsonl", "source": {"type": "file_content", "content": items}}
+)
+
+# Poll for completion
+while client.evals.runs.retrieve(eval_run.id, eval_id=eval_cfg.id).status != "completed":
+  time.sleep(10)
+
+# Get all output items with pagination
+output_items_page = client.evals.runs.output_items.list(eval_id=eval_cfg.id, run_id=eval_run.id)
+output_items = list(output_items_page.data)
+while hasattr(output_items_page, 'has_more') and output_items_page.has_more:
+  output_items_page = client.evals.runs.output_items.list(eval_id=eval_cfg.id, run_id=eval_run.id, after=output_items_page.data[-1].id)
+  output_items.extend(output_items_page.data)
+
+# Print all inputs, scores, and reasonings
+for idx, output_item in enumerate(output_items, 1):
+  input_text = output_item.datasource_item['input']
+  score = output_item.results[0]['score']
+  # Content: '{"steps":[{"description":"XXX","conclusion":"YYY"},{"description":"XXX","conclusion":"YYY"},...],"result":5.0}'
+  model_output_content = output_item.results[0]['sample']['output'][0]['content']
+  
+  try:
+    output_json = json.loads(model_output_content)
+    steps = output_json.get('steps', [])
+    rationale = ["Conclusion: " + step['conclusion'].replace('\n', ' ') + " Description: " + step['description'].replace('\n', ' ') for step in steps]
+  except json.JSONDecodeError:
+    rationale = ["Error parsing model output"]
+  
+  print(f"[ {idx} / {len(output_items)} ] Input: {input_text}")
+  print(f"  Score: {score}")
+  for r in rationale:
+    print(f"    - {r}")
 ```
-Prompt evaluation result: 2 of 3 answers correct (67%). Average score: 4.33 (87%).
+
+
+### Function: `test_prompt_evaluation_and_return_items`
+
+Complete evaluation pipeline that processes items, gets model answers, evaluates them, and provides summary statistics.
+
+**Location:** `test_eval_operations.py`
+
+**Parameters:**
+- `client`: The OpenAI client instance
+- `params`: EvalParams object containing evaluation configuration
+- `prompt_template`: Template for evaluation prompt
+- `remove_input_from_prompt`: Whether to remove input from evaluation prompt (default: False)
+- `log_rationale`: Whether to log evaluation rationale (default: True)
+
+**Returns:**
+- Updated items list with complete evaluation results
+
+**Example output:**
 ```
+1 of 4 answers correct (25%). Average score: 2.75 (55%).
+Question             | Reference                      | Answer                         | Score
+------------------------------------------------------------------------------------------------
+Who is Arilena Drovi | Arilena Drovik is molecular bi | Arilena Drovik is a singer fro | 0
+What was the title o | Epigenetic Modulators of Gene  | Epigenetic modulators, gene ex | 3
+What was the title o | The title of Arilena Drovik's  | The title of Arilena Drovik's  | 3
+With whom did Arilen | Between 2018 and 2020 Arilena  | Arilena Drovik has collaborate | 5
+```
+
+### Variability Testing
+
+#### `measure_score_model_variability()`
+- **Purpose:** Tests the consistency and reliability of judge model scoring by running multiple evaluations
+- **Parameters:** 
+  - `number_of_runs`: How many times to repeat the evaluation (default: 5)
+  - `prompt_template`: Which judge model template to test
+  - `eval_model`: Model used for scoring (e.g., "gpt-4o")
+- **Output Metrics:**
+  - **Instability rate**: Percentage of items with varying scores across runs
+  - **Average Standard Deviation**: Measure of score consistency (none/very low/low/moderate/high)
+- **Usage:** Helps identify unreliable prompts or models that produce inconsistent results
 
 **Example usage:**
 ```python
-params = EvalParams(
-  vector_store_name="test_vector_store",
-  folder_path="./RAGFiles/Batch01",
-  model="gpt-4o-mini",
-  items=evaluation_items,
-  judge_model_name="gpt-4o-mini",
-  min_score=4
+measure_score_model_variability(
+  client, items, "Prompt Variability Test", 
+  judge_model_prompt_template_1, "gpt-4o", 
+  min_score=4, number_of_runs=5
+)
+```
+**Example output:**
+```
++------------------------------------------------------------------------------------------------------+
+| Overall variability statistics for 5 runs of 'Prompt 1 (Simple) Variability' (model 'gpt-4o'):       |
+| ---------------------------------------------------------------------------------------------------- |
+| Instability rate           : 25.00% (1/4 items)                                                      |
+| Average Standard Deviation : 0.12 (low)                                                              |
++------------------------------------------------------------------------------------------------------+
+```
+
+### Demo Script Usage
+
+**Location:** `test_eval_operations.py`
+
+**Example usage:**
+```python
+min_score = 4
+# Using simple judge model evaluation
+items_with_scores = score_answers_using_judge_model_and_return_items(
+  client, items, judge_model_prompt_template_1, "gpt-4o"
 )
 
-# Step 1: Create vector store and upload files
-test_vector_store_with_files = create_test_vector_store_from_folder_path(client, params.vector_store_name, params.folder_path)
+# Using cosine similarity evaluation
+items_with_similarity = score_answers_using_cosine_similarity_and_return_items(
+  client, items
+)
 
-# Step 2: Get answers from model
-params.items = get_answers_from_model_and_return_items(client, test_vector_store_with_files.vector_store.id, params.model, params.items)
+# Using OpenAI evaluation API
+items_with_eval_api = score_answers_using_score_model_grader_and_return_items(
+  client, items, "test_eval", judge_model_prompt_template_2, "gpt-4o", min_score, False
+)
 
-# Step 3: Evaluate answers using judge model
-params.items = test_prompt_evaluation_and_return_items(client, params.items, answer_rating_prompt_template, params.judge_model_name)
+# Measure score model variability
+number_of_runs = 5
+measure_score_model_variability(
+  client, items, "Prompt 1 (Simple) Variability", judge_model_prompt_template_1, "gpt-4o", min_score, number_of_runs
+)
+
 ```

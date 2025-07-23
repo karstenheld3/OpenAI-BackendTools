@@ -11,6 +11,7 @@ import re
 load_dotenv()
 
 # ----------------------------------------------------- START: Evals ----------------------------------------------------------
+
 # Item 01: FAIL - score = 0 (completely unrelated, incorrect)
 # Item 02: FAIL - score = 1 (related but completely incorrect), 1 similarity ("gene expression")
 # Item 03: FAIL - score = 3 (partially correct)
@@ -189,40 +190,54 @@ For each evaluation, first list each fact, conclusion, and key term from the ref
 For each, indicate if it is explicitly present in the model output, with a brief justification.
 Then calculate ratios as required.
 
+#### Definitions
+
+- **Facts**: A fact is a verifiable, objective statement that describes reality without inference, opinion, or interpretation. See examples below.  
+- **Conclusions**: A conclusion is a derived statement that interprets or explains facts, often through reasoning, causation, or judgment.
+  - If removing the sentence would make the text lose an interpretation, not a data point—it's likely a conclusion.
+- **Example**:
+  - Fact 1: Revenue grew by 25% in Q2.
+  - Fact 2: Marketing expenses were reduced by 15% over the same period.
+  - Fact 3: Customer acquisition rose by 18%.
+  - Terms: Revenue, Marketing expenses, Customer acquisition
+  - Conclusion 1: The company improved its profitability through efficient marketing.
+  - Conclusion 2: The business strategy in Q2 successfully balanced growth and cost-efficiency.
+
+#### Scoring
+
 - **Facts (40%)**  
   - Identify each discrete fact in the reference.
+  - Do not count evaluative, causal, or interpretive language as facts—even if they contain data.
   - Check whether the same fact appears correctly in the model output.
   - Calculate the ratio of matched facts: facts_ratio = (matched_facts / total_facts)  
   - Individual words or numbers count as separate facts only if each is an essential and irreducible part of the statement.
   - Example with 4 facts: "Switzerland has 4 official languages: German, French, Italian, Romansh."
   - Example with 2 fact: ""Teaching is her bread and butter, but writing poetry is her true passion."
 - **Conclusions (30%)**  
-  - Identify key conclusions or judgments in the reference.
+  - Identify key conclusions or judgments.
+  - Do not re-count previously identified facts as conclusions. Only count statements that derive or infer meaning from facts.
   - Check whether the model output reaches the same conclusions.
   - Calculate the ratio of matched conclusions: conclusions_ratio = (matched_conclusions / total_conclusions)
   - All conclusions have to be explicitly stated in the model output. Implicit conclusions do not count as matched.
-- **Terminology (20%)**  
-  - List each key term in the reference.
+- **Terminology (21%)**  
+  - List each key term in the reference without counting values and numeric expressions ('10 orders', '20%', 'less than 5') as terms.
   - Check whether the model output uses the same terms.
   - Calculate the ratio of matched terms: terms_ratio = (matched_terms / total_terms)
     - If total_terms > 0, then terms_ratio = (matched_terms / total_terms)
     - If total_terms == 0, set terms_ratio = 1
     - If no terms are matched, terms_ratio = 0
-- **Organization (10%)**
+- **Organization (9%)**
   - Compare the high-level structure (sections, ordering) of the model output and reference.
-  - Calculate the ratio of matched organization (0 or 1): organization_ratio = 0 for different, 1 for same
-  - organization_ratio = 0 facts_ratio < 1
-  - if total_conclusions == 0, then organization_ratio = 0
-
+  - Calculate the ratio of matched organization (0 or 1): organization_ratio = 0 for very different, 1 for comparable
 
 ### 2. Scoring model
 
 - **If total_conclusions > 0:**
-  - score = 5 * ( (facts_ratio * 0.4) + (conclusions_ratio * 0.3) + (terms_ratio * 0.2) + (organization_ratio * 0.1) )
+  - score = 5 * ( (facts_ratio * 0.4) + (conclusions_ratio * 0.3) + (terms_ratio * 0.21) + (organization_ratio * 0.09) )
 - **If total_conclusions == 0:**
-  - score = 5 * ( (facts_ratio * 0.7) + (terms_ratio * 0.2) + (organization_ratio * 0.1) )
+  - score = 5 * ( (facts_ratio * 0.7) + (terms_ratio * 0.21) + (organization_ratio * 0.09) )
 - **If matched_facts < 1:**
-  - score = 5 * ( (facts_ratio * 0.7) + (terms_ratio * 0.2) )
+  - score = 5 * ( (facts_ratio * 0.7) + (terms_ratio * 0.21) )
 - IMPORTANT: Round the score to the nearest integer number
 
 ### 3. Score verification
@@ -272,6 +287,53 @@ Return exactly:
 {{ item.output_text }}
 </model_output>
 """
+
+# This is the langchain open evals correctness prompt
+# https://github.com/langchain-ai/openevals/blob/main/python/openevals/prompts/correctness.py
+judge_model_prompt_template_3 = """
+You are an expert data labeler evaluating model outputs for correctness. Your task is to assign a score based on the following rubric:
+
+<Rubric>
+  A correct answer:
+  - Provides accurate and complete information
+  - Contains no factual errors
+  - Addresses all parts of the question
+  - Is logically consistent
+  - Uses precise and accurate terminology
+
+  When scoring, you should penalize:
+  - Factual errors or inaccuracies
+  - Incomplete or partial answers
+  - Misleading or ambiguous statements
+  - Incorrect terminology
+  - Logical inconsistencies
+  - Missing key information
+</Rubric>
+
+<Instructions>
+  - Carefully read the input and output
+  - Check for factual accuracy and completeness
+  - Focus on correctness of information rather than style or verbosity
+</Instructions>
+
+<Reminder>
+  The goal is to evaluate factual correctness and completeness of the response.
+</Reminder>
+
+<input>
+{{ item.input }}
+</input>
+
+<output>
+{{ item.output_text }}
+</output>
+
+Use the reference outputs below to help you evaluate the correctness of the response:
+
+<reference_outputs>
+{{ item.reference }}
+</reference_outputs>
+"""
 # ----------------------------------------------------- END: Prompts ----------------------------------------------------------
 
 # ----------------------------------------------------- START: Tests ----------------------------------------------------------
@@ -298,7 +360,7 @@ def get_answers_from_model_and_return_items(client, vector_store_id, model, item
   return items
 
 # Gets scores for all items using the provided prompt template and add score and rationale to each item
-def score_answers_using_judge_model_and_return_items(client, items, prompt_template, judge_model_name, remove_input_from_prompt: bool = False, log_items: bool = True):
+def score_answers_using_judge_model_and_return_items(client, items, prompt_template, judge_model_name, remove_input_from_prompt: bool = False, log_details: bool = True):
   function_name = 'Evaluate answers and add scores in items'
   start_time = log_function_header(function_name)
 
@@ -307,7 +369,7 @@ def score_answers_using_judge_model_and_return_items(client, items, prompt_templ
     reference = item['item']['reference']
     output_text = item['item'].get('output_text', '')
     print(f"  [ {idx} / {len(items)} ] Query: {truncate_string(input.replace('\n', ' '),120)}")
-    if log_items:
+    if log_details:
       print(f"    Reference    : {truncate_string(reference.replace('\n', ' '),100)}")
       print(f"    Model output : {truncate_string(output_text.replace('\n', ' '),100)}")
    
@@ -321,16 +383,16 @@ def score_answers_using_judge_model_and_return_items(client, items, prompt_templ
       prompt = re.sub(r'{{\s*item.input\s*}}', input, prompt)
     
     # Call the OpenAI API to evaluate the answer
-    response = retry_on_openai_errors(lambda: client.chat.completions.create(
-      model=judge_model_name,
-      messages=[{"role": "user", "content": prompt}],
-      response_format={"type": "json_object"},
-      temperature=0
+    response = retry_on_openai_errors(lambda: client.responses.create(
+      model=judge_model_name
+      ,input=prompt
+      ,text={ "format": { "type": "json_object" } }
+      ,temperature=0
     ), indentation=4)
     
     # Parse the JSON response
     try:
-      evaluation = json.loads(response.choices[0].message.content)
+      evaluation = json.loads(response.output_text)
       score = evaluation.get('score')
       rationale = evaluation.get('rationale')
       
@@ -338,20 +400,20 @@ def score_answers_using_judge_model_and_return_items(client, items, prompt_templ
       item['item']['score'] = score
       item['item']['rationale'] = rationale
       
-      if log_items:
+      if log_details:
         print(f"    Score: {score}")
         for r in rationale:
           print(f"    - {truncate_string(r,120) }")
     
     except json.JSONDecodeError:
-      print(f"    Error: Could not parse JSON response: {response.choices[0].message.content}")
+      print(f"    Error: Could not parse JSON response: {response.output_text}")
       item['item']['score'] = None
       item['item']['rationale'] = ["Error: Could not parse evaluation"]
 
   log_function_footer(function_name, start_time)
   return items
 
-def score_answers_using_cosine_similarity_and_return_items(client, items, embedding_model="text-embedding-3-small", log_items: bool = True):
+def score_answers_using_cosine_similarity_and_return_items(client, items, embedding_model="text-embedding-3-small", log_details: bool = True):
   function_name = 'Evaluate answers using cosine similarity'
   start_time = log_function_header(function_name)
 
@@ -370,7 +432,7 @@ def score_answers_using_cosine_similarity_and_return_items(client, items, embedd
     reference = item['item']['reference']
     output_text = item['item'].get('output_text', '')
     print(f"  [ {idx} / {len(items)} ] Query: {truncate_string(input.replace('\n', ' '),120)}")
-    if log_items:
+    if log_details:
       print(f"    Reference    : {truncate_string(reference.replace('\n', ' '),100)}")
       print(f"    Model output : {truncate_string(output_text.replace('\n', ' '),100)}")
 
@@ -387,7 +449,7 @@ def score_answers_using_cosine_similarity_and_return_items(client, items, embedd
       item['item']['score'] = score
       item['item']['rationale'] = [f"Cosine similarity: {similarity:.3f} (mapped to score {score})"] 
       
-      if log_items:
+      if log_details:
         print(f"    Score: {score}")
         print(f"    - Similarity: {similarity:.3f}")
     except Exception as e:
@@ -399,7 +461,7 @@ def score_answers_using_cosine_similarity_and_return_items(client, items, embedd
   return items
 
 
-def score_answers_using_score_model_grader_and_return_items(client, items, eval_name, prompt_template, eval_model, remove_input_from_prompt: bool, delete_eval_after_run: bool = False, log_items: bool = True):
+def score_answers_using_score_model_grader_and_return_items(client, items, eval_name, prompt_template, eval_model, min_score: int, remove_input_from_prompt: bool, delete_eval_after_run: bool = False, log_details: bool = True):
   function_name = 'Evaluate answers using score model grader'
   start_time = log_function_header(function_name)
 
@@ -431,7 +493,7 @@ def score_answers_using_score_model_grader_and_return_items(client, items, eval_
           {"role": "system", "content": "You are an expert evaluator. Your task is to evaluate the quality and accuracy of an answer compared to a reference answer."}
           ,{"role": "user", "content": prompt_template }
         ]
-        ,"range": [0, 5], "pass_threshold": 4
+        ,"range": [0, 5], "pass_threshold": min_score
       }
     ]
   )
@@ -448,7 +510,7 @@ def score_answers_using_score_model_grader_and_return_items(client, items, eval_
   print(f"  View results at: {eval_run.report_url}")
 
   # Poll for completion
-  attempts = 0; sleep_time_in_seconds = 5; max_attempts = math.ceil((2 * len(items)) / sleep_time_in_seconds) + 5 # 2 seconds per item + 5 additional retries
+  attempts = 0; sleep_time_in_seconds = 10; max_attempts = math.ceil((10 * len(items)) / sleep_time_in_seconds) + 5 # 10 seconds per item + 5 additional retries
   while attempts < max_attempts:
     status = client.evals.runs.retrieve(eval_run.id, eval_id=eval_cfg.id).status
     if status == "completed": print("  Evaluation completed."); break
@@ -470,7 +532,7 @@ def score_answers_using_score_model_grader_and_return_items(client, items, eval_
 
   # Run over all items and update their score and rationale from the evaluation results
   for idx, item in enumerate(items, 1):
-    print(f"  [ {idx} / {len(items)} ] Query: {truncate_string(item['item']['input'].replace('\n', ' '),120)}")
+    if log_details: print(f"  [ {idx} / {len(items)} ] Query: {truncate_string(item['item']['input'].replace('\n', ' '),120)}")
     # Find matching output item for this input item
     try:
       output_item = next(o for o in output_items 
@@ -478,7 +540,7 @@ def score_answers_using_score_model_grader_and_return_items(client, items, eval_
                         and o.datasource_item['reference'] == item['item']['reference'])
       # combined_item_status = output_item.status # 'fail' or 'pass'
     except StopIteration:
-      print(f"    ERROR: No matching output found for input: {truncate_string(item['item']['input'], 80)}")
+      print(f"    ERROR: No matching output found for input {idx}: {truncate_string(item['item']['input'], 80)}")
       item['item']['score'] = -1
       item['item']['rationale'] = ["Error: No matching evaluation output found"]
       continue
@@ -499,7 +561,7 @@ def score_answers_using_score_model_grader_and_return_items(client, items, eval_
       rationale = ["Error parsing model output"]
     item['item']['score'] = score
     item['item']['rationale'] = rationale
-    if log_items:
+    if log_details:
       print(f"    Reference: {truncate_string(item['item']['reference'], 120)}")
       print(f"    Model output: {truncate_string(item['item']['output_text'], 120)}")
       print(f"    Score: {score}")
@@ -513,6 +575,44 @@ def score_answers_using_score_model_grader_and_return_items(client, items, eval_
   log_function_footer(function_name, start_time)
   return items
 
+# calculates the accuracy of the evaluation model by using the calibration Batch02 where each score has 10 reference answers + model outputs
+# returns a string like this: Accuracy: 72%; Score 0: [9/10 = 90%], Score 1: [9/10 = 90%], Score 2: [9/10 = 90%], Score 3: [6/10 = 60%], Score 4: [9/10 = 90%], Score 5: [9/10 = 90%]
+def analyze_batch02_scores_and_return_string(items):
+  # Initialize counters for each score block
+  score_blocks = {
+    0: items[0:10],    # First 10 items
+    1: items[10:20],   # Next 10 items
+    2: items[20:30],   # Next 10 items
+    3: items[30:40],   # Next 10 items
+    4: items[40:50],   # Next 10 items
+    5: items[50:60]    # Last 10 items
+  }
+  
+  score_counts = {i: {'total': 0, 'correct': 0} for i in range(6)}
+  total_items = 0; total_correct = 0
+
+  # Process each block of 10 items
+  for expected_score, block_items in score_blocks.items():
+    for item in block_items:
+      score = item['item']['score']
+      score_counts[expected_score]['total'] += 1
+      if score == expected_score: score_counts[expected_score]['correct'] += 1
+      total_items += 1
+
+  total_correct = sum(count['correct'] for count in score_counts.values())
+  
+  string_parts = []
+  accuracy = (total_correct / total_items * 100) if total_items > 0 else 0
+  string_parts.append(f"Batch02 accuracy: {accuracy:.0f}%")
+  
+  for score in range(6):
+    correct = score_counts[score]['correct']; total = score_counts[score]['total']
+    percentage = (correct / total * 100) if total > 0 else 0
+    string_parts.append(f"Score {score}: [{correct}/{total} = {percentage:.0f}%]")
+  
+  return "; ".join(string_parts)
+
+# creates score table and if items == Batch02 it also calculates the evaluation model accuracy
 def summarize_item_scores(items, min_score: int, indentation: int = 0) -> str:
   # calculate average score
   scores = [item['item']['score'] for item in items if item['item'].get('score') is not None]
@@ -529,14 +629,77 @@ def summarize_item_scores(items, min_score: int, indentation: int = 0) -> str:
   table += indentation_string + "-" * (max_chars_question+max_chars_reference+max_chars_answer+max_chars_score+10)
   
   for item in items:
-    question = item['item']['input'][:max_chars_question]
-    reference = item['item']['reference'][:max_chars_reference]
-    answer = item['item'].get('output_text', '')[:max_chars_answer]
+    question = item['item']['input'].replace("\n", " ")[:max_chars_question]
+    reference = item['item']['reference'].replace("\n", " ")[:max_chars_reference]
+    answer = item['item'].get('output_text', '').replace("\n", " ")[:max_chars_answer]
     score = item['item'].get('score', 'N/A')
     table += "\n" + indentation_string + f"{question:{max_chars_question}} | {reference:{max_chars_reference}} | {answer:{max_chars_answer}} | {str(score):<{max_chars_score}}"
   
-  summary = indentation_string + f"{questions_answered_correctly} of {len(items)} answers correct ({questions_answered_correctly_percent:.0%}). Average score: {average_score:.2f} ({average_score_in_percent:.0%})."
+  summary = indentation_string + analyze_batch02_scores_and_return_string(items) if items == Batch02 else ""
+  summary += "\n" + indentation_string + f"{questions_answered_correctly} of {len(items)} answers correct ({questions_answered_correctly_percent:.0%}). Average score: {average_score:.2f} ({average_score_in_percent:.0%})."
   return  summary + table
+
+# Print lines as box with + and - and | characters
+def print_as_box(indentation: int, lines: str | list, min_width: int):
+  # Convert single string to list
+  if isinstance(lines, str): lines = [lines]
+  # Calculate required width
+  content_width = max(max(len(line) for line in lines), min_width)
+  # Create top/bottom border with + at corners
+  border = "+" + "-" * (content_width + 2) + "+"
+  indent = " " * indentation
+  # Print box
+  print(f"{indent}{border}")
+  for line in lines:
+    right_pad = content_width - len(line)
+    print(f"{indent}| {line}{' ' * right_pad} |")
+  print(f"{indent}{border}")
+
+# Measures the variability of the score model by running the evaluation multiple times and calculating the standard deviation of the scores
+def measure_score_model_variability(client, items, eval_name, prompt_template, eval_model, min_score: int, number_of_runs: int, remove_input_from_prompt: bool = False, delete_eval_after_run: bool = False, log_details: bool = True):
+  function_name = 'Measure score model variability'
+  start_time = log_function_header(function_name)
+
+  # Store scores for each item across all runs
+  item_scores = {i: [] for i in range(len(items))}
+
+  # Run the evaluation multiple times
+  for run in range(number_of_runs):
+    print(f"-------------- Run {run + 1} of {number_of_runs} --------------")
+    eval_name2 = f"{eval_name} - run {run + 1}"
+    # Run evaluation and collect scores
+    scored_items = score_answers_using_score_model_grader_and_return_items( client, items, eval_name2, prompt_template, eval_model, min_score, remove_input_from_prompt, delete_eval_after_run, log_details=False)
+    for i, item in enumerate(scored_items):
+      score = item['item']['score']
+      item_scores[i].append(score)
+
+  # Calculate metrics for each item
+  unstable_items = 0;all_std_devs = []
+  for i, item in enumerate(items):
+    scores = item_scores[i]
+    if scores:
+      std = np.std(scores)
+      score_range = (min(scores), max(scores))
+      is_unstable = len(set(scores)) > 1
+      if is_unstable: unstable_items += 1
+      item['item']['score_variability'] = { 'scores': scores, 'std': std, 'min': score_range[0], 'max': score_range[1], 'unstable': is_unstable }
+      all_std_devs.append(std)
+
+  total_items = len(items)
+  instability_rate = unstable_items / total_items if total_items > 0 else 0.0
+  avg_std_dev = np.mean(all_std_devs) if all_std_devs else 0.0
+  magnitude_of_deviation = lambda avg_std_dev: "none" if avg_std_dev == 0 else "very low" if avg_std_dev < 0.05 else "low" if avg_std_dev < 0.15 else "moderate" if avg_std_dev < 0.4 else "high"
+
+  content_lines = [
+    f"Overall variability statistics for {number_of_runs} runs of '{eval_name}' (model '{eval_model}'):",
+    "-" * 100,
+    f"Instability rate           : {instability_rate * 100:.2f}% ({unstable_items}/{total_items} items)",
+    f"Average Standard Deviation : {avg_std_dev:.2f} ({magnitude_of_deviation(avg_std_dev)})"
+  ]
+  print_as_box(0, content_lines, 60)
+
+  log_function_footer(function_name, start_time)
+  return items
 
 # ----------------------------------------------------- END: Tests ------------------------------------------------------------
 
@@ -556,23 +719,33 @@ if __name__ == '__main__':
     client = create_azure_openai_client(azure_openai_use_key_authentication)
 
   @dataclass
-  class EvalParams: vector_store_name: str; folder_path: str; items: list; answer_model: str; eval_model: str; embedding_model: str; min_score: int; remove_input_from_prompt: bool; delete_eval_after_run: bool; log_items: bool
+  class EvalParams: vector_store_name: str; folder_path: str; eval_path: str; items: list; answer_model: str; eval_model: str; embedding_model: str; min_score: int; remove_input_from_prompt: bool; delete_eval_after_run: bool; log_details: bool; variability_runs: int
 
   params = EvalParams(
     vector_store_name="test_vector_store"
     ,folder_path="./RAGFiles/Batch01"
+    # if you have a path to a JSON file with items, the code will load the items from the file instead of using the assigned batch objects
+    ,eval_path=None
     ,items = Batch01
     ,answer_model = answer_model_name
     ,eval_model = eval_model_name
     ,embedding_model="text-embedding-3-small"
-    ,min_score=3
+    ,min_score=4
     # By removing the input from the evaluation prompt templates we can demonstrate that evaluation needs the input to be able to provide a correct evaluation
     # CORRECT   -> reference="Jupiter" vs. output="Zeus" for input="Who is the master of the olympian gods?"
     # INCORRECT -> reference="Jupiter" vs. output="Zeus" for input="What is largest planet in our solar system?"
     ,remove_input_from_prompt=False
-    ,delete_eval_after_run=True
-    ,log_items=True
+    ,delete_eval_after_run=False
+    ,log_details=False
+    ,variability_runs=5
   )
+
+  # If we have path to eval file, load items from eval file (JSON)
+  if params.eval_path:
+    with open(params.eval_path, 'r') as f:
+      eval_data = json.load(f)
+      params.items = eval_data
+      # params.items = [item['item'] for item in eval_data]
 
   # If use_predefined_model_outputs is set to False, create vector store and get answers from model
   use_predefined_model_outputs = True
@@ -585,30 +758,45 @@ if __name__ == '__main__':
     params.items = get_answers_from_model_and_return_items(client, test_vector_store_with_files.vector_store.id, params.answer_model, params.items)
     print("-"*140) 
 
-  # Step 3A: Test eval using judge model with prompt template 1
-  params.items = score_answers_using_judge_model_and_return_items(client, params.items, judge_model_prompt_template_1, params.eval_model, params.remove_input_from_prompt, params.log_items)
-  print("."*100 + f"\n    Evaluation results using judge model '{params.eval_model}' with prompt template 1:")
-  print(summarize_item_scores(params.items, params.min_score, 4) )
-  print("-"*140)
-  # Step 3B: Test eval using judge model with prompt template 2
-  params.items = score_answers_using_judge_model_and_return_items(client, params.items, judge_model_prompt_template_2, params.eval_model, params.remove_input_from_prompt, params.log_items)
-  print("."*100 + f"\n    Evaluation results using judge model '{params.eval_model}' with prompt template 2:")
-  print(summarize_item_scores(params.items, params.min_score, 4))
-  print("-"*140)
-  # Step 3C: Test eval using embedding and cosine similarity
-  params.items = score_answers_using_cosine_similarity_and_return_items(client, params.items, params.embedding_model, params.log_items)
+  # Step 3A: Test eval using embedding and cosine similarity
+  params.items = score_answers_using_cosine_similarity_and_return_items(client, params.items, params.embedding_model, params.log_details)
   print("."*100 + f"\n    Evaluation results using embedding with '{params.embedding_model}' and cosine similiarity:")
   print(summarize_item_scores(params.items, params.min_score, 4))
   print("-"*140)
-  # Step 3D: Test eval using score model grader with prompt template 1
-  params.items = score_answers_using_score_model_grader_and_return_items(client, params.items, "test_eval - prompt_template_1", judge_model_prompt_template_1, params.eval_model, params.remove_input_from_prompt, params.delete_eval_after_run, params.log_items)
-  print("."*100 + f"\n    Evaluation results using 'score_model' grader and prompt template 1:")
+  # Step 3B: Test eval using judge model with prompt template 1 (Simple)
+  params.items = score_answers_using_judge_model_and_return_items(client, params.items, judge_model_prompt_template_1, params.eval_model, params.remove_input_from_prompt, params.log_details)
+  print("."*100 + f"\n    Evaluation results using judge model '{params.eval_model}' with prompt template 1 (Simple):")
+  print(summarize_item_scores(params.items, params.min_score, 4) )
+  print("-"*140)
+  # Step 3C: Test eval using judge model with prompt template 2 (Scoring Model)
+  params.items = score_answers_using_judge_model_and_return_items(client, params.items, judge_model_prompt_template_2, params.eval_model, params.remove_input_from_prompt, params.log_details)
+  print("."*100 + f"\n    Evaluation results using judge model '{params.eval_model}' with prompt template 2 (Scoring Model):")
   print(summarize_item_scores(params.items, params.min_score, 4))
   print("-"*140)
-  # Step 3E: Test eval using score model grader with prompt template 2
-  params.items = score_answers_using_score_model_grader_and_return_items(client, params.items, "test_eval - prompt_template_2", judge_model_prompt_template_2, params.eval_model, params.remove_input_from_prompt, params.delete_eval_after_run, params.log_items)
-  print("."*100 + f"\n    Evaluation results using 'score_model' grader and prompt template 2:")
+  # Step 3D: Test eval using score model grader with prompt template 1 (Simple)
+  params.items = score_answers_using_score_model_grader_and_return_items(client, params.items, "test_eval - prompt_template_1", judge_model_prompt_template_1, params.eval_model, params.min_score, params.remove_input_from_prompt, params.delete_eval_after_run, params.log_details)
+  print("."*100 + f"\n    Evaluation results using 'score_model' grader and prompt template 1 (Simple):")
   print(summarize_item_scores(params.items, params.min_score, 4))
+  print("-"*140)
+  # Step 3E: Test eval using score model grader with prompt template 2 (Scoring Model)
+  params.items = score_answers_using_score_model_grader_and_return_items(client, params.items, "test_eval - prompt_template_2", judge_model_prompt_template_2, params.eval_model, params.min_score, params.remove_input_from_prompt, params.delete_eval_after_run, params.log_details)
+  print("."*100 + f"\n    Evaluation results using 'score_model' grader and prompt template 2 (Scoring Model):")
+  print(summarize_item_scores(params.items, params.min_score, 4))
+  print("-"*140)
+  # Step 3F: Test eval using score model grader with prompt template 3 (Langchain Correctness)
+  params.items = score_answers_using_score_model_grader_and_return_items(client, params.items, "test_eval - prompt_template_3", judge_model_prompt_template_3, params.eval_model, params.min_score, params.remove_input_from_prompt, params.delete_eval_after_run, params.log_details)
+  print("."*100 + f"\n    Evaluation results using 'score_model' grader and prompt template 3 (Langchain Correctness):")
+  print(summarize_item_scores(params.items, params.min_score, 4))
+  print("-"*140)
+
+  # Step 4A: Measure variablity of prompt 1
+  measure_score_model_variability(client, params.items, "Prompt 1 (Simple) Variability", judge_model_prompt_template_1, params.eval_model, params.min_score, params.variability_runs, params.remove_input_from_prompt, params.delete_eval_after_run, params.log_details)
+  print("-"*140)
+  # Step 4B: Measure variablity of prompt 2
+  measure_score_model_variability(client, params.items, "Prompt 2 (Scoring model) variability", judge_model_prompt_template_2, params.eval_model, params.min_score, params.variability_runs, params.remove_input_from_prompt, params.delete_eval_after_run, params.log_details)
+  print("-"*140)
+  # Step 4C: Measure variablity of prompt 3
+  measure_score_model_variability(client, params.items, "Prompt 2 (Langchain Correctness) variability", judge_model_prompt_template_3, params.eval_model, params.min_score, params.variability_runs, params.remove_input_from_prompt, params.delete_eval_after_run, params.log_details)
   print("-"*140)
 
   # Step 4: Delete vector store including all files
