@@ -7,6 +7,7 @@ import time
 import math
 import numpy as np
 import re
+import copy
 
 load_dotenv()
 
@@ -342,8 +343,11 @@ Use the reference outputs below to help you evaluate the correctness of the resp
 def get_answers_from_model_and_return_items(client, vector_store_id, model, items):
   function_name = 'Get answers from model and add to items'
   start_time = log_function_header(function_name)
+  
+  # Make a deep copy of items to avoid modifying the original
+  items_copy = copy.deepcopy(items)
 
-  for idx, item in enumerate(items, 1):
+  for idx, item in enumerate(items_copy, 1):
     input = item['item']['input']
     print(f"  [ {idx} / {len(items)} ] Query: {input}")
     response = retry_on_openai_errors(lambda: client.responses.create(
@@ -357,14 +361,68 @@ def get_answers_from_model_and_return_items(client, vector_store_id, model, item
     item['item']['output_text'] = output_text
 
   log_function_footer(function_name, start_time)
-  return items
+  return items_copy
+
+# Embedds (vectorizes) reference and model output, then gets scores for all items using cosine similarity and adds score and rationale to each item
+def score_answers_using_cosine_similarity_and_return_items(client, items, embedding_model="text-embedding-3-small", log_details: bool = True):
+  function_name = 'Evaluate answers using cosine similarity'
+  start_time = log_function_header(function_name)
+  
+  # Make a deep copy of items to avoid modifying the original
+  items_copy = copy.deepcopy(items)
+
+  def cosine_similarity(a, b):
+    return float(np.dot(a, b) / (np.linalg.norm(a) * np.linalg.norm(b)))
+
+  def embed_text(text):
+    response = retry_on_openai_errors(lambda: client.embeddings.create(
+      model=embedding_model,
+      input=[text]
+    ), indentation=4)
+    return response.data[0].embedding
+
+  for idx, item in enumerate(items_copy, 1):
+    input = item['item']['input']
+    reference = item['item']['reference']
+    output_text = item['item'].get('output_text', '')
+    print(f"  [ {idx} / {len(items)} ] Query: {truncate_string(input.replace('\n', ' '),120)}")
+    if log_details:
+      print(f"    Reference    : {truncate_string(reference.replace('\n', ' '),100)}")
+      print(f"    Model output : {truncate_string(output_text.replace('\n', ' '),100)}")
+
+    try:
+      # Get embeddings and calculate similarity
+      reference_embedding = embed_text(reference)
+      output_embedding = embed_text(output_text)
+      similarity = cosine_similarity(reference_embedding, output_embedding)
+      
+      # Convert similarity score (0-1) to evaluation score (1-5)
+      score = int(round(similarity * 4)) + 1
+      
+      # Add score and rationale to the item
+      item['item']['score'] = score
+      item['item']['rationale'] = [f"Cosine similarity: {similarity:.3f} (mapped to score {score})"] 
+      
+      if log_details:
+        print(f"    Score: {score}")
+        print(f"    - Similarity: {similarity:.3f}")
+    except Exception as e:
+      print(f"    Error: Could not calculate embedding similarity: {str(e)}")
+      item['item']['score'] = 0
+      item['item']['rationale'] = [f"Error calculating similarity score: {str(e)}"]
+
+  log_function_footer(function_name, start_time)
+  return items_copy
 
 # Gets scores for all items using the provided prompt template and add score and rationale to each item
 def score_answers_using_judge_model_and_return_items(client, items, prompt_template, judge_model_name, remove_input_from_prompt: bool = False, log_details: bool = True):
   function_name = 'Evaluate answers and add scores in items'
   start_time = log_function_header(function_name)
+  
+  # Make a deep copy of items to avoid modifying the original
+  items_copy = copy.deepcopy(items)
 
-  for idx, item in enumerate(items, 1):
+  for idx, item in enumerate(items_copy, 1):
     input = item['item']['input']
     reference = item['item']['reference']
     output_text = item['item'].get('output_text', '')
@@ -411,62 +469,17 @@ def score_answers_using_judge_model_and_return_items(client, items, prompt_templ
       item['item']['rationale'] = ["Error: Could not parse evaluation"]
 
   log_function_footer(function_name, start_time)
-  return items
-
-def score_answers_using_cosine_similarity_and_return_items(client, items, embedding_model="text-embedding-3-small", log_details: bool = True):
-  function_name = 'Evaluate answers using cosine similarity'
-  start_time = log_function_header(function_name)
-
-  def cosine_similarity(a, b):
-    return float(np.dot(a, b) / (np.linalg.norm(a) * np.linalg.norm(b)))
-
-  def embed_text(text):
-    response = retry_on_openai_errors(lambda: client.embeddings.create(
-      model=embedding_model,
-      input=[text]
-    ), indentation=4)
-    return response.data[0].embedding
-
-  for idx, item in enumerate(items, 1):
-    input = item['item']['input']
-    reference = item['item']['reference']
-    output_text = item['item'].get('output_text', '')
-    print(f"  [ {idx} / {len(items)} ] Query: {truncate_string(input.replace('\n', ' '),120)}")
-    if log_details:
-      print(f"    Reference    : {truncate_string(reference.replace('\n', ' '),100)}")
-      print(f"    Model output : {truncate_string(output_text.replace('\n', ' '),100)}")
-
-    try:
-      # Get embeddings and calculate similarity
-      reference_embedding = embed_text(reference)
-      output_embedding = embed_text(output_text)
-      similarity = cosine_similarity(reference_embedding, output_embedding)
-      
-      # Convert similarity score (0-1) to evaluation score (1-5)
-      score = int(round(similarity * 4)) + 1
-      
-      # Add score and rationale to the item
-      item['item']['score'] = score
-      item['item']['rationale'] = [f"Cosine similarity: {similarity:.3f} (mapped to score {score})"] 
-      
-      if log_details:
-        print(f"    Score: {score}")
-        print(f"    - Similarity: {similarity:.3f}")
-    except Exception as e:
-      print(f"    Error: Could not calculate embedding similarity: {str(e)}")
-      item['item']['score'] = 0
-      item['item']['rationale'] = [f"Error calculating similarity score: {str(e)}"]
-
-  log_function_footer(function_name, start_time)
-  return items
-
+  return items_copy
 
 def score_answers_using_score_model_grader_and_return_items(client, items, eval_name, prompt_template, eval_model, min_score: int, remove_input_from_prompt: bool, delete_eval_after_run: bool = False, log_details: bool = True):
   function_name = 'Evaluate answers using score model grader'
   start_time = log_function_header(function_name)
+  
+  # Make a deep copy of items to avoid modifying the original
+  items_copy = copy.deepcopy(items)
 
   # Reset 'score' and 'rationale' for each item
-  for item in items: item['item']['score'] = -1; item['item']['rationale'] = ""
+  for item in items_copy: item['item']['score'] = -1; item['item']['rationale'] = ""
 
   if remove_input_from_prompt:
     # remove tags <input></input> and everything in between
@@ -503,7 +516,7 @@ def score_answers_using_score_model_grader_and_return_items(client, items, eval_
     name=eval_name.lower().replace(" ", "_") + "_run",
     eval_id=eval_cfg.id,
     data_source={
-      "type": "jsonl", "source": { "type": "file_content", "content": items }
+      "type": "jsonl", "source": { "type": "file_content", "content": items_copy }
     }
   )
   print(f"  Created evaluation run with ID: {eval_run.id}")
@@ -531,7 +544,7 @@ def score_answers_using_score_model_grader_and_return_items(client, items, eval_
   output_items = get_all_eval_run_output_items(client, run_id=eval_run.id, eval_id=eval_cfg.id)
 
   # Run over all items and update their score and rationale from the evaluation results
-  for idx, item in enumerate(items, 1):
+  for idx, item in enumerate(items_copy, 1):
     if log_details: print(f"  [ {idx} / {len(items)} ] Query: {truncate_string(item['item']['input'].replace('\n', ' '),120)}")
     # Find matching output item for this input item
     try:
@@ -569,11 +582,10 @@ def score_answers_using_score_model_grader_and_return_items(client, items, eval_
         print(f"      - {truncate_string(r, 140)}")
 
   # Delete evaluation after run if requested
-  if delete_eval_after_run:
-    client.evals.delete(eval_id=eval_cfg.id)
+  if delete_eval_after_run: client.evals.delete(eval_id=eval_cfg.id)
 
   log_function_footer(function_name, start_time)
-  return items
+  return items_copy
 
 # calculates the accuracy of the evaluation model by using the calibration Batch02 where each score has 10 reference answers + model outputs
 # returns a string like this: Accuracy: 72%; Score 0: [9/10 = 90%], Score 1: [9/10 = 90%], Score 2: [9/10 = 90%], Score 3: [6/10 = 60%], Score 4: [9/10 = 90%], Score 5: [9/10 = 90%]
@@ -659,23 +671,26 @@ def print_as_box(indentation: int, lines: str | list, min_width: int):
 def measure_score_model_variability(client, items, eval_name, prompt_template, eval_model, min_score: int, number_of_runs: int, remove_input_from_prompt: bool = False, delete_eval_after_run: bool = False, log_details: bool = True):
   function_name = 'Measure score model variability'
   start_time = log_function_header(function_name)
+  
+  # Make a deep copy of items to avoid modifying the original
+  items_copy = copy.deepcopy(items)
 
   # Store scores for each item across all runs
-  item_scores = {i: [] for i in range(len(items))}
+  item_scores = {i: [] for i in range(len(items_copy))}
 
   # Run the evaluation multiple times
   for run in range(number_of_runs):
     print(f"-------------- Run {run + 1} of {number_of_runs} --------------")
     eval_name2 = f"{eval_name} - run {run + 1}"
     # Run evaluation and collect scores
-    scored_items = score_answers_using_score_model_grader_and_return_items( client, items, eval_name2, prompt_template, eval_model, min_score, remove_input_from_prompt, delete_eval_after_run, log_details=False)
+    scored_items = score_answers_using_score_model_grader_and_return_items( client, items_copy, eval_name2, prompt_template, eval_model, min_score, remove_input_from_prompt, delete_eval_after_run, log_details=False)
     for i, item in enumerate(scored_items):
       score = item['item']['score']
       item_scores[i].append(score)
 
   # Calculate metrics for each item
   unstable_items = 0;all_std_devs = []
-  for i, item in enumerate(items):
+  for i, item in enumerate(items_copy):
     scores = item_scores[i]
     if scores:
       std = np.std(scores)
@@ -685,7 +700,7 @@ def measure_score_model_variability(client, items, eval_name, prompt_template, e
       item['item']['score_variability'] = { 'scores': scores, 'std': std, 'min': score_range[0], 'max': score_range[1], 'unstable': is_unstable }
       all_std_devs.append(std)
 
-  total_items = len(items)
+  total_items = len(items_copy)
   instability_rate = unstable_items / total_items if total_items > 0 else 0.0
   avg_std_dev = np.mean(all_std_devs) if all_std_devs else 0.0
   magnitude_of_deviation = lambda avg_std_dev: "none" if avg_std_dev == 0 else "very low" if avg_std_dev < 0.05 else "low" if avg_std_dev < 0.15 else "moderate" if avg_std_dev < 0.4 else "high"
@@ -699,7 +714,7 @@ def measure_score_model_variability(client, items, eval_name, prompt_template, e
   print_as_box(0, content_lines, 60)
 
   log_function_footer(function_name, start_time)
-  return items
+  return items_copy
 
 # ----------------------------------------------------- END: Tests ------------------------------------------------------------
 
@@ -735,7 +750,7 @@ if __name__ == '__main__':
     # CORRECT   -> reference="Jupiter" vs. output="Zeus" for input="Who is the master of the olympian gods?"
     # INCORRECT -> reference="Jupiter" vs. output="Zeus" for input="What is largest planet in our solar system?"
     ,remove_input_from_prompt=False
-    ,delete_eval_after_run=False
+    ,delete_eval_after_run=True
     ,log_details=False
     ,variability_runs=5
   )
@@ -747,7 +762,7 @@ if __name__ == '__main__':
       params.items = eval_data
       # params.items = [item['item'] for item in eval_data]
 
-  # If use_predefined_model_outputs is set to False, create vector store and get answers from model
+  # If use_predefined_model_outputs=False, create temporary vector store by uploading files and get answers from model
   use_predefined_model_outputs = True
   if not use_predefined_model_outputs:
     print("-"*140)
@@ -800,6 +815,6 @@ if __name__ == '__main__':
   print("-"*140)
 
   # Step 4: Delete vector store including all files
-  if not use_predefined_model_outputs: delete_eval_by_name(client, params.vector_store_name)
+  if not use_predefined_model_outputs: delete_vector_store_by_name(client, params.vector_store_name)
 
 # ----------------------------------------------------- END: Main -------------------------------------------------------------

@@ -917,7 +917,7 @@ def delete_vector_store_by_id(client, vector_store_id, delete_files=False):
   else:
     print(f"  Vector store id='{vector_store_id}' not found.")
 
-def delete_eval_by_name(client, name, delete_files=False):
+def delete_vector_store_by_name(client, name, delete_files=False):
   vector_stores = get_all_vector_stores(client)
   vs = [vs for vs in vector_stores if vs.name == name]
   if vs:

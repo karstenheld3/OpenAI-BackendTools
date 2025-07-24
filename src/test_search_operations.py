@@ -395,6 +395,6 @@ if __name__ == '__main__':
   print("-"*140)
 
   # Step 4: Delete vector store including all files
-  delete_eval_by_name(client, params.vector_store_name, True)
+  delete_vector_store_by_name(client, params.vector_store_name, True)
 
 # ----------------------------------------------------- END: Main -------------------------------------------------------------
