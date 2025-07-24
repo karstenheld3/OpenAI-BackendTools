@@ -299,13 +299,13 @@ def get_filelist_metrics(files):
 
 # ----------------------------------------------------- START: Assistants -----------------------------------------------------
 
-def get_assistant_vector_store_id(assistant):
+def get_assistant_vector_store_id(client, assistant):
   if isinstance(assistant, str):
     # if it's a name, retrieve the assistant
     assistants = get_all_assistants(client)
-    for ast in assistants:
-      if ast.name == assistant:
-        assistant = ast
+    for temp_assistant in assistants:
+      if temp_assistant.name == assistant:
+        assistant = temp_assistant
         break
 
   if not assistant:
@@ -329,7 +329,7 @@ def get_all_assistants(client):
     for idx, assistant in enumerate(first_page.data):
       setattr(assistant, 'index', idx)
       # Extract and set vector store ID
-      vector_store_id = get_assistant_vector_store_id(assistant)
+      vector_store_id = get_assistant_vector_store_id(client, assistant)
       setattr(assistant, 'vector_store_id', vector_store_id)
     return first_page.data
   
@@ -352,7 +352,7 @@ def get_all_assistants(client):
   for idx, assistant in enumerate(all_assistants):
     setattr(assistant, 'index', idx)
     # Extract and set vector store ID
-    vector_store_id = get_assistant_vector_store_id(assistant)
+    vector_store_id = get_assistant_vector_store_id(client, assistant)
     setattr(assistant, 'vector_store_id', vector_store_id)
     
   return all_assistants
