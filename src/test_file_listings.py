@@ -28,7 +28,7 @@ def list_all_files(client):
   return all_files
 
 # Display the vector stores with top row showing total count and expired count
-def list_evals(client):
+def list_vector_stores(client):
   all_vector_stores = get_all_vector_stores(client)
   all_vector_stores_expired = [v for v in all_vector_stores if getattr(v, 'status', None) == 'expired']
   total_usage_bytes = sum([vs.usage_bytes for vs in all_vector_stores if hasattr(vs, 'usage_bytes')])
@@ -116,7 +116,7 @@ if __name__ == '__main__':
 
   all_files = list_all_files(client)
 
-  all_vector_stores = list_evals(client)
+  all_vector_stores = list_vector_stores(client)
 
   all_assistants = list_assistants(client)
 
