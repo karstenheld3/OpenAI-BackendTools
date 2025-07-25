@@ -120,8 +120,6 @@ if __name__ == '__main__':
 
   all_assistants = list_assistants(client)
 
-  all_files = list_all_files(client)
-
   files_used_by_vector_stores = list_files_used_by_vector_stores(client)
 
   list_files_not_used_by_vector_stores(client, all_files)

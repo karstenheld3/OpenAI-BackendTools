@@ -76,7 +76,7 @@ def log_function_footer(name, start_time):
 
 def get_all_assistant_vector_store_ids(client):
   all_assistants = get_all_assistants(client)
-  all_assistant_vector_store_ids = [get_assistant_vector_store_id(a) for a in all_assistants]
+  all_assistant_vector_store_ids = [get_assistant_vector_store_id(client, a) for a in all_assistants]
   return all_assistant_vector_store_ids
 
 def get_files_used_by_assistant_vector_stores(client):

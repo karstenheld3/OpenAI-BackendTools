@@ -293,12 +293,12 @@ def test_file_search_functionalities(client, vector_store_id, params):
   # Search for files using query
   # https://cookbook.openai.com/examples/file_search_responses#standalone-vector-search
 
-  query = params.search_query_1; score_threshold = 0.3; max_num_results = 10
-  print(f"  Testing query search (score_threshold={str(score_threshold)}, max_num_results={max_num_results}): {query}")
+  query = params.search_query_1; max_num_results = 10
+  print(f"  Testing query search (score_threshold={str(params.score_threshold)}, max_num_results={max_num_results}): {query}")
   search_results = retry_on_openai_errors(lambda: client.vector_stores.search(
     vector_store_id=vector_store_id,
     query=query,
-    ranking_options={"ranker": "auto", "score_threshold": score_threshold},
+    ranking_options={"ranker": "auto", "score_threshold": params.score_threshold},
     max_num_results=max_num_results
   ), indentation=4)
   # sort by score
@@ -312,12 +312,12 @@ def test_file_search_functionalities(client, vector_store_id, params):
   query = params.search_query_2
   filters = params.search_query_2_filters
   print("  " + "-"*140)
-  print(f"  Testing filtered query search (filter: {filters['key']}='{filters['value']}', score_threshold={str(score_threshold)}, max_num_results={max_num_results}): {query}")
+  print(f"  Testing filtered query search (filter: {filters['key']}='{filters['value']}', score_threshold={str(params.score_threshold)}, max_num_results={max_num_results}): {query}")
 
   search_results = retry_on_openai_errors(lambda: client.vector_stores.search(
     vector_store_id=vector_store_id,
     query=query,
-    ranking_options={"ranker": "auto", "score_threshold": score_threshold},
+    ranking_options={"ranker": "auto", "score_threshold": params.score_threshold},
     max_num_results=max_num_results,
     filters=filters
   ), indentation=4)
@@ -327,14 +327,14 @@ def test_file_search_functionalities(client, vector_store_id, params):
 
   # Search for files using rewrite-query
   # https://platform.openai.com/docs/guides/retrieval#query-rewriting
-  query = params.search_query_3_with_query_rewrite; score_threshold = 0.3; max_num_results = 10
+  query = params.search_query_3_with_query_rewrite; max_num_results = 10
   print("  " + "-"*140)
-  print(f"  Testing rewrite query search (score_threshold={str(score_threshold)}, max_num_results={max_num_results}): {query}")
+  print(f"  Testing rewrite query search (score_threshold={str(params.score_threshold)}, max_num_results={max_num_results}): {query}")
   search_results = retry_on_openai_errors(lambda: client.vector_stores.search(
     vector_store_id=vector_store_id,
     query=query,
     rewrite_query=True,
-    ranking_options={"ranker": "auto", "score_threshold": score_threshold},
+    ranking_options={"ranker": "auto", "score_threshold": params.score_threshold},
     max_num_results=max_num_results
   ), indentation=4)
 
@@ -354,15 +354,15 @@ def test_file_search_functionalities(client, vector_store_id, params):
 if __name__ == '__main__':
   openai_service_type = os.getenv("OPENAI_SERVICE_TYPE", "openai")
   if openai_service_type == "openai":
-    eval_model_name = "gpt-4o-mini"
+    openai_model_name = "gpt-4o-mini"
     client = create_openai_client()
   elif openai_service_type == "azure_openai":
-    eval_model_name = os.getenv("AZURE_OPENAI_MODEL_DEPLOYMENT_NAME", "gpt-4o-mini")
+    openai_model_name = os.getenv("AZURE_OPENAI_MODEL_DEPLOYMENT_NAME", "gpt-4o-mini")
     azure_openai_use_key_authentication = os.getenv("AZURE_OPENAI_USE_KEY_AUTHENTICATION", "false").lower() in ['true']
     client = create_azure_openai_client(azure_openai_use_key_authentication)
 
   @dataclass
-  class SearchParams: vector_store_name: str; folder_path: str; search_query_1: str; search_query_2: str; search_query_2_filters: dict; search_query_3_with_query_rewrite: str
+  class SearchParams: vector_store_name: str; folder_path: str; search_query_1: str; search_query_2: str; search_query_2_filters: dict; search_query_3_with_query_rewrite: str; score_threshold: float
 
   params = SearchParams(
     vector_store_name="test_vector_store"
@@ -371,14 +371,15 @@ if __name__ == '__main__':
     ,search_query_2="Who is Arilena Drovik?"
     ,search_query_2_filters = { "key": "file_type", "type": "eq", "value": "md" }
     ,search_query_3_with_query_rewrite="All files from year 2015."
+    ,score_threshold=0.3
   )
 
   # Step 1: Create vector store by uploading files
   test_vector_store_with_files = create_test_vector_store_from_folder_path(client,params.vector_store_name, params.folder_path)
 
   # Step 2: Extract metadata from files and re-add files with more metadata to the vector store
-  extract_and_add_metadata_to_vector_store_using_assistants_api(client, test_vector_store_with_files, metadata_extraction_prompt_template, openai_model_name, True)
- 
+  # extract_and_add_metadata_to_vector_store_using_assistants_api(client, test_vector_store_with_files, metadata_extraction_prompt_template, openai_model_name, True)
+  extract_and_add_metadata_to_vector_store_using_responses_api(client, test_vector_store_with_files, metadata_extraction_prompt_template, openai_model_name, True)
   print("\n")
 
   files = get_vector_store_files(client, test_vector_store_with_files.vector_store)

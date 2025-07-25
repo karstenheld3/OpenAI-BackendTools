@@ -155,10 +155,18 @@ Batch02 = [
 # ----------------------------------------------------- START: Prompts --------------------------------------------------------
 # A very simple judge model prompt
 judge_model_prompt_template_1 = """
-You are an expert evaluator for a QA system. Compare the generated model output ('model_output' tag) to the reference answer ('reference' tag). Assign an **integer score from 0 to 5** where:
-0 = completely unrelated and incorrect, 1 = related but completely incorrect, 3 = partially correct, 5 = completely correct
-Also explain your reasoning. Return exactly:
+You are an expert evaluator for a QA system.
+Compare the generated model output ('model_output' tag) to the reference answer ('reference' tag).
+If you have the question ('input' tag), also consider the input when comparing the model output to the reference answer.
+Assign an **integer score from 0 to 5** where:
+- Score 0 = completely unrelated and incorrect
+- Score 1 = related but completely incorrect
+- Score 2 = mostly incorrect
+- Score 3 = partially correct
+- Score 4 = mostly correct
+- Score 5 = completely correct
 
+Also explain your reasoning. Return exactly:
 ```json
 {
   "score": <0-5>,
@@ -667,6 +675,13 @@ def print_as_box(indentation: int, lines: str | list, min_width: int):
     print(f"{indent}| {line}{' ' * right_pad} |")
   print(f"{indent}{border}")
 
+# Check if items have the same questions as Batch02 by comparing input text
+def is_same_as_batch02_items(items) -> bool:
+  if len(items) != len(Batch02): return False
+  for i, item in enumerate(items):
+    if item['item']['input'] != Batch02[i]['item']['input']: return False
+  return True
+
 # Measures the variability of the score model by running the evaluation multiple times and calculating the standard deviation of the scores
 def measure_score_model_variability(client, items, eval_name, prompt_template, eval_model, min_score: int, number_of_runs: int, remove_input_from_prompt: bool = False, delete_eval_after_run: bool = False, log_details: bool = True):
   function_name = 'Measure score model variability'
@@ -689,30 +704,113 @@ def measure_score_model_variability(client, items, eval_name, prompt_template, e
       item_scores[i].append(score)
 
   # Calculate metrics for each item
-  unstable_items = 0;all_std_devs = []
+  unstable_score_items = 0;all_std_devs = []
+  score_counts = {0: [], 1: [], 2: [], 3: [], 4: [], 5: []}  # Track items per score across runs
+  above_min_score_100_percent = 0
+  below_min_score_100_percent = 0
+  pass_fail_unstable_items = 0
+  
   for i, item in enumerate(items_copy):
     scores = item_scores[i]
     if scores:
       std = np.std(scores)
       score_range = (min(scores), max(scores))
       is_unstable = len(set(scores)) > 1
-      if is_unstable: unstable_items += 1
+      if is_unstable: unstable_score_items += 1
+      
+      # Check if item consistently scores above or equal to min_score
+      if all(score >= min_score for score in scores):
+        above_min_score_100_percent += 1
+      
+      # Check if item consistently scores below min_score (fails 100% of runs)
+      if all(score < min_score for score in scores):
+        below_min_score_100_percent += 1
+      
+      # Check if item is unstable between pass/fail (has both scores >= min_score and < min_score)
+      has_pass = any(score >= min_score for score in scores)
+      has_fail = any(score < min_score for score in scores)
+      if has_pass and has_fail:
+        pass_fail_unstable_items += 1
+            
+      # Count occurrences of each score for this item
+      for score in scores:
+        if score in score_counts:
+          score_counts[score].append(i)
+      
       item['item']['score_variability'] = { 'scores': scores, 'std': std, 'min': score_range[0], 'max': score_range[1], 'unstable': is_unstable }
       all_std_devs.append(std)
+  
+  # Calculate average number of items per score
+  avg_items_per_score = {}
+  for score in range(6):
+    avg_items_per_score[score] = len(score_counts[score]) / number_of_runs if number_of_runs > 0 else 0
 
   total_items = len(items_copy)
-  instability_rate = unstable_items / total_items if total_items > 0 else 0.0
+  scoring_stability = (total_items - unstable_score_items) / total_items if total_items > 0 else 0.0
+  pass_fail_stability = (total_items - pass_fail_unstable_items) / total_items if total_items > 0 else 0.0
   avg_std_dev = np.mean(all_std_devs) if all_std_devs else 0.0
   magnitude_of_deviation = lambda avg_std_dev: "none" if avg_std_dev == 0 else "very low" if avg_std_dev < 0.05 else "low" if avg_std_dev < 0.15 else "moderate" if avg_std_dev < 0.4 else "high"
 
-  content_lines = [
-    f"Overall variability statistics for {number_of_runs} runs of '{eval_name}' (model '{eval_model}'):",
-    "-" * 100,
-    f"Instability rate           : {instability_rate * 100:.2f}% ({unstable_items}/{total_items} items)",
-    f"Average Standard Deviation : {avg_std_dev:.2f} ({magnitude_of_deviation(avg_std_dev)})"
-  ]
-  print_as_box(0, content_lines, 60)
+  # Calculate calibration accuracy if items are the same as Batch02 (our calibration dataset)
+  correct_passes_per_run = []; total_expected_passes = 0; avg_correct_passes = 0; correct_passes_percentage = 0; correct_passes_stability = 0; batch02_accuracy = None
+  if is_same_as_batch02_items(items_copy):
+    # For Batch02, calculate how many items consistently get their expected score across all runs
+    batch02_consistent_items = 0
+    expected_scores = [0] * 10 + [1] * 10 + [2] * 10 + [3] * 10 + [4] * 10 + [5] * 10  # Expected scores for each item
+    
+    # Calculate Batch02 accuracy
+    for i, expected_score in enumerate(expected_scores):
+      if i < len(items_copy):
+        scores = item_scores[i]
+        if all(score == expected_score for score in scores):
+          batch02_consistent_items += 1
+    batch02_accuracy = (batch02_consistent_items / total_items * 100) if total_items > 0 else 0.0
 
+    # Count items that should pass (expected score >= min_score)
+    for i, expected_score in enumerate(expected_scores[:len(items_copy)]):
+      if expected_score >= min_score:
+        total_expected_passes += 1
+    
+    # Calculate correct passes for each run
+    for run in range(number_of_runs):
+      correct_passes_this_run = 0
+      for i, expected_score in enumerate(expected_scores[:len(items_copy)]):
+        if expected_score >= min_score and i < len(item_scores) and run < len(item_scores[i]):
+          actual_score = item_scores[i][run]
+          if actual_score >= min_score:
+            correct_passes_this_run += 1
+      correct_passes_per_run.append(correct_passes_this_run)
+    
+    # Calculate correct passes metrics
+    avg_correct_passes = np.mean(correct_passes_per_run) if correct_passes_per_run else 0
+    correct_passes_percentage = (avg_correct_passes / total_expected_passes * 100) if total_expected_passes > 0 else 0
+    correct_passes_std = np.std(correct_passes_per_run) if correct_passes_per_run else 0
+    correct_passes_stability = 100 - (correct_passes_std / total_expected_passes * 100) if total_expected_passes > 0 else 100
+
+  content_lines = [
+    f"Variability statistics for {number_of_runs} runs of '{eval_name}', model '{eval_model}':",
+    "-" * 100,
+  ]  
+ 
+  content_lines.extend([
+    f"Pass/Fail Stability (higher = better)               : {pass_fail_stability * 100:04.1f}% ( {total_items - pass_fail_unstable_items} / {total_items} items, {pass_fail_unstable_items} unstable )",
+    f"Scoring Stability (higher = better)                 : {scoring_stability * 100:04.1f}% ( {total_items - unstable_score_items} / {total_items} items )",
+    f"Average Standard Deviation                          :  {avg_std_dev:.2f} ( {magnitude_of_deviation(avg_std_dev)} )",
+    f"Items passing 100% of runs (score >= {min_score})             : {above_min_score_100_percent/total_items*100:04.1f}% ( {above_min_score_100_percent} / {total_items} items )",
+    f"Items failing 100% of runs (score < {min_score})              : {below_min_score_100_percent/total_items*100:04.1f}% ( {below_min_score_100_percent} / {total_items} items )",
+  ])
+  
+  # Add Batch02 accuracy metric if applicable
+  if batch02_accuracy is not None:
+    batch02_consistent_count = int(batch02_accuracy * total_items / 100)
+    content_lines.extend([
+      f"Batch02 Accuracy (gets expected scores in all runs) : {batch02_accuracy:04.1f}% ( {batch02_consistent_count} / {total_items} items )",
+      f"Batch02 Correct Passes (score >= {min_score}):                : {correct_passes_percentage:05.2f}% ( avg. {int(avg_correct_passes)} of {total_expected_passes} items with Stability of {correct_passes_stability:02.0f}% )",
+    ])
+  
+  content_lines.append(f"Average number of items: Score 0: {avg_items_per_score[0]:.1f},  Score 1: {avg_items_per_score[1]:.1f}, Score 2: {avg_items_per_score[2]:.1f}, Score 3: {avg_items_per_score[3]:.1f}, Score 4: {avg_items_per_score[4]:.1f}, Score 5: {avg_items_per_score[5]:.1f}")
+  print_as_box(0, content_lines, 60)
+  
   log_function_footer(function_name, start_time)
   return items_copy
 
@@ -741,7 +839,7 @@ if __name__ == '__main__':
     ,folder_path="./RAGFiles/Batch01"
     # if you have a path to a JSON file with items, the code will load the items from the file instead of using the assigned batch objects
     ,eval_path=None
-    ,items = Batch01
+    ,items = Batch02
     ,answer_model = answer_model_name
     ,eval_model = eval_model_name
     ,embedding_model="text-embedding-3-small"
@@ -751,8 +849,8 @@ if __name__ == '__main__':
     # INCORRECT -> reference="Jupiter" vs. output="Zeus" for input="What is largest planet in our solar system?"
     ,remove_input_from_prompt=False
     ,delete_eval_after_run=True
-    ,log_details=False
-    ,variability_runs=5
+    ,log_details=True
+    ,variability_runs=20
   )
 
   # If we have path to eval file, load items from eval file (JSON)
@@ -773,45 +871,45 @@ if __name__ == '__main__':
     params.items = get_answers_from_model_and_return_items(client, test_vector_store_with_files.vector_store.id, params.answer_model, params.items)
     print("-"*140) 
 
-  # Step 3A: Test eval using embedding and cosine similarity
-  params.items = score_answers_using_cosine_similarity_and_return_items(client, params.items, params.embedding_model, params.log_details)
-  print("."*100 + f"\n    Evaluation results using embedding with '{params.embedding_model}' and cosine similiarity:")
-  print(summarize_item_scores(params.items, params.min_score, 4))
-  print("-"*140)
-  # Step 3B: Test eval using judge model with prompt template 1 (Simple)
-  params.items = score_answers_using_judge_model_and_return_items(client, params.items, judge_model_prompt_template_1, params.eval_model, params.remove_input_from_prompt, params.log_details)
-  print("."*100 + f"\n    Evaluation results using judge model '{params.eval_model}' with prompt template 1 (Simple):")
-  print(summarize_item_scores(params.items, params.min_score, 4) )
-  print("-"*140)
-  # Step 3C: Test eval using judge model with prompt template 2 (Scoring Model)
-  params.items = score_answers_using_judge_model_and_return_items(client, params.items, judge_model_prompt_template_2, params.eval_model, params.remove_input_from_prompt, params.log_details)
-  print("."*100 + f"\n    Evaluation results using judge model '{params.eval_model}' with prompt template 2 (Scoring Model):")
-  print(summarize_item_scores(params.items, params.min_score, 4))
-  print("-"*140)
-  # Step 3D: Test eval using score model grader with prompt template 1 (Simple)
-  params.items = score_answers_using_score_model_grader_and_return_items(client, params.items, "test_eval - prompt_template_1", judge_model_prompt_template_1, params.eval_model, params.min_score, params.remove_input_from_prompt, params.delete_eval_after_run, params.log_details)
-  print("."*100 + f"\n    Evaluation results using 'score_model' grader and prompt template 1 (Simple):")
-  print(summarize_item_scores(params.items, params.min_score, 4))
-  print("-"*140)
-  # Step 3E: Test eval using score model grader with prompt template 2 (Scoring Model)
-  params.items = score_answers_using_score_model_grader_and_return_items(client, params.items, "test_eval - prompt_template_2", judge_model_prompt_template_2, params.eval_model, params.min_score, params.remove_input_from_prompt, params.delete_eval_after_run, params.log_details)
-  print("."*100 + f"\n    Evaluation results using 'score_model' grader and prompt template 2 (Scoring Model):")
-  print(summarize_item_scores(params.items, params.min_score, 4))
-  print("-"*140)
-  # Step 3F: Test eval using score model grader with prompt template 3 (Langchain Correctness)
-  params.items = score_answers_using_score_model_grader_and_return_items(client, params.items, "test_eval - prompt_template_3", judge_model_prompt_template_3, params.eval_model, params.min_score, params.remove_input_from_prompt, params.delete_eval_after_run, params.log_details)
-  print("."*100 + f"\n    Evaluation results using 'score_model' grader and prompt template 3 (Langchain Correctness):")
-  print(summarize_item_scores(params.items, params.min_score, 4))
-  print("-"*140)
+  # # Step 3A: Test eval using embedding and cosine similarity
+  # params.items = score_answers_using_cosine_similarity_and_return_items(client, params.items, params.embedding_model, params.log_details)
+  # print("."*100 + f"\n    Evaluation results using embedding with '{params.embedding_model}' and cosine similiarity:")
+  # print(summarize_item_scores(params.items, params.min_score, 4))
+  # print("-"*140)
+  # # Step 3B: Test eval using judge model with prompt template 1 (Simple)
+  # params.items = score_answers_using_judge_model_and_return_items(client, params.items, judge_model_prompt_template_1, params.eval_model, params.remove_input_from_prompt, params.log_details)
+  # print("."*100 + f"\n    Evaluation results using judge model '{params.eval_model}' with prompt template 1 (Simple):")
+  # print(summarize_item_scores(params.items, params.min_score, 4) )
+  # print("-"*140)
+  # # Step 3C: Test eval using judge model with prompt template 2 (Scoring Model)
+  # params.items = score_answers_using_judge_model_and_return_items(client, params.items, judge_model_prompt_template_2, params.eval_model, params.remove_input_from_prompt, params.log_details)
+  # print("."*100 + f"\n    Evaluation results using judge model '{params.eval_model}' with prompt template 2 (Scoring Model):")
+  # print(summarize_item_scores(params.items, params.min_score, 4))
+  # print("-"*140)
+  # # Step 3D: Test eval using score model grader with prompt template 1 (Simple)
+  # params.items = score_answers_using_score_model_grader_and_return_items(client, params.items, "test_eval - prompt_template_1", judge_model_prompt_template_1, params.eval_model, params.min_score, params.remove_input_from_prompt, params.delete_eval_after_run, params.log_details)
+  # print("."*100 + f"\n    Evaluation results using 'score_model' grader and prompt template 1 (Simple):")
+  # print(summarize_item_scores(params.items, params.min_score, 4))
+  # print("-"*140)
+  # # Step 3E: Test eval using score model grader with prompt template 2 (Scoring Model)
+  # params.items = score_answers_using_score_model_grader_and_return_items(client, params.items, "test_eval - prompt_template_2", judge_model_prompt_template_2, params.eval_model, params.min_score, params.remove_input_from_prompt, params.delete_eval_after_run, params.log_details)
+  # print("."*100 + f"\n    Evaluation results using 'score_model' grader and prompt template 2 (Scoring Model):")
+  # print(summarize_item_scores(params.items, params.min_score, 4))
+  # print("-"*140)
+  # # Step 3F: Test eval using score model grader with prompt template 3 (Langchain Correctness)
+  # params.items = score_answers_using_score_model_grader_and_return_items(client, params.items, "test_eval - prompt_template_3", judge_model_prompt_template_3, params.eval_model, params.min_score, params.remove_input_from_prompt, params.delete_eval_after_run, params.log_details)
+  # print("."*100 + f"\n    Evaluation results using 'score_model' grader and prompt template 3 (Langchain Correctness):")
+  # print(summarize_item_scores(params.items, params.min_score, 4))
+  # print("-"*140)
 
   # Step 4A: Measure variablity of prompt 1
-  measure_score_model_variability(client, params.items, "Prompt 1 (Simple) Variability", judge_model_prompt_template_1, params.eval_model, params.min_score, params.variability_runs, params.remove_input_from_prompt, params.delete_eval_after_run, params.log_details)
+  measure_score_model_variability(client, params.items, "Eval Prompt 1 (Simple)", judge_model_prompt_template_1, params.eval_model, params.min_score, params.variability_runs, params.remove_input_from_prompt, params.delete_eval_after_run, params.log_details)
   print("-"*140)
   # Step 4B: Measure variablity of prompt 2
-  measure_score_model_variability(client, params.items, "Prompt 2 (Scoring model) variability", judge_model_prompt_template_2, params.eval_model, params.min_score, params.variability_runs, params.remove_input_from_prompt, params.delete_eval_after_run, params.log_details)
+  measure_score_model_variability(client, params.items, "Eval Prompt 2 (Math Scoring Model)", judge_model_prompt_template_2, params.eval_model, params.min_score, params.variability_runs, params.remove_input_from_prompt, params.delete_eval_after_run, params.log_details)
   print("-"*140)
   # Step 4C: Measure variablity of prompt 3
-  measure_score_model_variability(client, params.items, "Prompt 2 (Langchain Correctness) variability", judge_model_prompt_template_3, params.eval_model, params.min_score, params.variability_runs, params.remove_input_from_prompt, params.delete_eval_after_run, params.log_details)
+  measure_score_model_variability(client, params.items, "Eval Prompt 3 (Langchain Correctness)", judge_model_prompt_template_3, params.eval_model, params.min_score, params.variability_runs, params.remove_input_from_prompt, params.delete_eval_after_run, params.log_details)
   print("-"*140)
 
   # Step 4: Delete vector store including all files

@@ -290,7 +290,7 @@ if __name__ == '__main__':
 
   params = RAGParams(
     vector_store_name="test_vector_store",
-    folder_path="./RAGFiles/Batch01",
+    folder_path="./RAGFiles/Batch02",
     query="Who is Arilena Drovik?"
   )
   
