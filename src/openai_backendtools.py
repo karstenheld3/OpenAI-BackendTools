@@ -1118,38 +1118,45 @@ def get_all_eval_runs(client, eval_id):
   
   return all_runs
 
-def get_all_eval_run_output_items(client, run_id, eval_id):
-  """Gets all output items from an eval run with pagination handling.
-
-  Args:
-      client: The OpenAI client instance
-      run_id: The ID of the run to get output items from
-      eval_id: The ID of the evaluation the run belongs to
-
-  Returns:
-      list: All output items from the run across all pages
-  """
-  output_items_page = client.evals.runs.output_items.list(eval_id=eval_id, run_id=run_id)
-  all_output_items = list(output_items_page.data)
+def get_all_eval_run_output_items(client, run_id, eval_id, expected_count=None, max_retries=3):
+  import time
   
-  # Get additional pages if they exist
-  has_more = hasattr(output_items_page, 'has_more') and output_items_page.has_more
-  current_page = output_items_page
-  
-  while has_more:
-    last_id = current_page.data[-1].id if current_page.data else None
-    if not last_id: break
+  for attempt in range(max_retries + 1):
+    if attempt > 0:
+      print(f"  DEBUG: [Get all eval output items] - Retry attempt {attempt} / {max_retries} for fetching output items")
+      time.sleep(2)  # Wait 2 seconds before retry
     
-    next_page = client.evals.runs.output_items.list(eval_id=eval_id, run_id=run_id, after=last_id)
-    all_output_items.extend(next_page.data)
-    current_page = next_page
-    has_more = hasattr(next_page, 'has_more') and next_page.has_more
+    # Fetch first page
+    output_items_page = client.evals.runs.output_items.list(eval_id=eval_id, run_id=run_id)
+    all_output_items = list(output_items_page.data)
+    
+    # Get additional pages if they exist
+    has_more = hasattr(output_items_page, 'has_more') and output_items_page.has_more
+    current_page = output_items_page
+    
+    while has_more:
+      last_id = current_page.data[-1].id if current_page.data else None
+      if not last_id: break
+      
+      next_page = client.evals.runs.output_items.list(eval_id=eval_id, run_id=run_id, after=last_id)
+      all_output_items.extend(next_page.data)
+      current_page = next_page
+      has_more = hasattr(next_page, 'has_more') and next_page.has_more
+    
+    # Check if we got the expected number of items
+    if expected_count is None or len(all_output_items) == expected_count:
+      if attempt > 0:
+        print(f"  DEBUG: [Get all eval output items] - Successfully retrieved {len(all_output_items)} items after {attempt} retries")
+      return all_output_items
+    
+    # Log the mismatch
+    print(f"  DEBUG: [Get all eval output items] - Attempt {attempt + 1}: Got {len(all_output_items)} items, expected {expected_count}")
+    if attempt < max_retries:
+      print(f"  DEBUG: [Get all eval output items] - Will retry fetching items in 10 seconds...")
+      time.sleep(10)
   
-  # Add index and run_id attributes to all output items
-  for idx, item in enumerate(all_output_items):
-    setattr(item, 'index', idx)
-    setattr(item, 'run_id', run_id)
-  
+  # If we get here, all retries failed
+  print(f"  WARNING: [Get all eval output items] - After {max_retries + 1} attempts, still got {len(all_output_items)} items instead of expected {expected_count}")
   return all_output_items
 
 def delete_all_evals(client, dry_run=False):
