@@ -877,7 +877,7 @@ if __name__ == '__main__':
     ,remove_input_from_prompt=False
     ,delete_eval_after_run=True
     ,log_details=False
-    ,variability_runs=3
+    ,variability_runs=5
   )
 
   # If we have path to eval file, load items from eval file (JSON)

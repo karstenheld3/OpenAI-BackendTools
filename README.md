@@ -1329,7 +1329,12 @@ Not recommended to compare answers because it can't evaluate higher level meanin
 **Returns:**
 - Updated items list with `score` and `rationale` added to each item
 
-**Scoring:** Converts cosine similarity (0-1) to evaluation score (1-5) using: `score = int(round(similarity * 4)) + 1`
+**Scoring:** Uses threshold-based mapping to handle negative similarities properly:
+- similarity >= 0.8: score 5 (excellent match)
+- similarity >= 0.6: score 4 (good match)
+- similarity >= 0.4: score 3 (moderate match)
+- similarity >= 0.2: score 2 (poor match)
+- similarity < 0.2: score 1 (very poor match)
 
 ### Function: `score_answers_using_score_model_grader_and_return_items`
 
@@ -1467,28 +1472,57 @@ With whom did Arilen | Between 2018 and 2020 Arilena  | Arilena Drovik has colla
   - `number_of_runs`: How many times to repeat the evaluation (default: 5)
   - `prompt_template`: Which judge model template to test
   - `eval_model`: Model used for scoring (e.g., "gpt-4o")
+  - `min_score`: Threshold for pass/fail classification (default: 4)
 - **Output Metrics:**
-  - **Instability rate**: Percentage of items with varying scores across runs
+  - **Pass/Fail Stability**: Percentage of items with consistent pass/fail classification across runs
+  - **Scoring Stability**: Percentage of items with identical scores across all runs
   - **Average Standard Deviation**: Measure of score consistency (none/very low/low/moderate/high)
-- **Usage:** Helps identify unreliable prompts or models that produce inconsistent results
+  - **Items passing 100% of runs**: Percentage of items that consistently pass the threshold
+  - **Items failing 100% of runs**: Percentage of items that consistently fail the threshold
+  - **Classification Metrics** (for Batch02): Standard ML metrics treating evaluation as binary classification
+    - **Accuracy**: Percentage of all correct predictions (both pass and fail)
+    - **Precision**: Percentage of predicted passes that are actual passes (no false positives)
+    - **Recall**: Percentage of actual passes that were correctly identified
+    - **F1 Score**: Harmonic mean of precision and recall (balanced measure)
+    - **Confusion Matrix**: True Positives, False Positives, False Negatives, True Negatives
+  - **Score Distribution**: Average count of items at each score level (0-5)
+- **Usage:** Comprehensive evaluation reliability testing with statistical significance analysis
 
 **Example usage:**
 ```python
 measure_score_model_variability(
-  client, items, "Prompt Variability Test", 
-  judge_model_prompt_template_1, "gpt-4o", 
-  min_score=4, number_of_runs=5
+  client, Batch02, "Eval Prompt 3 (Langchain Correctness)", 
+  judge_model_prompt_template_3, "gpt-4o", 
+  min_score=4, number_of_runs=3
 )
 ```
 **Example output:**
 ```
-+-------------------------------------------------------------------------------------------------+
-| Overall variability statistics for 5 runs of 'Prompt 1 (Simple) Variability' (model 'gpt-4o'):  |
-| ----------------------------------------------------------------------------------------------- |
-| Instability rate           : 25.00% (1/4 items)                                                 |
-| Average Standard Deviation : 0.12 (low)                                                         |
-+-------------------------------------------------------------------------------------------------+
++------------------------------------------------------------------------------------------------------------------+
+| Variability statistics for 3 runs of 'Eval Prompt 3 (Langchain Correctness)', model 'gpt-4o':                    |
+| ----------------------------------------------------------------------------------------------------             |
+| Pass/Fail Stability (higher = better)               :  91.7% ( 55 / 60 items, 5 unstable )                       |
+| Scoring Stability (higher = better)                 :  75.0% ( 45 / 60 items )                                   |
+| Average Standard Deviation                          :  0.12 ( low )                                              |
+| Items passing 100% of runs (score >= 4)             :  11.7% ( 7 / 60 items )                                    |
+| Items failing 100% of runs (score < 4)              :  80.0% ( 48 / 60 items )                                   |
+| ----- Batch02 Classification Metrics (threshold: score >= 4) -----                                               |
+|   Accuracy (% of all correct predictions)           :   81.7% ( 147 / 180 correct predictions )                  |
+|   Precision (% of predicted passes are passes)      :  100.0% ( 27 / 27 when predicted pass )                    |
+|   Recall (% of real passes that were found)         :   45.0% ( 27 / 60 actual passes found )                    |
+|   F1 Score (balance of precision & recall)          :   62.1% ( harmonic mean of precision & recall )            |
+|   Confusion Matrix                                  : TP=27, FP=0, FN=33, TN=120                                 |
+| Average number of items: Score 0: 10.0,  Score 1: 11.0, Score 2: 16.3, Score 3: 10.0, Score 4: 2.3, Score 5: 6.7 |
++------------------------------------------------------------------------------------------------------------------+
 ```
+
+**Metric Interpretations:**
+- **High Pass/Fail Stability (>90%)**: Evaluation consistently identifies which items should pass/fail
+- **High Scoring Stability (>80%)**: Evaluation produces identical scores across runs
+- **Low Standard Deviation (<0.2)**: Minimal score variation between runs
+- **High Precision (100%)**: No false positives - when evaluation says "pass", it's always correct
+- **Moderate Recall (45%)**: Evaluation finds less than half of items that should actually pass
+- **Balanced F1 Score**: Indicates the evaluation is conservative but accurate when it does predict passes
 
 ### Demo Script Usage
 
