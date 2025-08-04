@@ -228,11 +228,9 @@ def create_test_vector_store_from_folder_path(client, vector_store_name, folder_
 
 
 
-def test_rag_operations_using_responses_api(client, test_vector_store_with_files, openai_model_name, query):
+def test_rag_operations_using_responses_api(client, vector_store_id, openai_model_name, query, truncate_output=True):
   function_name = 'RAG operations using responses API'
   start_time = log_function_header(function_name)
-
-  vector_store_id = test_vector_store_with_files.vector_store.id
 
   # Ask question
   print("-"*140)
@@ -244,7 +242,8 @@ def test_rag_operations_using_responses_api(client, test_vector_store_with_files
     ,tools=[{ "type": "file_search", "vector_store_ids": [vector_store_id] }]
     ,temperature=0
   ), indentation=4)
-  print(f"    Response: {truncate_string(response.output_text,80)}")
+  model_output = ("\n" + response.output_text) if not truncate_output else truncate_string(response.output_text.replace("\n", " ") ,80)
+  print(f"    Response: {model_output}")
   print(f"    status='{response.status}', tool_choice='{response.tool_choice}', input_tokens={response.usage.input_tokens}, output_tokens={response.usage.output_tokens}")
   # search for tool call of type 'file_search_call' in response.output
   response_file_search_tool_call = next((item for item in response.output if item.type == 'file_search_call'), None)
@@ -259,7 +258,8 @@ def test_rag_operations_using_responses_api(client, test_vector_store_with_files
     ,include=["file_search_call.results"]
     ,temperature=0
   ), indentation=4)
-  print(f"    Response: {truncate_string(response.output_text,80)}")
+  model_output = ("\n" + response.output_text) if not truncate_output else truncate_string(response.output_text.replace("\n", " ") ,80)
+  print(f"    Response: {model_output}")
   print(f"    status='{response.status}', tool_choice='{response.tool_choice}', input_tokens={response.usage.input_tokens}, output_tokens={response.usage.output_tokens}")
   # search for tool call of type 'file_search_call' in response.output
   response_file_search_tool_call = next((item for item in response.output if item.type == 'file_search_call'), None)
@@ -278,31 +278,39 @@ def test_rag_operations_using_responses_api(client, test_vector_store_with_files
 if __name__ == '__main__':
   openai_service_type = os.getenv("OPENAI_SERVICE_TYPE", "openai")
   if openai_service_type == "openai":
-    eval_model_name = "gpt-4o-mini"
+    openai_model_name = "gpt-4o-mini"
     client = create_openai_client()
   elif openai_service_type == "azure_openai":
-    eval_model_name = os.getenv("AZURE_OPENAI_MODEL_DEPLOYMENT_NAME", "gpt-4o-mini")
+    openai_model_name = os.getenv("AZURE_OPENAI_MODEL_DEPLOYMENT_NAME", "gpt-4o-mini")
     azure_openai_use_key_authentication = os.getenv("AZURE_OPENAI_USE_KEY_AUTHENTICATION", "false").lower() in ['true']
     client = create_azure_openai_client(azure_openai_use_key_authentication)
 
   @dataclass
-  class RAGParams: vector_store_name: str; folder_path: str; query: str
+  class RAGParams: vector_store_name: str; folder_path: str; query: str; use_existing_vector_store: bool; truncate_output: bool; delete_vector_store_after_run: bool
 
   params = RAGParams(
-    vector_store_name="test_vector_store",
-    folder_path="./RAGFiles/Batch02",
-    query="Who is Arilena Drovik?"
+    vector_store_name="test_vector_store"
+    ,folder_path="./RAGFiles/Batch01"
+    ,query="Who is Arilena Drovik?"
+    ,use_existing_vector_store=True
+    ,truncate_output=True
+    ,delete_vector_store_after_run=True
   )
-  
-  # Step 1: Create vector store by uploading files
-  test_vector_store_with_files = create_test_vector_store_from_folder_path(client, params.vector_store_name, params.folder_path)
+
+  # Step 1: Create vector store by uploading files or get existing vector store
+  if params.use_existing_vector_store:
+    vs = get_vector_store_by_name(client, params.vector_store_name)
+  else:
+    test_vector_store_with_files = create_test_vector_store_from_folder_path(client, params.vector_store_name, params.folder_path)
+    vs = test_vector_store_with_files.vector_store
 
   # Step 2: Test file RAG functionalities
-  test_rag_operations_using_responses_api(client, test_vector_store_with_files, eval_model_name, params.query)
+  test_rag_operations_using_responses_api(client, vs.id, openai_model_name, params.query, params.truncate_output)
 
   print("-"*140)
 
   # Step 3: Delete vector store including all files
-  delete_vector_store_by_name(client, params.vector_store_name, True)
+  if params.delete_vector_store_after_run:
+    delete_vector_store_by_name(client, params.vector_store_name, True)
 
 # ----------------------------------------------------- END: Main -------------------------------------------------------------

@@ -362,7 +362,7 @@ if __name__ == '__main__':
     client = create_azure_openai_client(azure_openai_use_key_authentication)
 
   @dataclass
-  class SearchParams: vector_store_name: str; folder_path: str; search_query_1: str; search_query_2: str; search_query_2_filters: dict; search_query_3_with_query_rewrite: str; score_threshold: float
+  class SearchParams: vector_store_name: str; folder_path: str; search_query_1: str; search_query_2: str; search_query_2_filters: dict; search_query_3_with_query_rewrite: str; score_threshold: float; use_existing_vector_store: bool; delete_vector_store_after_run: bool
 
   params = SearchParams(
     vector_store_name="test_vector_store"
@@ -372,17 +372,25 @@ if __name__ == '__main__':
     ,search_query_2_filters = { "key": "file_type", "type": "eq", "value": "md" }
     ,search_query_3_with_query_rewrite="All files from year 2015."
     ,score_threshold=0.3
+    ,use_existing_vector_store=True
+    ,delete_vector_store_after_run=True
   )
 
-  # Step 1: Create vector store by uploading files
-  test_vector_store_with_files = create_test_vector_store_from_folder_path(client,params.vector_store_name, params.folder_path)
+  # Step 1: Create vector store by uploading files or get existing vector store
+  if params.use_existing_vector_store:
+    vs = get_vector_store_by_name(client, params.vector_store_name)
+    test_vector_store_with_files = None  # We'll work directly with vs for existing stores
+  else:
+    test_vector_store_with_files = create_test_vector_store_from_folder_path(client, params.vector_store_name, params.folder_path)
+    vs = test_vector_store_with_files.vector_store
 
-  # Step 2: Extract metadata from files and re-add files with more metadata to the vector store
-  # extract_and_add_metadata_to_vector_store_using_assistants_api(client, test_vector_store_with_files, metadata_extraction_prompt_template, openai_model_name, True)
-  extract_and_add_metadata_to_vector_store_using_responses_api(client, test_vector_store_with_files, metadata_extraction_prompt_template, openai_model_name, True)
-  print("\n")
+  # Step 2: Extract metadata from files and re-add files with more metadata to the vector store (only for new vector stores)
+  if not params.use_existing_vector_store:
+    # extract_and_add_metadata_to_vector_store_using_assistants_api(client, test_vector_store_with_files, metadata_extraction_prompt_template, openai_model_name, True)
+    extract_and_add_metadata_to_vector_store_using_responses_api(client, test_vector_store_with_files, metadata_extraction_prompt_template, openai_model_name, True)
+    print("\n")
 
-  files = get_vector_store_files(client, test_vector_store_with_files.vector_store)
+  files = get_vector_store_files(client, vs)
   print(f"{len(files)} files in vector store:")
   print("-"*140)
   print(format_file_attributes_table(files))
@@ -390,11 +398,12 @@ if __name__ == '__main__':
   print("\n")
 
   # Step 3: Test file search functionalities
-  test_file_search_functionalities(client, test_vector_store_with_files.vector_store.id, params)
+  test_file_search_functionalities(client, vs.id, params)
 
   print("-"*140)
 
   # Step 4: Delete vector store including all files
-  delete_vector_store_by_name(client, params.vector_store_name, True)
+  if params.delete_vector_store_after_run:
+    delete_vector_store_by_name(client, params.vector_store_name, True)
 
 # ----------------------------------------------------- END: Main -------------------------------------------------------------

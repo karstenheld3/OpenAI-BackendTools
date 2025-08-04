@@ -498,6 +498,16 @@ def score_answers_using_score_model_grader_and_return_items(client, items, eval_
     # remove tags <input></input> and everything in between
     prompt_template = re.sub(r'<input>.*?</input>', '', prompt_template)
 
+  testing_criteria_item={
+    "type": "score_model", "name": "Answer Quality Score", "model": eval_model
+    ,"sampling_params": { "temperature": 0 }
+    ,"input": [ {"role": "system", "content": prompt_template } ]
+    ,"range": [0, 5], "pass_threshold": min_score
+  }
+
+  # if eval model name starts with 'o', remove sampling_params attribute because o-models do not support temperature -> results will be empty
+  if eval_model.startswith('o'): del testing_criteria_item['sampling_params']
+
   # Create evaluation configuration with custom graders
   # https://platform.openai.com/docs/api-reference/graders/score-model
   eval_cfg = client.evals.create(
@@ -511,17 +521,7 @@ def score_answers_using_score_model_grader_and_return_items(client, items, eval_
       },
       "include_sample_schema": False
     },
-    testing_criteria=[
-      {
-        "type": "score_model", "name": "Answer Quality Score", "model": eval_model
-        ,"sampling_params": { "temperature": 0 }
-        ,"input": [
-          {"role": "system", "content": "You are an expert evaluator. Your task is to evaluate the quality and accuracy of an answer compared to a reference answer."}
-          ,{"role": "user", "content": prompt_template }
-        ]
-        ,"range": [0, 5], "pass_threshold": min_score
-      }
-    ]
+    testing_criteria=[testing_criteria_item]
   )
 
   # Create and run evaluation
@@ -554,7 +554,7 @@ def score_answers_using_score_model_grader_and_return_items(client, items, eval_
   # total_count, passed_count, failed_count, errored_count = results.result_counts.total, results.result_counts.passed, results.result_counts.failed, results.result_counts.errored
   
   # Get all output items with pagination handling
-  output_items = get_all_eval_run_output_items(client, run_id=eval_run.id, eval_id=eval_cfg.id, expected_count=len(items_copy), max_retries=3)
+  output_items = get_all_eval_run_output_items(client, run_id=eval_run.id, eval_id=eval_cfg.id, expected_count=len(items_copy), max_retries=5)
 
   # Run over all items and update their score and rationale from the evaluation results
   for idx, item in enumerate(items_copy):
@@ -766,8 +766,6 @@ def measure_score_model_variability(client, items, eval_name, prompt_template, e
   # Calculate calibration accuracy if items are the same as Batch02 (our calibration dataset)
   ml_metrics = None
   if is_same_as_batch02_items(items_copy):
-    # For Batch02, calculate how many items consistently get their expected score across all runs
-    batch02_consistent_items = 0
     expected_scores = [0] * 10 + [1] * 10 + [2] * 10 + [3] * 10 + [4] * 10 + [5] * 10  # Expected scores for each item
     
     # Calculate ML Classification Metrics
