@@ -10,7 +10,6 @@ import re
 import copy
 
 load_dotenv()
-
 # ----------------------------------------------------- START: Evals ----------------------------------------------------------
 
 # Item 01: FAIL - score = 0 (completely unrelated, incorrect)
@@ -82,6 +81,7 @@ Batch01 = [
 # 4) Copy final 10 items into code
 
 # Calibration batch with 60 test cases, with 10 cases for each score: 0, 1, 2, 3, 4, 5
+
 Batch02 = [
   { "item": { "input": "Who was the first President of the United States?", "reference": "George Washington", "output_text": "Abraham Lincoln" } }
   ,{ "item": { "input": "What is the chemical symbol for gold?", "reference": "Au", "output_text": "Silver" } }
@@ -506,7 +506,7 @@ def score_answers_using_score_model_grader_and_return_items(client, items, eval_
   }
 
   # if eval model name starts with 'o', remove sampling_params attribute because o-models do not support temperature -> results will be empty
-  if eval_model.startswith('o'): del testing_criteria_item['sampling_params']
+  if eval_model.startswith('o') or eval_model.startswith('gpt-5'): del testing_criteria_item['sampling_params']
 
   # Create evaluation configuration with custom graders
   # https://platform.openai.com/docs/api-reference/graders/score-model
@@ -864,7 +864,7 @@ if __name__ == '__main__':
     ,folder_path="./RAGFiles/Batch01"
     # if you have a path to a JSON file with items, the code will load the items from the file instead of using the assigned batch objects
     ,eval_path=None
-    ,items = Batch01
+    ,items = Batch02
     ,answer_model = answer_model_name
     ,eval_model = eval_model_name
     ,embedding_model="text-embedding-3-small"
@@ -874,8 +874,8 @@ if __name__ == '__main__':
     # INCORRECT -> reference="Jupiter" vs. output="Zeus" for input="What is largest planet in our solar system?"
     ,remove_input_from_prompt=False
     ,delete_eval_after_run=True
-    ,log_details=False
-    ,variability_runs=5
+    ,log_details=True
+    ,variability_runs=20
   )
 
   # If we have path to eval file, load items from eval file (JSON)
