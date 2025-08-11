@@ -34,7 +34,7 @@ def list_vector_stores(client):
   total_usage_bytes = sum([vs.usage_bytes for vs in all_vector_stores if hasattr(vs, 'usage_bytes')])
   print(f"Total vector stores: {len(all_vector_stores)} ({len(all_vector_stores_expired)} expired, {format_filesize(total_usage_bytes)} total storage)")
   print("-"*140)
-  print(format_evals_table(truncate_list_if_too_long(all_vector_stores)))
+  print(format_vector_stores_table(client, truncate_list_if_too_long(all_vector_stores)))
   print("\n")
   return all_vector_stores
   
