@@ -1,5 +1,6 @@
 import os
 import datetime
+import time
 from azure.identity import DefaultAzureCredential, get_bearer_token_provider
 import openai
 
@@ -280,7 +281,7 @@ def format_files_table(file_list):
 def delete_files(client, files):
   for file in files:
     file_id = getattr(file, 'id', None)
-    if not id: continue
+    if not file_id: continue
     filename = getattr(file, 'filename', None)
     print(f"Deleting file ID={file_id} '{filename}'...")
     try: client.files.delete(file_id)
@@ -518,15 +519,14 @@ def get_vector_store_files(client, vector_store):
   return all_files
 
 # Gets the file metrics for a vector store as dictionary with keys: total, failed, cancelled, in_progress, completed
-def get_vector_store_file_metrics(vector_store):
+def get_vector_store_file_metrics(client, vector_store):
   metrics = { "total": 0, "failed": 0, "cancelled": 0, "in_progress": 0, "completed": 0 }
 
   if isinstance(vector_store, str):
-    # if it's a name, retrieve the vector store
     vector_stores = get_all_vector_stores(client)
-    for vector_store in vector_stores:
-      if vector_store.name == vector_store:
-        vector_store = vector_store
+    for vs in vector_stores:
+      if vs.name == vector_store or vs.id == vector_store:
+        vector_store = vs
         break
 
   if not vector_store:
@@ -536,17 +536,17 @@ def get_vector_store_file_metrics(vector_store):
     file_counts = vector_store.file_counts
     for key in metrics:
       metrics[key] = getattr(file_counts, key, 0)
-      
+
   return metrics
 
 # Format a list of vector stores into a table
-def format_evals_table(vector_store_list):
+def format_vector_stores_table(client, vector_store_list):
   # Check if input object is raw API response and if yes, extract list of items
   # vector_store_list: SyncCursorPage[VectorStoreObject] or list of VectorStoreObject
   vector_stores = getattr(vector_store_list, 'data', None)
   if vector_stores is None: vector_stores = vector_store_list  # fallback if just a list
   if not vector_stores: return '(No vector stores found)'
-  
+
   # Define headers and max column widths
   headers = ['Index', 'ID', 'Name','Created', 'Status', 'Size', 'Files (completed, in_progress, failed, cancelled)']
   max_widths = [6, 36, 40, 19, 12, 10, 50]  # Maximum width for each column
@@ -558,7 +558,7 @@ def format_evals_table(vector_store_list):
   for idx, item in enumerate(vector_stores):
     # Prepare row data
     # Get file metrics
-    metrics = get_vector_store_file_metrics(item)
+    metrics = get_vector_store_file_metrics(client, item)
     files_str = f"Total: {metrics['total']} (✓ {metrics['completed']}, ⌛ {metrics['in_progress']}, ❌ {metrics['failed']}, ⏹ {metrics['cancelled']})" if metrics['total'] > 0 else '' 
     
     row_data = [
