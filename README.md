@@ -33,8 +33,8 @@ A collection of tools and demo code to test, operate and maintain Open AI and Az
 | ---------------------------------- | ------------------------------------------------------------ | ------------------------------------------------------------ | ------------------------------------------------------------ | ------------------------------------------------------------ | ------------------------------------------------------------ |
 | Open AI Docs                       | [Models](https://platform.openai.com/docs/models)            | [Pricing](https://platform.openai.com/docs/pricing)          | [Cookbook](https://cookbook.openai.com/)                     | [Data retention](https://platform.openai.com/docs/guides/your-data) | [Tokenizer](https://platform.openai.com/tokenizer)           |
 | Open AI Docs                       | [Assistants](https://platform.openai.com/docs/assistants/overview) | [Agents](https://platform.openai.com/docs/guides/agents)     | [Using PDF files](https://platform.openai.com/docs/guides/pdf-files) |                                                              |                                                              |
-| Open AI Docs                       | [Retrieval / Search](https://platform.openai.com/docs/guides/retrieval) | [Built-In tools](https://platform.openai.com/docs/guides/agents#tools) | [Actions](https://platform.openai.com/docs/actions/introduction) |                                                              |                                                              |
-| Open AI Docs                       | [Evals](https://platform.openai.com/docs/guides/evals)       | [Graders](https://platform.openai.com/docs/guides/graders)   | [Fine-tuning](https://platform.openai.com/docs/guides/fine-tuning) |                                                              |                                                              |
+| Open AI Docs                       | [Retrieval / Search](https://platform.openai.com/docs/guides/retrieval) | [Built-In tools](https://platform.openai.com/docs/guides/agents#tools) | [Actions](https://platform.openai.com/docs/actions/introduction) | [Function calling](https://platform.openai.com/docs/guides/function-calling) | [Conversation state](https://platform.openai.com/docs/guides/conversation-state?api-mode=responses) |
+| Open AI Docs                       | [Evals](https://platform.openai.com/docs/guides/evals)       | [Graders](https://platform.openai.com/docs/guides/graders)   | [Fine-tuning](https://platform.openai.com/docs/guides/fine-tuning) | [GPT-5](https://platform.openai.com/docs/guides/latest-model) | [Reasoning](https://platform.openai.com/docs/guides/reasoning) |
 | Open AI Docs<br />File search tool | [File search tool](https://platform.openai.com/docs/guides/tools-file-search) | [Retrieval customization](https://platform.openai.com/docs/guides/tools-file-search#retrieval-customization) | [Metadata filtering](https://platform.openai.com/docs/guides/tools-file-search#metadata-filtering) | [Supported files](https://platform.openai.com/docs/guides/tools-file-search#supported-files) |                                                              |
 | Open AI API                        | [Responses](https://platform.openai.com/docs/api-reference/responses) | [Completions](https://platform.openai.com/docs/api-reference/chat) | [Files](https://platform.openai.com/docs/api-reference/files) | [Vector stores](https://platform.openai.com/docs/api-reference/vector-stores) | [Assistants](https://platform.openai.com/docs/api-reference/assistants) |
 | Open AI API                        | [Evals](https://platform.openai.com/docs/api-reference/evals) | [Graders](https://platform.openai.com/docs/api-reference/graders) |                                                              |                                                              |                                                              |
@@ -537,7 +537,6 @@ response = client.responses.create(
     model=openai_model_name
     ,input=query
     ,tools=[{ "type": "file_search", "vector_store_ids": [vector_store_id] }]
-    ,temperature=0
 )
 ...
 # Query with response model that searches in vector store and returns file search results
@@ -546,7 +545,6 @@ response = client.responses.create(
     ,input=query
     ,tools=[{ "type": "file_search", "vector_store_ids": [vector_store_id] }]
     ,include=["file_search_call.results"]
-    ,temperature=0
 )
 response_file_search_tool_call = next((item for item in response.output if item.type == 'file_search_call'), None)
 response_file_search_results = response_file_search_tool_call.results
@@ -1306,13 +1304,26 @@ Evaluates answers using a judge model with scoring based on a prompt template. U
 [2025-06-09 12:01:30] END: Evaluate answers and add scores in items (30 secs).
 ```
 
-**OpenAI SDK code:**
+**OpenAI SDK code (older GPT-3 and GPT-4 models):**
 ```python
 response = client.responses.create(
   model=judge_model_name
   ,input=prompt
   ,text={ "format": { "type": "json_object" } }
   ,temperature=0
+)
+evaluation = json.loads(response.output_text)
+score = evaluation.get('score')
+rationale = evaluation.get('rationale')
+```
+
+**OpenAI SDK code (newer GPT-5 and 'o' reasoning models):**
+```python
+response = client.responses.create(
+  model=judge_model_name
+  ,input=prompt
+  ,text={ "format": { "type": "json_object" } }
+  ,reasoning={ "effort": "medium" }
 )
 evaluation = json.loads(response.output_text)
 score = evaluation.get('score')
@@ -1365,7 +1376,7 @@ Evaluates answers using OpenAI's evaluation API with score model graders.
 **OpenAI SDK code:**
 ```python
 eval_name = "Test Evaluation"
-eval_model = "gpt-4o"
+eval_model = "gpt-5"
 items = [
   { "item": { "input": "What is H2O?", "reference": "Water.", "output_text": "Wine" } }
   ,{ "item": { "input": "Currency of USA?", "reference": "Dollar.", "output_text": "USD" } }
@@ -1380,7 +1391,17 @@ Assign an **integer score from 0 to 5** where:
 <reference> {{ item.reference }} </reference>
 <model_output> {{ item.output_text }} </model_output>
 """
+
 # Create evaluation configuration
+testing_criteria_item={
+  "type": "score_model", "name": "Answer Quality Score", "model": eval_model
+  ,"sampling_params": { "temperature": 0 }
+  ,"input": [ {"role": "system", "content": prompt_template } ]
+  ,"range": [0, 5], "pass_threshold": min_score
+}
+# if eval model name starts with 'o' or 'gpt-5', remove sampling_params attribute because reasoning models do not support temperature -> results will be empty
+if eval_model.startswith('o') or eval_model.startswith('gpt-5'): del testing_criteria_item['sampling_params']
+
 eval_cfg = client.evals.create(
   name=eval_name,
   data_source_config={
@@ -1392,17 +1413,7 @@ eval_cfg = client.evals.create(
     },
     "include_sample_schema": False
   },
-  testing_criteria=[
-    {
-      "type": "score_model", "name": "Answer Quality Score", "model": eval_model
-      ,"sampling_params": { "temperature": 0 }
-      ,"input": [
-        {"role": "system", "content": "You are an expert evaluator. Your task is to evaluate the quality and accuracy of an answer compared to a reference answer."}
-        ,{"role": "user", "content": prompt_template }
-      ]
-      ,"range": [0, 5], "pass_threshold": 4
-    }
-  ]
+  testing_criteria=[testing_criteria_item]
 )
 
 # Run evaluation
@@ -1498,7 +1509,7 @@ With whom did Arilen | Between 2018 and 2020 Arilena  | Arilena Drovik has colla
 ```python
 measure_score_model_variability(
   client, Batch02, "Eval Prompt 3 (Langchain Correctness)", 
-  judge_model_prompt_template_3, "gpt-4o", 
+  judge_model_prompt_template_3, "gpt-5", 
   min_score=4, number_of_runs=3
 )
 ```
@@ -1539,7 +1550,7 @@ measure_score_model_variability(
 min_score = 4
 # Using simple judge model evaluation
 items_with_scores = score_answers_using_judge_model_and_return_items(
-  client, items, judge_model_prompt_template_1, "gpt-4o"
+  client, items, judge_model_prompt_template_1, "gpt-5"
 )
 
 # Using cosine similarity evaluation
@@ -1549,13 +1560,13 @@ items_with_similarity = score_answers_using_cosine_similarity_and_return_items(
 
 # Using OpenAI evaluation API
 items_with_eval_api = score_answers_using_score_model_grader_and_return_items(
-  client, items, "test_eval", judge_model_prompt_template_2, "gpt-4o", min_score, False
+  client, items, "test_eval", judge_model_prompt_template_2, "gpt-5", min_score, False
 )
 
 # Measure score model variability
 number_of_runs = 5
 measure_score_model_variability(
-  client, items, "Prompt 1 (Simple) Variability", judge_model_prompt_template_1, "gpt-4o", min_score, number_of_runs
+  client, items, "Prompt 1 (Simple) Variability", judge_model_prompt_template_1, "gpt-5", min_score, number_of_runs
 )
 
 ```

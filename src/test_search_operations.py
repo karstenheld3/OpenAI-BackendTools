@@ -354,7 +354,7 @@ def test_file_search_functionalities(client, vector_store_id, params):
 if __name__ == '__main__':
   openai_service_type = os.getenv("OPENAI_SERVICE_TYPE", "openai")
   if openai_service_type == "openai":
-    openai_model_name = "gpt-4o-mini"
+    openai_model_name = "gpt-5"
     client = create_openai_client()
   elif openai_service_type == "azure_openai":
     openai_model_name = os.getenv("AZURE_OPENAI_MODEL_DEPLOYMENT_NAME", "gpt-4o-mini")

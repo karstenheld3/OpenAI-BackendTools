@@ -154,6 +154,19 @@ def get_all_files_used_by_vector_stores(client):
   
   return all_files
 
+# Utility function to remove temperature parameter for reasoning models that don't support it
+# When reasoning model is used, it will add the reasoning effort if specified
+def remove_temperature_from_request_params_for_reasoning_models(request_params, model_name, reasoning_effort=None):
+  if (model_name.startswith('o') or model_name.startswith('gpt-5')) and 'temperature' in request_params:
+    del request_params['temperature']
+  
+  # Add reasoning parameter for reasoning models if reasoning_effort is specified
+  if reasoning_effort and reasoning_effort in ["minimal", "low", "medium", "high"]:
+    if model_name.startswith('o') or model_name.startswith('gpt-5'):
+      # For 'o' models, 'minimal' is invalid and will be mapped to 'low'
+      if model_name.startswith('o') and reasoning_effort == "minimal": request_params["reasoning"] = {"effort": "low"}
+      else: request_params["reasoning"] = {"effort": reasoning_effort}
+
 # ----------------------------------------------------- END: Utilities --------------------------------------------------------
 
 # ----------------------------------------------------- START: Files ----------------------------------------------------------

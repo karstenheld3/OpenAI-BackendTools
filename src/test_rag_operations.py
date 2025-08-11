@@ -11,7 +11,6 @@ load_dotenv()
 # https://platform.openai.com/docs/assistants/tools/file-search/supported-files#supported-files
 default_filetypes_accepted_by_vector_stores = ["c", "cpp", "cs", "css", "doc", "docx", "go", "html", "java", "js", "json", "md", "pdf", "php", "pptx", "py", "rb", "sh", "tex", "ts", "txt"]
 
-
 # ----------------------------------------------------- START: Tests ----------------------------------------------------------
 
 @dataclass
@@ -236,12 +235,17 @@ def test_rag_operations_using_responses_api(client, vector_store_id, openai_mode
   print("-"*140)
   print(f"  Test query with 'file_search' tool: {query}")
 
-  response = retry_on_openai_errors(lambda: client.responses.create(
-    model=openai_model_name
-    ,input=query
-    ,tools=[{ "type": "file_search", "vector_store_ids": [vector_store_id] }]
-    ,temperature=0
-  ), indentation=4)
+  request_params = {
+    "model": openai_model_name,
+    "input": query,
+    "tools": [{ "type": "file_search", "vector_store_ids": [vector_store_id] }],
+    "temperature": 0
+  }
+  
+  # Remove temperature parameter for reasoning models that don't support it
+  remove_temperature_from_request_params_for_reasoning_models(request_params, openai_model_name, reasoning_effort="low")
+  
+  response = retry_on_openai_errors(lambda: client.responses.create(**request_params), indentation=4)
   model_output = ("\n" + response.output_text) if not truncate_output else truncate_string(response.output_text.replace("\n", " ") ,80)
   print(f"    Response: {model_output}")
   print(f"    status='{response.status}', tool_choice='{response.tool_choice}', input_tokens={response.usage.input_tokens}, output_tokens={response.usage.output_tokens}")
@@ -251,13 +255,18 @@ def test_rag_operations_using_responses_api(client, vector_store_id, openai_mode
   if response_file_search_tool_call: print(f"    File search tool call status: '{response_file_search_tool_call.status}', results: {len(response_file_search_results) if response_file_search_results else 'N/A'}")
 
   print(f"  Test query with 'file_search' tool with 'file_search_call.results': {query}")
-  response = retry_on_openai_errors(lambda: client.responses.create(
-    model=openai_model_name
-    ,input=query
-    ,tools=[{ "type": "file_search", "vector_store_ids": [vector_store_id] }]
-    ,include=["file_search_call.results"]
-    ,temperature=0
-  ), indentation=4)
+  request_params = {
+    "model": openai_model_name,
+    "input": query,
+    "tools": [{ "type": "file_search", "vector_store_ids": [vector_store_id] }],
+    "include": ["file_search_call.results"],
+    "temperature": 0
+  }
+  
+  # Remove temperature parameter for reasoning models that don't support it
+  remove_temperature_from_request_params_for_reasoning_models(request_params, openai_model_name, reasoning_effort="low")
+  
+  response = retry_on_openai_errors(lambda: client.responses.create(**request_params), indentation=4)
   model_output = ("\n" + response.output_text) if not truncate_output else truncate_string(response.output_text.replace("\n", " ") ,80)
   print(f"    Response: {model_output}")
   print(f"    status='{response.status}', tool_choice='{response.tool_choice}', input_tokens={response.usage.input_tokens}, output_tokens={response.usage.output_tokens}")
@@ -278,7 +287,7 @@ def test_rag_operations_using_responses_api(client, vector_store_id, openai_mode
 if __name__ == '__main__':
   openai_service_type = os.getenv("OPENAI_SERVICE_TYPE", "openai")
   if openai_service_type == "openai":
-    openai_model_name = "gpt-4o-mini"
+    openai_model_name = "gpt-5-nano"
     client = create_openai_client()
   elif openai_service_type == "azure_openai":
     openai_model_name = os.getenv("AZURE_OPENAI_MODEL_DEPLOYMENT_NAME", "gpt-4o-mini")
@@ -292,7 +301,7 @@ if __name__ == '__main__':
     vector_store_name="test_vector_store"
     ,folder_path="./RAGFiles/Batch01"
     ,query="Who is Arilena Drovik?"
-    ,use_existing_vector_store=True
+    ,use_existing_vector_store=False
     ,truncate_output=True
     ,delete_vector_store_after_run=True
   )

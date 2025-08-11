@@ -10,6 +10,7 @@ import re
 import copy
 
 load_dotenv()
+
 # ----------------------------------------------------- START: Evals ----------------------------------------------------------
 
 # Item 01: FAIL - score = 0 (completely unrelated, incorrect)
@@ -21,7 +22,7 @@ Batch01 = [
   { "item": {
       "input": "Who is Arilena Drovik?"
       ,"reference": "Arilena Drovik is molecular biologist and geneticist. She is a Professor of Molecular Genetics and principal investigator at the Department of Molecular Biology, Lund University, Sweden. She holds a PhD in Molecular Biology from University of Cambridge, UK."
-      ,"output_text": "Arilena Drovik is a singer from Albania."
+      ,"output_text": "Mahatma Gandhi was an Indian lawyer, anti-colonial nationalist, and political ethicist."
       }
   }
   ,{ "item": {
@@ -358,12 +359,17 @@ def get_answers_from_model_and_return_items(client, vector_store_id, model, item
   for idx, item in enumerate(items_copy, 1):
     input = item['item']['input']
     print(f"  [ {idx} / {len(items)} ] Query: {input}")
-    response = retry_on_openai_errors(lambda: client.responses.create(
-      model=model
-      ,input=input
-      ,tools=[{ "type": "file_search", "vector_store_ids": [vector_store_id] }]
-      ,temperature=0
-    ), indentation=4)
+    request_params = {
+      "model": model,
+      "input": input,
+      "tools": [{ "type": "file_search", "vector_store_ids": [vector_store_id] }],
+      "temperature": 0
+    }
+    
+    # Remove temperature parameter for reasoning models that don't support it
+    remove_temperature_from_request_params_for_reasoning_models(request_params, model)
+    
+    response = retry_on_openai_errors(lambda: client.responses.create(**request_params), indentation=4)
     output_text = response.output_text
     print(f"    Response: {truncate_string(output_text,80)}")
     item['item']['output_text'] = output_text
@@ -449,12 +455,17 @@ def score_answers_using_judge_model_and_return_items(client, items, prompt_templ
       prompt = re.sub(r'{{\s*item.input\s*}}', input, prompt)
     
     # Call the OpenAI API to evaluate the answer
-    response = retry_on_openai_errors(lambda: client.responses.create(
-      model=judge_model_name
-      ,input=prompt
-      ,text={ "format": { "type": "json_object" } }
-      ,temperature=0
-    ), indentation=4)
+    request_params = {
+      "model": judge_model_name,
+      "input": prompt,
+      "text": { "format": { "type": "json_object" } },
+      "temperature": 0
+    }
+    
+    # Remove temperature parameter for reasoning models that don't support it
+    remove_temperature_from_request_params_for_reasoning_models(request_params, judge_model_name)
+    
+    response = retry_on_openai_errors(lambda: client.responses.create(**request_params), indentation=4)
     
     # Parse the JSON response
     try:
@@ -847,8 +858,8 @@ def measure_score_model_variability(client, items, eval_name, prompt_template, e
 if __name__ == '__main__':
   openai_service_type = os.getenv("OPENAI_SERVICE_TYPE", "openai")
   if openai_service_type == "openai":
-    answer_model_name = "gpt-4o-mini"
-    eval_model_name = "gpt-4o"
+    answer_model_name = "gpt-5-nano"
+    eval_model_name = "gpt-5"
     client = create_openai_client()
   elif openai_service_type == "azure_openai":
     answer_model_name = os.getenv("AZURE_OPENAI_MODEL_DEPLOYMENT_NAME", "gpt-4o-mini")
@@ -864,7 +875,7 @@ if __name__ == '__main__':
     ,folder_path="./RAGFiles/Batch01"
     # if you have a path to a JSON file with items, the code will load the items from the file instead of using the assigned batch objects
     ,eval_path=None
-    ,items = Batch02
+    ,items = Batch01
     ,answer_model = answer_model_name
     ,eval_model = eval_model_name
     ,embedding_model="text-embedding-3-small"
@@ -875,7 +886,7 @@ if __name__ == '__main__':
     ,remove_input_from_prompt=False
     ,delete_eval_after_run=True
     ,log_details=True
-    ,variability_runs=20
+    ,variability_runs=1
   )
 
   # If we have path to eval file, load items from eval file (JSON)
@@ -927,15 +938,15 @@ if __name__ == '__main__':
   print(summarize_item_scores(params.items, params.min_score, 4))
   print("-"*140)
 
-  # Step 4A: Measure variablity of prompt 1
-  measure_score_model_variability(client, params.items, "Eval Prompt 1 (Simple)", judge_model_prompt_template_1, params.eval_model, params.min_score, params.variability_runs, params.remove_input_from_prompt, params.delete_eval_after_run, params.log_details)
-  print("-"*140)
-  # Step 4B: Measure variablity of prompt 2
-  measure_score_model_variability(client, params.items, "Eval Prompt 2 (Math Scoring Model)", judge_model_prompt_template_2, params.eval_model, params.min_score, params.variability_runs, params.remove_input_from_prompt, params.delete_eval_after_run, params.log_details)
-  print("-"*140)
-  # Step 4C: Measure variablity of prompt 3
-  measure_score_model_variability(client, params.items, "Eval Prompt 3 (Langchain Correctness)", judge_model_prompt_template_3, params.eval_model, params.min_score, params.variability_runs, params.remove_input_from_prompt, params.delete_eval_after_run, params.log_details)
-  print("-"*140)
+  # # Step 4A: Measure variablity of prompt 1
+  # measure_score_model_variability(client, params.items, "Eval Prompt 1 (Simple)", judge_model_prompt_template_1, params.eval_model, params.min_score, params.variability_runs, params.remove_input_from_prompt, params.delete_eval_after_run, params.log_details)
+  # print("-"*140)
+  # # Step 4B: Measure variablity of prompt 2
+  # measure_score_model_variability(client, params.items, "Eval Prompt 2 (Math Scoring Model)", judge_model_prompt_template_2, params.eval_model, params.min_score, params.variability_runs, params.remove_input_from_prompt, params.delete_eval_after_run, params.log_details)
+  # print("-"*140)
+  # # Step 4C: Measure variablity of prompt 3
+  # measure_score_model_variability(client, params.items, "Eval Prompt 3 (Langchain Correctness)", judge_model_prompt_template_3, params.eval_model, params.min_score, params.variability_runs, params.remove_input_from_prompt, params.delete_eval_after_run, params.log_details)
+  # print("-"*140)
 
   # Step 4: Delete vector store including all files
   if not use_predefined_model_outputs: delete_vector_store_by_name(client, params.vector_store_name)
