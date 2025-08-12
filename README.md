@@ -9,6 +9,7 @@ A collection of tools and demo code to test, operate and maintain Open AI and Az
 - [5. Cleanup operations](#5-cleanup-operations) - delete expired and unused files, delete expired vector stores and unneeded assistants
 - [6. Vector store replication](#6-vector-store-replication) - replicate content between vector stores
 - [7. Evaluation operations](#7-evaluation-operations) - evaluate RAG responses with scoring and grading
+- [8. Azure AI Evaluation operations](#8-azure-ai-evaluation-operations) - evaluate RAG responses using Azure AI Foundry cloud evaluation
 
 #### Files, Features, Demos
 - **Authentication Management**: Support for multiple authentication methods including Service Principals, Managed Identities, and API Keys, all configured in `.env` file. Functions to test authentication: `test_access_with_api_key.py` and `test_access_with_service_principal.py`.
@@ -1570,3 +1571,112 @@ measure_score_model_variability(
 )
 
 ```
+
+## 8. Azure AI Evaluation Operations
+
+Functions and classes used to evaluate responses using Azure AI evaluation service with cloud-based evaluators and dataset management:
+
+### Core Components:
+- **Azure AI Evaluation Client** – Manages evaluation runs and dataset operations
+- **Azure AI Project Client** – Handles dataset upload and version management
+- **QA Evaluator** – Built-in Azure evaluator for question-answering scenarios
+- **Dataset Management** – Automatic upload and version checking for JSONL datasets
+
+### Environment Variables Required:
+- `AZURE_AI_FOUNDRY_PROJECT_ENDPOINT` – Azure AI Foundry project endpoint
+- `AZURE_OPENAI_ENDPOINT` – Azure OpenAI service endpoint (format: https://name.openai.azure.com/)
+- `AZURE_OPENAI_API_KEY` – API key for Azure OpenAI resource
+- `AZURE_OPENAI_EVAL_MODEL_DEPLOYMENT_NAME` – Deployment name for evaluation model
+
+### Azure AI Evaluation Script
+
+**Location:** `test_azure_ai_eval_operations.py`
+
+**Description:** Complete Azure AI evaluation pipeline that uploads datasets, configures evaluators, and submits cloud evaluation runs.
+
+**Azure SDK Dependencies:**
+```text
+azure-identity==1.24.0
+azure-ai-evaluation==1.10.0
+azure-ai-projects==1.0.0
+azure-core==1.34.0
+```
+
+**Client Setup:**
+```python
+from azure.identity import DefaultAzureCredential
+from azure.ai.evaluation._common.onedp import AIProjectClient
+from azure.ai.projects import AIProjectClient as ProjectClient
+
+# Create both clients - evaluation client for running evaluations, project client for dataset operations
+eval_client = AIProjectClient(endpoint=azure_ai_foundry_project_endpoint, credential=DefaultAzureCredential())
+project_client = ProjectClient(endpoint=azure_ai_foundry_project_endpoint, credential=DefaultAzureCredential())
+```
+
+**Dataset Upload with Version Check:**
+```python
+from azure.core.exceptions import ResourceNotFoundError
+
+# Check if dataset version already exists
+try:
+  existing_dataset = eval_client.datasets.get_version(name=dataset_name, version=dataset_version)
+  print(f"Dataset {dataset_name} version {dataset_version} already exists, using existing dataset")
+  dataset = existing_dataset
+except ResourceNotFoundError:
+  print(f"Dataset {dataset_name} version {dataset_version} not found, uploading new dataset")
+  dataset = project_client.datasets.upload_file(name=dataset_name, version=dataset_version, file_path=file_path)
+  print(f"Dataset uploaded successfully: {dataset.name}")
+```
+
+**QA Evaluator Configuration:**
+```python
+from azure.ai.evaluation._common.onedp.models._models import EvaluatorConfiguration
+from azure.ai.projects.models._patch_evaluations import EvaluatorIds
+
+# Configure QA evaluator with exact field names: query, response, context, ground_truth
+evaluators = {
+    "relevance": EvaluatorConfiguration(
+        id=EvaluatorIds.QA.value,
+        init_params={"deployment_name": azure_openai_eval_model_deployment_name},
+        data_mapping={
+            "query": "${data.query}",
+            "response": "${data.response}",
+            "context": "${data.context}",
+            "ground_truth": "${data.ground_truth}",
+        },
+    )
+}
+```
+
+**Evaluation Submission:**
+```python
+from azure.ai.evaluation._common.onedp.models._models import Evaluation, InputDataset
+from datetime import datetime
+
+# Submit the cloud evaluation
+evaluation = Evaluation(
+    display_name=f"QA Eval - {dataset_name} ({datetime.now().strftime('%Y-%m-%d %H:%M')})",
+    description="Grades existing responses in JSONL",
+    data=InputDataset(id=data_id),
+    evaluators=evaluators,
+)
+
+resp = eval_client.evaluations.create_run(
+    evaluation,
+    headers={"model-endpoint": azure_openai_endpoint, "api-key": azure_openai_api_key},
+)
+
+print("Evaluation name:", resp.display_name)
+print("Status:", resp.status)
+# Tip: poll with eval_client.evaluations.get(resp.name) until Completed
+```
+
+**Expected JSONL Dataset Format:**
+```jsonl
+{"query": "What is the capital of France?", "response": "Paris", "context": "France is a country in Europe", "ground_truth": "Paris is the capital of France"}
+{"query": "What is 2+2?", "response": "4", "context": "Basic arithmetic", "ground_truth": "2+2 equals 4"}
+```
+
+**Azure Permissions Required:**
+- **Azure AI Project Manager** role for dataset upload operations
+- **Cognitive Services OpenAI User** role for evaluation model access
