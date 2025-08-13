@@ -344,6 +344,128 @@ Use the reference outputs below to help you evaluate the correctness of the resp
 {{ item.reference }}
 </reference_outputs>
 """
+
+# Azure AI Foundry "Model Scorer > Semantic Similarity" prompt (2025-08-13). Modified to also return return score 0-5 (instead of 1-5)
+judge_model_prompt_template_4 = """
+Evaluate the degree of similarity between the given output and the ground truth on a scale from 0 to 5, using a chain of thought to ensure step-by-step reasoning before reaching the conclusion.
+
+Consider the following criteria:
+
+- 5: Highly similar - The output and ground truth are nearly identical, with only minor, insignificant differences.
+- 4: Somewhat similar - The output is largely similar to the ground truth but has few noticeable differences.
+- 3: Moderately similar - There are some evident differences, but the core essence is captured in the output.
+- 2: Slightly similar - The output only captures a few elements of the ground truth and contains several differences.
+- 1: Not similar - The output is significantly different from the ground truth, with few or no matching elements.
+- 0: Not similar and completely unrelated - Absolutely no relation to the question and no relation to the ground truth.
+
+# Steps
+
+1. Identify and list the key elements present in both the output and the ground truth.
+2. Compare these key elements to evaluate their similarities and differences, considering both content and structure.
+3. Analyze the semantic meaning conveyed by both the output and the ground truth, noting any significant deviations.
+4. Based on these comparisons, categorize the level of similarity according to the defined criteria above.
+5. Write out the reasoning for why a particular score is chosen, to ensure transparency and correctness.
+6. Assign a similarity score based on the defined criteria above.
+
+# Output Format
+
+Provide the final similarity score as an integer (0, 1, 2, 3, 4, or 5).
+
+# Examples
+
+**Example 1:**
+
+- Output: "The cat sat on the mat."
+- Ground Truth: "The feline is sitting on the rug."
+- Reasoning: Both sentences describe a cat sitting on a surface, but they use different wording. The structure is slightly different, but the core meaning is preserved. There are noticeable differences, but the overall meaning is conveyed well.
+- Similarity Score: 3
+
+**Example 2:**
+
+- Output: "The quick brown fox jumps over the lazy dog."
+- Ground Truth: "A fast brown animal leaps over a sleeping canine."
+- Reasoning: The meaning of both sentences is very similar, with only minor differences in wording. The structure and intent are well preserved.
+- Similarity Score: 4
+
+# Notes
+
+- Always aim to provide a fair and balanced assessment.
+- Consider both syntactic and semantic differences in your evaluation.
+- Consistency in scoring similar pairs is crucial for accurate measurement.
+
+# Data
+
+<output>
+{{ item.output_text }}
+</output>
+
+<ground_truth>
+{{ item.reference }}
+</ground_truth>
+
+<question>
+{{ item.input }}
+</question>
+"""
+# Azure AI Foundry "Likert-Scale Evaluator > Similarity" prompt (2025-08-13). Modified to also return return score 0-5 (instead of 1-5)
+judge_model_prompt_template_5 = """
+system:
+You are an AI assistant. You will be given the definition of an evaluation metric for assessing the quality of an answer in a question-answering task. Your job is to compute an accurate evaluation score using the provided evaluation metric. You should return a single integer value between 1 to 5 representing the evaluation metric. You will include no other text or information.
+user:
+Equivalence, as a metric, measures the similarity between the predicted answer and the correct answer. If the information and content in the predicted answer is similar or equivalent to the correct answer, then the value of the Equivalence metric should be high, else it should be low. Given the question, correct answer, and predicted answer, determine the value of Equivalence metric using the following rating scale:
+Score 0: the predicted answer is not at all similar to the correct answer and completely unrelated to the question
+Score 1: the predicted answer is not at all similar to the correct answer but at somewhat related to the question
+Score 2: the predicted answer is mostly not similar to the correct answer
+Score 3: the predicted answer is somewhat similar to the correct answer
+Score 4: the predicted answer is mostly similar to the correct answer
+Score 5: the predicted answer is completely similar to the correct answer
+
+This rating value should always be an integer between 0 and 5. So the rating produced should be 0 or 1 or 2 or 3 or 4 or 5.
+
+The examples below show the Equivalence score for a question, a correct answer, and a predicted answer.
+
+question: Who was the first president of the USA?
+correct answer: George Washington
+predicted answer: Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.
+score: 0
+
+question: What is the role of ribosomes?
+correct answer: Ribosomes are cellular structures responsible for protein synthesis. They interpret the genetic information carried by messenger RNA (mRNA) and use it to assemble amino acids into proteins.
+predicted answer: Ribosomes participate in carbohydrate breakdown by removing nutrients from complex sugar molecules.
+score: 1
+
+question: Why did the Titanic sink?
+correct answer: The Titanic sank after it struck an iceberg during its maiden voyage in 1912. The impact caused the ship's hull to breach, allowing water to flood into the vessel. The ship's design, lifeboat shortage, and lack of timely rescue efforts contributed to the tragic loss of life.
+predicted answer: The sinking of the Titanic was a result of a large iceberg collision. This caused the ship to take on water and eventually sink, leading to the death of many passengers due to a shortage of lifeboats and insufficient rescue attempts.
+score: 2
+
+question: What causes seasons on Earth?
+correct answer: Seasons on Earth are caused by the tilt of the Earth's axis and its revolution around the Sun. As the Earth orbits the Sun, the tilt causes different parts of the planet to receive varying amounts of sunlight, resulting in changes in temperature and weather patterns.
+predicted answer: Seasons occur because of the Earth's rotation and its elliptical orbit around the Sun. The tilt of the Earth's axis causes regions to be subjected to different sunlight intensities, which leads to temperature fluctuations and alternating weather conditions.
+score: 3
+
+question: How does photosynthesis work?
+correct answer: Photosynthesis is a process by which green plants and some other organisms convert light energy into chemical energy. This occurs as light is absorbed by chlorophyll molecules, and then carbon dioxide and water are converted into glucose and oxygen through a series of reactions.
+predicted answer: In photosynthesis, sunlight is transformed into nutrients by plants and certain microorganisms. Light is captured by chlorophyll molecules, followed by the conversion of carbon dioxide and water into sugar and oxygen through multiple reactions.
+score: 4
+
+question: What are the health benefits of regular exercise?
+correct answer: Regular exercise can help maintain a healthy weight, increase muscle and bone strength, and reduce the risk of chronic diseases. It also promotes mental well-being by reducing stress and improving overall mood.
+predicted answer: Routine physical activity can contribute to maintaining ideal body weight, enhancing muscle and bone strength, and preventing chronic illnesses. In addition, it supports mental health by alleviating stress and augmenting general mood.
+score: 5
+
+<question>
+{{ item.input }}
+</question>
+
+<correct_answer>
+{{ item.reference }}
+</correct_answer>
+
+<predicted_answer>
+{{ item.output_text }}
+</predicted_answer>
+"""
 # ----------------------------------------------------- END: Prompts ----------------------------------------------------------
 
 # ----------------------------------------------------- START: Tests ----------------------------------------------------------
@@ -875,7 +997,7 @@ if __name__ == '__main__':
     ,folder_path="./RAGFiles/Batch01"
     # if you have a path to a JSON file with items, the code will load the items from the file instead of using the assigned batch objects
     ,eval_path=None
-    ,items = Batch01
+    ,items = Batch02
     ,answer_model = answer_model_name
     ,eval_model = eval_model_name
     ,embedding_model="text-embedding-3-small"
@@ -886,7 +1008,7 @@ if __name__ == '__main__':
     ,remove_input_from_prompt=False
     ,delete_eval_after_run=True
     ,log_details=True
-    ,variability_runs=1
+    ,variability_runs=20
   )
 
   # If we have path to eval file, load items from eval file (JSON)
@@ -938,15 +1060,22 @@ if __name__ == '__main__':
   print(summarize_item_scores(params.items, params.min_score, 4))
   print("-"*140)
 
-  # # Step 4A: Measure variablity of prompt 1
-  # measure_score_model_variability(client, params.items, "Eval Prompt 1 (Simple)", judge_model_prompt_template_1, params.eval_model, params.min_score, params.variability_runs, params.remove_input_from_prompt, params.delete_eval_after_run, params.log_details)
-  # print("-"*140)
-  # # Step 4B: Measure variablity of prompt 2
-  # measure_score_model_variability(client, params.items, "Eval Prompt 2 (Math Scoring Model)", judge_model_prompt_template_2, params.eval_model, params.min_score, params.variability_runs, params.remove_input_from_prompt, params.delete_eval_after_run, params.log_details)
-  # print("-"*140)
-  # # Step 4C: Measure variablity of prompt 3
-  # measure_score_model_variability(client, params.items, "Eval Prompt 3 (Langchain Correctness)", judge_model_prompt_template_3, params.eval_model, params.min_score, params.variability_runs, params.remove_input_from_prompt, params.delete_eval_after_run, params.log_details)
-  # print("-"*140)
+  # Step 4A: Measure variablity of prompt 1
+  measure_score_model_variability(client, params.items, "Eval Prompt 1 (Simple)", judge_model_prompt_template_1, params.eval_model, params.min_score, params.variability_runs, params.remove_input_from_prompt, params.delete_eval_after_run, params.log_details)
+  print("-"*140)
+  # Step 4B: Measure variablity of prompt 2
+  measure_score_model_variability(client, params.items, "Eval Prompt 2 (Math Scoring Model)", judge_model_prompt_template_2, params.eval_model, params.min_score, params.variability_runs, params.remove_input_from_prompt, params.delete_eval_after_run, params.log_details)
+  print("-"*140)
+  # Step 4C: Measure variablity of prompt 3
+  measure_score_model_variability(client, params.items, "Eval Prompt 3 (Langchain Correctness)", judge_model_prompt_template_3, params.eval_model, params.min_score, params.variability_runs, params.remove_input_from_prompt, params.delete_eval_after_run, params.log_details)
+  print("-"*140)
+  # Step 4D: Measure variablity of prompt 4
+  measure_score_model_variability(client, params.items, "Eval Prompt 4 (AI Foundry Semantic Similarity)", judge_model_prompt_template_4, params.eval_model, params.min_score, params.variability_runs, params.remove_input_from_prompt, params.delete_eval_after_run, params.log_details)
+  print("-"*140)
+  # Step 4E: Measure variablity of prompt 5
+  measure_score_model_variability(client, params.items, "Eval Prompt 5 (AI Foundry Similarity)", judge_model_prompt_template_5, params.eval_model, params.min_score, params.variability_runs, params.remove_input_from_prompt, params.delete_eval_after_run, params.log_details)
+  print("-"*140)
+
 
   # Step 4: Delete vector store including all files
   if not use_predefined_model_outputs: delete_vector_store_by_name(client, params.vector_store_name)
