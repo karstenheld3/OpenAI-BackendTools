@@ -298,6 +298,81 @@ Return exactly:
 </model_output>
 """
 
+# A detailed judge model prompt using multiple criteria
+# Optimized version (https://platform.openai.com/chat/edit?models=gpt-5&optimize=true)
+judge_model_prompt_template_2b = """
+Developer:
+## Role and Objective
+You are an evaluation assistant tasked with scoring a GPT model's output (`model_output`) by comparison to a given reference answer (`reference`).
+
+Begin with a concise checklist (3-7 bullets) of your evaluation steps before scoring. Evaluate according to all provided criteria and ensure outputs strictly match the requested format.
+
+## Instructions
+- Identify facts, conclusions, and key terms in the reference.
+- For each, determine if it is explicitly present in the model output, with justification.
+- Calculate coverage ratios for facts, conclusions, and terminology.
+- Calculate organization ratio as described.
+- Apply the appropriate scoring formula based on present categories.
+- Always round the final score to the nearest integer.
+
+### Sub-categories
+#### Definitions
+- **Facts:** Verifiable, objective statements describing reality. Exclude any interpretive or evaluative content.
+- **Conclusions:** Statements that interpret or derive meaning from facts, excluding facts themselves.
+- **Terms:** Essential, topic-specific non-numeric expressions. Numeric values are not counted as terms.
+
+#### Evaluation Steps
+1. Enumerate all reference facts, conclusions, and key terms.
+2. For each, indicate whether it is present in the model output, with brief justifications.
+3. Calculate these ratios:
+   - facts_ratio = (matched_facts / total_facts)
+   - conclusions_ratio = (matched_conclusions / total_conclusions) [if any conclusions]
+   - terms_ratio = (matched_terms / total_terms). Set terms_ratio = 1 if total_terms == 0.
+   - organization_ratio: 1 if comparable structure, 0 if very different.
+
+#### Scoring Formulas
+- If conclusions exist: score = 5 * (facts_ratio * 0.4 + conclusions_ratio * 0.3 + terms_ratio * 0.21 + organization_ratio * 0.09)
+- If no conclusions: score = 5 * (facts_ratio * 0.7 + terms_ratio * 0.21 + organization_ratio * 0.09)
+- If less than 1 fact matched: score = 5 * (facts_ratio * 0.7 + terms_ratio * 0.21)
+- Always round to the nearest integer.
+
+#### Ambiguity Handling
+- If any reference category is zero, note this and set relevant ratio rules (terms_ratio = 1 if total_terms == 0).
+- If content is ambiguous or missing, note this in rationale, assign a score of 0, and explain.
+
+## Context
+- <input>: {{ item.input }}
+- <reference>: {{ item.reference }}
+- <model_output>: {{ item.output_text }}
+
+## Output Format
+Return your result strictly in this format:
+```json
+{
+  "score": <0-5>,
+  "rationale": [
+    "Fact: <number_of_output_facts> of <number_of_reference_facts> correctly matched.",
+    "Conclusion: <number_of_output_conclusions> of <number_of_reference_conclusions> correctly matched.",
+    "Terminology: <number_of_output_terms> of <number_of_reference_terms> terms correctly matched.",
+    "Organization: matched/mismatched",
+    "Score: <score> = <score_calculation>"
+  ]
+}
+```
+- `score`: integer, 0-5, rounded.
+- `rationale`: 5 ordered bullets: Fact, Conclusion, Terminology, Organization, Score breakdown.
+- If any category is ambiguous or missing, reflect this in the rationale.
+- Field names and order must precisely match this output format.
+
+## Reasoning and Validation
+- Work internally: Analyze reference and output step-by-step, matching each element to the criteria. Only expose detailed calculations in the rationale per the output format.
+- After preparing output, validate that structure and field content match the required format. Only output valid JSON.
+
+## Verbosity and Stop Conditions
+- Explanations must be concise but fully address each evaluation category.
+- Stop after producing valid JSON output as specified, or escalate if required context is missing."""
+
+
 # This is the langchain open evals correctness prompt
 # https://github.com/langchain-ai/openevals/blob/main/python/openevals/prompts/correctness.py
 judge_model_prompt_template_3 = """
@@ -334,9 +409,9 @@ You are an expert data labeler evaluating model outputs for correctness. Your ta
 {{ item.input }}
 </input>
 
-<output>
+<model_output>
 {{ item.output_text }}
-</output>
+</model_output>
 
 Use the reference outputs below to help you evaluate the correctness of the response:
 
@@ -355,8 +430,8 @@ Consider the following criteria:
 - 4: Somewhat similar - The output is largely similar to the ground truth but has few noticeable differences.
 - 3: Moderately similar - There are some evident differences, but the core essence is captured in the output.
 - 2: Slightly similar - The output only captures a few elements of the ground truth and contains several differences.
-- 1: Not similar - The output is significantly different from the ground truth, with few or no matching elements.
-- 0: Not similar and completely unrelated - Absolutely no relation to the question and no relation to the ground truth.
+- 1: Not similar - The output is significantly different from the ground truth, with few or no matching elements, but it is still related to the question. 
+- 0: Not similar and completely unrelated - Absolutely no relation to the question and complete mismatch with the ground truth.
 
 # Steps
 
@@ -734,8 +809,10 @@ def score_answers_using_score_model_grader_and_return_items(client, items, eval_
       for r in rationale:
         print(f"      - {truncate_string(r, 140)}")
 
-  # Delete evaluation after run if requested
-  if delete_eval_after_run: client.evals.delete(eval_id=eval_cfg.id)
+  # Try delete evaluation after run if requested (can fail)
+  if delete_eval_after_run:
+      try: client.evals.delete(eval_id=eval_cfg.id)
+      except: print(f"    WARNING: Failed to delete eval ID={eval_cfg.id}")
 
   log_function_footer(function_name, start_time)
   return items_copy
