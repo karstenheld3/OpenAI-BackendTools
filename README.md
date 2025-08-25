@@ -559,13 +559,15 @@ response_file_search_results = response_file_search_tool_call.results
 
 
 Functions and classes used to demonstrate vector store search, filtering, and query rewrite:
-- Function `test_file_search_functionalities` - Demonstrates file search functionalities including basic search, filtered search, and query rewriting using a vector store.
+- Function `test_file_search_functionalities_using_search_api` – Uses `client.vector_stores.search(...)` with native `ranking_options.score_threshold`, `filters`, `max_num_results`, and `rewrite_query=True`.
+- Function `test_file_search_functionalities_using_responses_api` – Uses `client.responses.create(...)` with the `file_search` tool and native tool params (`ranking_options.score_threshold`, `filters`, `max_num_results`). Query rewrite is done via a separate `rewrite_query_with_model()` step.
+  - Note: This Responses API path is a workaround for Azure OpenAI Service, which does not support the Search API as of 2025-08-25.
 Functions and classes used to prepare test vector store and files:
-- Function `create_test_vector_store_with_files` - Creates a vector store and uploads files from the specified folder to it. Handles retries and verifies file processing completion.
-- Function `extract_and_add_metadata_to_vector_store_using_responses_api` - Extracts metadata from files and re-adds files with more metadata to the vector store using the responses API. Handles retries and verifies file processing completion.
-- Function `extract_and_add_metadata_to_vector_store_using_assistants_api` - Extracts metadata from files using the assistants API. Creates and deletes a temporary assistant to extract metadata.
-- Class `TestVectorStoreWithFiles` - Container class that holds information about a test vector store and its associated files. Used to pass vector store and file information between test functions.
-- Class `SearchParams` - Container class for search parameters used in test functions, such as vector store name, folder path, queries, and filters.
+- Function `create_test_vector_store_with_files` – Creates a vector store and uploads files from the specified folder. Handles retries and verifies file processing completion.
+- Function `extract_and_add_metadata_to_vector_store_using_responses_api` – Extracts metadata from files and re-adds files with more metadata to the vector store using the Responses API. Handles retries and verifies file processing completion.
+- Function `extract_and_add_metadata_to_vector_store_using_assistants_api` – Extracts metadata from files using the Assistants API. Creates and deletes a temporary assistant to extract metadata.
+- Class `TestVectorStoreWithFiles` – Container for a test vector store and its files, used to pass vector store and file information between test functions.
+- Class `SearchParams` – Container for search parameters (vector store name, folder path, queries, filters, score threshold, max results).
 
 ### Class: `SearchParams`
 
@@ -656,6 +658,107 @@ search_results = client.vector_stores.search(
   max_num_results=10
 )
 rewritten_search_query = search_results.model_extra['search_query'][0]
+```
+
+### Function: `test_file_search_functionalities_using_responses_api`
+
+Demonstrates file search functionalities using the Responses API and the `file_search` tool:
+- Basic search in a vector store
+- Simulated filtered search via prompt instructions (Responses API has no direct filters)
+- Search with query rewriting and extraction of the rewritten query from model output
+
+**Location:** `test_search_operations.py`
+
+**Parameters:**
+- `client`: The OpenAI client instance to use for API calls
+- `vector_store_id`: ID of the vector store to search
+- `params`: Instance of `SearchParams` containing search queries and filters
+
+**Notes:**
+- Determines model from environment: `gpt-5` for OpenAI, or `AZURE_OPENAI_MODEL_DEPLOYMENT_NAME` for Azure.
+- Uses `remove_temperature_from_request_params_for_reasoning_models()` to drop `temperature` for reasoning models and add low reasoning effort.
+- When `include` is set to `["file_search_call.results"]`, raw retrieval results are returned and formatted into a table.
+
+**Example output:**
+```
+[2025-06-09 16:58:47] START: File search functionalities using responses API (RAG search, filter, rewrite query)...
+  Testing query search (score_threshold=0.3, max_num_results=10): Who is Arilena Drovik?
+    2 search results
+    Index | File ID                     | Filename            | Score | Attributes | Content
+    ----- | --------------------------- | ------------------- | ----- | ---------- | ------------------------------------------------------------
+    00000 | file-...                    | ArilenaDrovikCV.pdf | 0.90  | 3 of 3     | (anonymous)  Arilena Drovik PhD Molecular Biology Princip...
+    00001 | file-...                    | Publications1.md    | 0.64  | 3 of 3     | | Title | Author(s) | Year | Publisher | Link | |-------|...
+  --------------------------------------------------------------------------------------------------------------------------------------------
+  Testing filtered query search (filter: file_type='md', score_threshold=0.3, max_num_results=10): Who is Arilena Drovik?
+    1 search results
+    Index | File ID                     | Filename         | Score | Attributes | Content
+    ----- | --------------------------- | ---------------- | ----- | ---------- | ------------------------------------------------------------
+    00000 | file-...                    | Publications1.md | 0.64  | 3 of 3     | | Title | Author(s) | Year | Publisher | Link | |-------|...
+  --------------------------------------------------------------------------------------------------------------------------------------------
+  Testing rewrite query search (score_threshold=0.3, max_num_results=10): All files from year 2015.
+    1 search results
+    Rewritten query: Files from 2015
+    Index | File ID                     | Filename         | Score | Attributes | Content
+    ----- | --------------------------- | ---------------- | ----- | ---------- | ------------------------------------------------------------
+    00000 | file-...                    | Publications1.md | 0.64  | 3 of 3     | | Title | Author(s) | Year | Publisher | Link | |-------|...
+[2025-06-09 16:59:03] END: File search functionalities using responses API (RAG search, filter, rewrite query) (16 secs).
+```
+
+**Open AI SDK code (Responses API)**
+```python
+def run_file_search_with_responses(input_query, max_num_results=10, score_threshold=None, filters=None, include_results=True):
+  request_params = {
+    "model": openai_model_name,
+    "input": input_query,
+    "tools": [{
+      "type": "file_search",
+      "vector_store_ids": [vector_store_id],
+      "max_num_results": max_num_results
+    }],
+    "temperature": 0
+  }
+  # For gpt-5 models, use this instead (omit temperature; add reasoning effort):
+  # request_params = {
+  #   "model": "gpt-5.1-mini",
+  #   "input": input_query,
+  #   "tools": [{
+  #     "type": "file_search",
+  #     "vector_store_ids": [vector_store_id],
+  #     "max_num_results": max_num_results
+  #   }],
+  #   "reasoning": {"effort": "low"}
+  # }
+  ranking_options = {"ranker": "auto"}
+  if score_threshold is not None: ranking_options["score_threshold"] = score_threshold
+  request_params["tools"][0]["ranking_options"] = ranking_options
+  if filters: request_params["tools"][0]["filters"] = filters
+  if include_results: request_params["include"] = ["file_search_call.results"]
+  response = client.responses.create(**request_params)
+  # Extract raw file_search results
+  response_file_search_tool_call = next((item for item in response.output if getattr(item, 'type', None) == 'file_search_call'), None)
+  results = getattr(response_file_search_tool_call, 'results', None) if response_file_search_tool_call else None
+  return results or [], response
+
+def rewrite_query_with_model(original_query):
+  req = {
+    "model": openai_model_name,
+    "input": (
+      "Rewrite the following search query to be concise and unambiguous, "
+      "output only the rewritten text.\n\nQuery: " + str(original_query)
+    ),
+    "temperature": 0
+  }
+  # For gpt-5 models, use this instead (omit temperature; add reasoning effort):
+  # req = {
+  #   "model": "gpt-5.1-mini",
+  #   "input": (
+  #     "Rewrite the following search query to be concise and unambiguous, "
+  #     "output only the rewritten text.\n\nQuery: " + str(original_query)
+  #   ),
+  #   "reasoning": {"effort": "low"}
+  # }
+  resp = client.responses.create(**req)
+  return getattr(resp, "output_text", "").strip()
 ```
 
 ### Function: `extract_and_add_metadata_to_vector_store_using_responses_api`

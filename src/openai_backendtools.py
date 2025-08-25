@@ -1292,11 +1292,14 @@ def delete_failed_and_unused_files(client, dry_run=False):
   for i, file in enumerate(files_to_delete, 1):
     print(f"    [ {i} / {len(files_to_delete)} ] Deleting file '{file.filename}' (ID={file.id}, {format_timestamp(file.created_at)})...")
     if dry_run: continue
-    client.files.delete(file_id=file.id)
+    try:
+      client.files.delete(file_id=file.id)
+    except Exception as e:
+      print(f"  WARNING: Failed to delete file ID={file.id} from global storage: {str(e)}")
 
   log_function_footer(function_name, start_time)
 
-def delete_vector_stores_not_used_by_assistants(client, until_date_created):
+def delete_vector_stores_not_used_by_assistants(client, until_date_created, dry_run=False):
   function_name = 'Delete vector stores not used by assistants'
   start_time = log_function_header(function_name)
 
@@ -1306,7 +1309,11 @@ def delete_vector_stores_not_used_by_assistants(client, until_date_created):
 
   for vs in vector_stores_not_used_by_assistants:
     print(f"  Deleting vector store ID={vs.id} '{vs.name}' ({format_timestamp(vs.created_at)})...")
-    client.vector_stores.delete(vs.id)
+    if dry_run: continue
+    try:
+      client.vector_stores.delete(vs.id)
+    except Exception as e:
+      print(f"  WARNING: Failed to delete vector store ID={vs.id}: {str(e)}")
 
   log_function_footer(function_name, start_time)
 

@@ -17,13 +17,14 @@ if __name__ == '__main__':
   # delete_duplicate_files_in_vector_stores(client)
 
   # USE WITH CAUTION! This will delete all non-assistant vector stores older than 10 days. Including those used in current conversations.
+  # dry_run = True -> show what files would be deleted; dry_run = False -> delete files.
   # -------------------------------------------------------------------------------------------------
-  # delete_vector_stores_not_used_by_assistants(client, datetime.datetime.now() - datetime.timedelta(days=10))
+  # delete_vector_stores_not_used_by_assistants(client, datetime.datetime.now() - datetime.timedelta(days=10), dry_run=True)
 
   # Run this after you have deleted vector stores to remove unused files
   # -------------------------------------------------------------------------------------------------
-  # delete_failed_and_unused_files(client)
-
+  # delete_failed_and_unused_files(client, dry_run=True)
+  
   # delete_vector_store_by_name(client, "test_vector_store", True)
   # client.vector_stores.delete("vs_67b0ca3da1fc819186fc791943fce1a3")
   # delete_vector_store_by_id(client, "vs_67b0ca3da1fc819186fc791943fce1a3", True)
@@ -50,14 +51,14 @@ if __name__ == '__main__':
   # print("-"*140)
 
   # USE WITH CAUTION! This will delete all files with specific filename across all vector stores. 
-  # If dry_run is True, it will only show what files would be deleted.
+  # dry_run = True -> show what files would be deleted; dry_run = False -> delete files.
   # If delete_files_in_global_storage is True, it will also delete the files from global storage.
   # -------------------------------------------------------------------------------------------------
   # filenames = ["ArilenaDrovikCV.pdf", "Publications1.md"]
   # files_deleted = delete_files_in_all_vector_stores_by_filename(client, filenames, dry_run=True, delete_files_in_global_storage=True)
 
   # USE WITH CAUTION! This will delete all files of a specific type in a vector store.
-  # If dry_run is True, it will only show what files would be deleted.
+  # dry_run = True -> show what files would be deleted; dry_run = False -> delete files.
   # If delete_files_in_global_storage is True, it will also delete the files from global storage.
   # -------------------------------------------------------------------------------------------------
   # vector_store_id = "vs_1iPc8a1Js8QqAW55Ld4BK1MY"
@@ -69,8 +70,8 @@ if __name__ == '__main__':
   # delete_eval_by_id(client, "eval_687e23a614508191bf7abb6ee384e166")
 
   # USE WITH CAUTION! This will delete all evals including all runs.
-  # If dry_run is True, it will only show what evals would be deleted.
+  # dry_run = True -> show what files would be deleted; dry_run = False -> delete files.
   # -------------------------------------------------------------------------------------------------
-  # delete_all_evals(client, dry_run=True)
+  # delete_all_evals(client, dry_run=False)
 
 # ----------------------------------------------------- END: Main -------------------------------------------------------------

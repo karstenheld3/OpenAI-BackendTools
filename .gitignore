@@ -5,4 +5,3 @@ Set-*-Env.bat
 __pycache__
 __pycache__/*
 *.bak
-ConvertEval.py

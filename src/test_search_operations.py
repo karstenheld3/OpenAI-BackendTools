@@ -94,14 +94,35 @@ def re_add_files_with_metadata_to_vector_store(client,test_vector_store_with_fil
     # calculate metadata tags - count total fields
     file_metadata_count = len(file_metadata.keys())
 
+    # Try to add/update first; only delete the original if add succeeds
+    readding_succeeded = False
     try:
-      # first remove the file from the vector store
-      client.vector_stores.files.delete( vector_store_id=test_vector_store_with_files.vector_store.id, file_id=file_id )
-      # then add the file back with the updated metadata
-      client.vector_stores.files.create( vector_store_id=test_vector_store_with_files.vector_store.id, file_id=file_id, attributes=file_metadata )
+      client.vector_stores.files.create(
+        vector_store_id=test_vector_store_with_files.vector_store.id,
+        file_id=file_id,
+        attributes=file_metadata
+      )
+      readding_succeeded = True
       print(f"    [ {idx} / {len(test_vector_store_with_files.files)} ] OK: ID={file_id} with {file_metadata_count} attributes '{file_path}'")
     except Exception as e:
       print(f"    [ {idx} / {len(test_vector_store_with_files.files)} ] FAIL: '{file_path}' - {str(e)}")
+
+    # If add succeeded, attempt to delete any previous entry; ignore not-found errors
+    if readding_succeeded:
+      try:
+        client.vector_stores.files.delete(
+          vector_store_id=test_vector_store_with_files.vector_store.id,
+          file_id=file_id
+        )
+        # Only re-add if delete succeeded (indicates a prior association existed and was removed)
+        client.vector_stores.files.create(
+          vector_store_id=test_vector_store_with_files.vector_store.id,
+          file_id=file_id,
+          attributes=file_metadata
+        )
+      except Exception as e:
+        # If delete fails (e.g., 404 not found), keep the successfully added association
+        print(f"      WARNING: Deletion failed for '{file_path}': {str(e)}")
 
   # make sure all files in the vector store have status 'processed' and delete those that don't
   print(f"  Ensuring all files in the vector store have status='completed'...")
@@ -285,9 +306,92 @@ def extract_and_add_metadata_to_vector_store_using_assistants_api(client, test_v
   
   log_function_footer(function_name, start_time)
 
+def test_file_search_functionalities_using_responses_api(client, vector_store_id, params):
+  function_name = 'File search functionalities using responses API (RAG search, filter, rewrite query)'
+  start_time = log_function_header(function_name)
+  
+  # Determine model name for Responses API calls
+  openai_service_type = os.getenv("OPENAI_SERVICE_TYPE", "openai")
+  openai_model_name = (os.getenv("AZURE_OPENAI_MODEL_DEPLOYMENT_NAME", "gpt-4o-mini") if openai_service_type == "azure_openai" else "gpt-5")
 
-def test_file_search_functionalities(client, vector_store_id, params):
-  function_name = 'File search functionalities (RAG search, filter, rewrite query)'
+  # Helper to run a file_search via Responses API and return (results_list, raw_response)
+  def run_file_search_with_responses(input_query, max_num_results=10, score_threshold=None, filters=None, include_results=True):
+    tool = { "type": "file_search", "vector_store_ids": [vector_store_id], "max_num_results": max_num_results }
+    if score_threshold is not None:
+      tool["ranking_options"] = { "ranker": "auto", "score_threshold": float(score_threshold) }
+    if filters is not None:
+      tool["filters"] = filters
+    request_params = {
+      "model": openai_model_name,
+      "input": input_query,
+      "tools": [tool],
+      "temperature": 0
+    }
+    if include_results:
+      request_params["include"] = ["file_search_call.results"]
+    # Remove temperature and add reasoning params for reasoning models
+    remove_temperature_from_request_params_for_reasoning_models(request_params, openai_model_name, reasoning_effort="low")
+    response = retry_on_openai_errors(lambda: client.responses.create(**request_params), indentation=4)
+    # Extract raw file_search results
+    response_file_search_tool_call = next((item for item in response.output if getattr(item, 'type', None) == 'file_search_call'), None)
+    results = getattr(response_file_search_tool_call, 'results', None) if response_file_search_tool_call else None
+    return results or [], response
+
+  # Helper to rewrite a query using the model (no tools involved)
+  def rewrite_query_with_model(original_query):
+    request_params = {
+      "model": openai_model_name,
+      "input": (
+        "Rewrite the following user query to an optimal search phrase for retrieval. "
+        "Return only the rewritten query with no additional text.\n"
+        f"User query: {original_query}"
+      ),
+      "temperature": 0
+    }
+    remove_temperature_from_request_params_for_reasoning_models(request_params, openai_model_name, reasoning_effort="low")
+    response = retry_on_openai_errors(lambda: client.responses.create(**request_params), indentation=4)
+    return getattr(response, 'output_text', None) or original_query
+
+  # 1) RAG query search (no filters)
+  query = params.search_query_1; max_num_results = 10
+  print(f"  Testing query search (score_threshold={str(params.score_threshold)}, max_num_results={max_num_results}): {query}")
+  results, raw = run_file_search_with_responses(query, max_num_results=max_num_results, score_threshold=params.score_threshold)
+  # Sort by score desc if available
+  try: results.sort(key=lambda x: getattr(x, 'score', 0), reverse=True)
+  except Exception: pass
+  print(f"    {len(results)} search results")
+  table = ("    " + format_search_results_table(results)).replace("\n","\n    ")
+  print(table)
+
+  # 2) Filtered search using native tool filters
+  filters = params.search_query_2_filters
+  query = params.search_query_2
+  print("  " + "-"*140)
+  print(f"  Testing filtered query search (filter: {filters['key']}='{filters['value']}', score_threshold={str(params.score_threshold)}, max_num_results={max_num_results}): {query}")
+  results, raw = run_file_search_with_responses(query, max_num_results=max_num_results, score_threshold=params.score_threshold, filters=filters)
+  try: results.sort(key=lambda x: getattr(x, 'score', 0), reverse=True)
+  except Exception: pass
+  print(f"    {len(results)} search results")
+  table = ("    " + format_search_results_table(results)).replace("\n","\n    ")
+  print(table)
+
+  # 3) Rewrite query search (two-step: rewrite -> search)
+  query = params.search_query_3_with_query_rewrite; max_num_results = 10
+  print("  " + "-"*140)
+  print(f"  Testing rewrite query search (score_threshold={str(params.score_threshold)}, max_num_results={max_num_results}): {query}")
+  rewritten_search_query = rewrite_query_with_model(query)
+  results, raw = run_file_search_with_responses(rewritten_search_query, max_num_results=max_num_results, score_threshold=params.score_threshold)
+  print(f"    {len(results)} search results")
+  if rewritten_search_query: print(f"    Rewritten query: {rewritten_search_query}")
+  try: results.sort(key=lambda x: getattr(x, 'score', 0), reverse=True)
+  except Exception: pass
+  table = ("    " + format_search_results_table(results)).replace("\n","\n    ")
+  print(table)
+
+  log_function_footer(function_name, start_time)
+
+def test_file_search_functionalities_using_search_api(client, vector_store_id, params):
+  function_name = 'File search functionalities using search API(RAG search, filter, rewrite query)'
   start_time = log_function_header(function_name)
 
   # Search for files using query
@@ -371,11 +475,10 @@ if __name__ == '__main__':
     ,search_query_2="Who is Arilena Drovik?"
     ,search_query_2_filters = { "key": "file_type", "type": "eq", "value": "md" }
     ,search_query_3_with_query_rewrite="All files from year 2015."
-    ,score_threshold=0.3
+    ,score_threshold=0.001
     ,use_existing_vector_store=False
     ,delete_vector_store_after_run=True
   )
-
 
   # Step 1: Create vector store by uploading files or get existing vector store
   if params.use_existing_vector_store:
@@ -398,8 +501,12 @@ if __name__ == '__main__':
 
   print("\n")
 
-  # Step 3: Test file search functionalities
-  test_file_search_functionalities(client, vs.id, params)
+  # Step 3A: Test file search functionalities using search API
+  test_file_search_functionalities_using_search_api(client, vs.id, params)
+
+  # Step 3B: Test file search functionalities using responses API
+  # This is a workaround for Azure OpenAI Service that does not support the search API as of 2025-08-25
+  # test_file_search_functionalities_using_responses_api(client, vs.id, params)
 
   print("-"*140)
 
