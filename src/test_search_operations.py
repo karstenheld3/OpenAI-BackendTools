@@ -51,7 +51,7 @@ Example: 'Insights on world demographics since the 1950s. Focus on Africa and As
 ### doc_type
 What is the document's type? Use semantic analysis to determine the type.
 Return an answer with less than 30 characters.
-Examples: 'Financial report', ''Market research', 'Invoice', 'Letter', 'Memo', 'Minutes', 'Newsletter', 'Press release', 'Report', 'Speech', 'Survey', 'White paper'
+Examples: 'Financial report', 'Market research', 'Invoice', 'Letter', 'Memo', 'Minutes', 'Newsletter', 'Press release', 'Report', 'Speech', 'Survey', 'White paper'
 
 ### doc_language
 What is the document's language? Return only one language.
@@ -372,9 +372,10 @@ if __name__ == '__main__':
     ,search_query_2_filters = { "key": "file_type", "type": "eq", "value": "md" }
     ,search_query_3_with_query_rewrite="All files from year 2015."
     ,score_threshold=0.3
-    ,use_existing_vector_store=True
+    ,use_existing_vector_store=False
     ,delete_vector_store_after_run=True
   )
+
 
   # Step 1: Create vector store by uploading files or get existing vector store
   if params.use_existing_vector_store:
