@@ -63,7 +63,7 @@ A collection of tools and demo code to test, operate and maintain Open AI and Az
 │   ├── openai_backendtools.py                 # Main library implementation with core functionality
 │   ├── test_access_with_api_key.py            # Tests Azure OpenAI access using API key authentication
 │   ├── test_access_with_service_principal.py  # Tests Azure OpenAI access using service principal
-│   ├── test_basic_file_operations.py          # Basic file operations: upload, add to vector  store, deletion
+│   ├── test_file_operations.py                # Basic file operations: upload, add to vector  store, deletion
 │   ├── test_cleanup_operations.py             # Cleanup of files and vector stores
 │   ├── test_file_listings.py                  # Listing of assistants, vector stores, files, unused files, etc. 
 │   ├── test_rag_operations.py                 # RAG (Retrieval Augmented Generation) tests
@@ -327,7 +327,7 @@ Index | ID                                 | Filename                           
 
 Performs basic file operations: upload, add to vector store, deletion. With Azure Open AI Services, if vector store and file deletion fails and you are using a Service Principal or Managed Identity, you need to assign it the 'Cognitive Services OpenAI Contributor' role. See [AzureOpenAI.md](AzureOpenAI.md) for more information.  
 
-**Location:** `test_basic_file_operations.py`
+**Location:** `test_file_operations.py`
 
 **Parameters:** 
 - `client`: The OpenAI client instance to use for API calls 
