@@ -3,8 +3,10 @@ from dotenv import load_dotenv
 from openai_backendtools import *
 from test_rag_operations import *
 import json
-import time
+import openai
 import math
+import time
+import httpx
 import numpy as np
 import re
 import copy
@@ -47,71 +49,71 @@ Batch01 = [
 
 # Calibration batch with 60 test cases, with 10 cases for each score: 0, 1, 2, 3, 4, 5
 Batch02 = [
-  { "item": { "input": "Who was the first President of the United States?", "reference": "George Washington", "output_text": "Abraham Lincoln", "target_score": 0 } }
-  ,{ "item": { "input": "What is the chemical symbol for gold?", "reference": "Au", "output_text": "Silver", "target_score": 0 } }
-  ,{ "item": { "input": "Name the process by which plants make food using sunlight.", "reference": "Photosynthesis", "output_text": "Digestion", "target_score": 0 } }
-  ,{ "item": { "input": "Capital of Spain?", "reference": "Madrid.", "output_text": "Blue.", "target_score": 0 } }
-  ,{ "item": { "input": "What is H2O?", "reference": "Water.", "output_text": "", "target_score": 0 } }
-  ,{ "item": { "input": "Largest mammal?", "reference": "Blue whale.", "output_text": "Elephant.", "target_score": 0 } }
-  ,{ "item": { "input": "Main language of Brazil?", "reference": "Portuguese.", "output_text": "Spanish.", "target_score": 0 } }
-  ,{ "item": { "input": "Currency of Japan?", "reference": "Yen.", "output_text": "Dollar.", "target_score": 0 } }
-  ,{ "item": { "input": "Who painted the Mona Lisa?", "reference": "Leonardo da Vinci.", "output_text": "Picasso.", "target_score": 0 } }
-  ,{ "item": { "input": "Chemical formula for salt?", "reference": "NaCl.", "output_text": "HCl.", "target_score": 0 } }
+  { "item": { "input": "Who was the first President of the United States?", "reference": "George Washington", "output_text": "Abraham Lincoln" } }
+  ,{ "item": { "input": "What is the chemical symbol for gold?", "reference": "Au", "output_text": "Silver" } }
+  ,{ "item": { "input": "Name the process by which plants make food using sunlight.", "reference": "Photosynthesis", "output_text": "Digestion" } }
+  ,{ "item": { "input": "Capital of Spain?", "reference": "Madrid.", "output_text": "Blue." } }
+  ,{ "item": { "input": "What is H2O?", "reference": "Water.", "output_text": "" } }
+  ,{ "item": { "input": "Largest mammal?", "reference": "Blue whale.", "output_text": "Elephant." } }
+  ,{ "item": { "input": "Main language of Brazil?", "reference": "Portuguese.", "output_text": "Spanish." } }
+  ,{ "item": { "input": "Currency of Japan?", "reference": "Yen.", "output_text": "Dollar." } }
+  ,{ "item": { "input": "Who painted the Mona Lisa?", "reference": "Leonardo da Vinci.", "output_text": "Picasso." } }
+  ,{ "item": { "input": "Chemical formula for salt?", "reference": "NaCl.", "output_text": "HCl." } }
 
-  ,{ "item": { "input": "Explain five functions of the liver in the human body.", "reference": "The liver produces bile, metabolizes nutrients, detoxifies harmful substances, stores vitamins, and regulates blood clotting.", "output_text": "The liver produces bile.", "target_score": 1 } }
-  ,{ "item": { "input": "Describe five major features of the Amazon rainforest.", "reference": "The Amazon rainforest is home to diverse wildlife, spans nine countries, influences global weather, contains the world's largest river by discharge, and is threatened by deforestation.", "output_text": "The Amazon rainforest is threatened by deforestation.", "target_score": 1 } }
-  ,{ "item": { "input": "Name five functions performed by the roots of a plant.", "reference": "Roots absorb water, anchor the plant, store nutrients, transport minerals, and interact with soil microbes.", "output_text": "Roots anchor the plant.", "target_score": 1 } }
-  ,{ "item": { "input": "Describe five notable aspects of Paris, France.", "reference": "Paris is the capital of France, is known for the Eiffel Tower, is a center of fashion, has a rich history, and hosts the Louvre Museum.", "output_text": "Paris is a center of fashion.", "target_score": 1 } }
-  ,{ "item": { "input": "Describe five features and five societal effects of inflation.", "reference": "Inflation is characterized by rising prices, decreasing currency value, higher production costs, increased wages, and reduced purchasing power. Its effects include eroded savings, uncertainty in investment, wage-price spirals, redistribution of wealth, and social unrest.", "output_text": "Inflation is characterized by rising prices, leading to eroded savings.", "target_score": 1 } }
-  ,{ "item": { "input": "State five symptoms and five possible complications of untreated diabetes.", "reference": "Symptoms of untreated diabetes include excessive thirst, frequent urination, blurred vision, fatigue, and slow wound healing. Complications can be nerve damage, kidney failure, heart disease, blindness, and infections.", "output_text": "Untreated diabetes can cause excessive thirst, leading to nerve damage.", "target_score": 1 } }
-  ,{ "item": { "input": "List five colors of the rainbow.", "reference": "Red, orange, yellow, green, blue, indigo, and violet are the colors of the rainbow.", "output_text": "Red is a color of the rainbow.", "target_score": 1 } }
-  ,{ "item": { "input": "List five elements essential for plant growth.", "reference": "Nitrogen, phosphorus, potassium, calcium, and magnesium are essential elements for plant growth.", "output_text": "Nitrogen is essential for plant growth.", "target_score": 1 } }
-  ,{ "item": { "input": "State five causes of World War I.", "reference": "The main causes of World War I were nationalism, imperialism, militarism, alliances, and the assassination of Archduke Franz Ferdinand.", "output_text": "Nationalism was a cause of World War I.", "target_score": 1 } }
-  ,{ "item": { "input": "Name five human senses.", "reference": "Sight, hearing, smell, taste, and touch are the five human senses.", "output_text": "Hearing is a human sense.", "target_score": 1 } }
+  ,{ "item": { "input": "Explain five functions of the liver in the human body.", "reference": "The liver produces bile, metabolizes nutrients, detoxifies harmful substances, stores vitamins, and regulates blood clotting.", "output_text": "The liver produces bile." } }
+  ,{ "item": { "input": "Describe five major features of the Amazon rainforest.", "reference": "The Amazon rainforest is home to diverse wildlife, spans nine countries, influences global weather, contains the world's largest river by discharge, and is threatened by deforestation.", "output_text": "The Amazon rainforest is threatened by deforestation." } }
+  ,{ "item": { "input": "Name five functions performed by the roots of a plant.", "reference": "Roots absorb water, anchor the plant, store nutrients, transport minerals, and interact with soil microbes.", "output_text": "Roots anchor the plant." } }
+  ,{ "item": { "input": "Describe five notable aspects of Paris, France.", "reference": "Paris is the capital of France, is known for the Eiffel Tower, is a center of fashion, has a rich history, and hosts the Louvre Museum.", "output_text": "Paris is a center of fashion." } }
+  ,{ "item": { "input": "Describe five features and five societal effects of inflation.", "reference": "Inflation is characterized by rising prices, decreasing currency value, higher production costs, increased wages, and reduced purchasing power. Its effects include eroded savings, uncertainty in investment, wage-price spirals, redistribution of wealth, and social unrest.", "output_text": "Inflation is characterized by rising prices, leading to eroded savings." } }
+  ,{ "item": { "input": "State five symptoms and five possible complications of untreated diabetes.", "reference": "Symptoms of untreated diabetes include excessive thirst, frequent urination, blurred vision, fatigue, and slow wound healing. Complications can be nerve damage, kidney failure, heart disease, blindness, and infections.", "output_text": "Untreated diabetes can cause excessive thirst, leading to nerve damage." } }
+  ,{ "item": { "input": "List five colors of the rainbow.", "reference": "Red, orange, yellow, green, blue, indigo, and violet are the colors of the rainbow.", "output_text": "Red is a color of the rainbow." } }
+  ,{ "item": { "input": "List five elements essential for plant growth.", "reference": "Nitrogen, phosphorus, potassium, calcium, and magnesium are essential elements for plant growth.", "output_text": "Nitrogen is essential for plant growth." } }
+  ,{ "item": { "input": "State five causes of World War I.", "reference": "The main causes of World War I were nationalism, imperialism, militarism, alliances, and the assassination of Archduke Franz Ferdinand.", "output_text": "Nationalism was a cause of World War I." } }
+  ,{ "item": { "input": "Name five human senses.", "reference": "Sight, hearing, smell, taste, and touch are the five human senses.", "output_text": "Hearing is a human sense." } }
 
-  ,{ "item": { "input": "List five causes and five effects of deforestation.", "reference": "Deforestation is caused by logging, agriculture, urbanization, mining, and wildfires. Its effects include loss of biodiversity, increased greenhouse gases, soil erosion, disruption of water cycles, and climate change.", "output_text": "Logging and agriculture cause deforestation, leading to increased greenhouse gases and loss of biodiversity.", "target_score": 2 } }
-  ,{ "item": { "input": "List five features and five global impacts of the Himalayas.", "reference": "The Himalayas feature the world's highest peaks, vast glaciers, deep valleys, unique biodiversity, and spiritual significance. Their global impacts include regulating climate, supplying freshwater, influencing monsoons, supporting livelihoods, and attracting tourism.", "output_text": "The Himalayas have the world's highest peaks and vast glaciers, influencing monsoons and attracting tourism.", "target_score": 2 } }
-  ,{ "item": { "input": "Identify five motifs and five effects found in 'Macbeth.'", "reference": "'Macbeth' features motifs of blood, darkness, supernatural elements, prophecy, and ambition. Effects include psychological torment, moral deterioration, disrupted order, guilt, and fear.", "output_text": "'Macbeth' contains the motifs of blood and ambition, leading to psychological torment and guilt.", "target_score": 2 } }
-  ,{ "item": { "input": "List five principles and five challenges of democracy.", "reference": "Principles of democracy include free elections, equality before the law, separation of powers, protection of rights, and majority rule. Challenges include voter apathy, corruption, misinformation, polarization, and inequality.", "output_text": "Free elections and equality before the law are democratic principles, with challenges such as voter apathy and corruption.", "target_score": 2 } }
-  ,{ "item": { "input": "List five properties and five uses of carbon.", "reference": "Carbon is nonmetallic, forms four bonds, is found in all living things, exists in several allotropes, and conducts electricity (in graphite). Uses include steel production, filters, fuels, nanotechnology, and as a reducing agent.", "output_text": "Carbon is nonmetallic and forms four bonds; it is used in steel production and as a reducing agent.", "target_score": 2 } }
-  ,{ "item": { "input": "Describe five causes and five effects of World War I.", "reference": "World War I was caused by nationalism, alliances, militarism, imperialism, and the assassination of Archduke Ferdinand. Effects included the Treaty of Versailles, the League of Nations, major loss of life, redrawn borders, and political upheaval.", "output_text": "World War I was caused by militarism and alliances, leading to the Treaty of Versailles and major loss of life.", "target_score": 2 } }
-  ,{ "item": { "input": "Name four major greenhouse gases and four effects of global warming.", "reference": "Major greenhouse gases include carbon dioxide, methane, nitrous oxide, and fluorinated gases. Effects of global warming are sea level rise, more extreme weather, ocean acidification, and loss of biodiversity.", "output_text": "Carbon dioxide and methane are greenhouse gases; global warming causes sea level rise and more extreme weather.", "target_score": 2 } }
-  ,{ "item": { "input": "List four properties of water and their significance.", "reference": "Properties of water include high specific heat (temperature regulation), solvent ability (dissolves substances), cohesion (surface tension), and density anomaly (ice floats).", "output_text": "Water has high specific heat and acts as a solvent.", "target_score": 2 } }
-  ,{ "item": { "input": "List four major contributions of Isaac Newton.", "reference": "Newton contributed the laws of motion, law of universal gravitation, calculus, and work on optics.", "output_text": "Newton is known for the laws of motion and gravity.", "target_score": 2 } }
-  ,{ "item": { "input": "Name four types of economic systems and a characteristic of each.", "reference": "Economic systems include capitalism (private ownership), socialism (public ownership), mixed economy (blend), and traditional economy (custom-based).", "output_text": "Capitalism and socialism are economic systems.", "target_score": 2 } }
+  ,{ "item": { "input": "List five causes and five effects of deforestation.", "reference": "Deforestation is caused by logging, agriculture, urbanization, mining, and wildfires. Its effects include loss of biodiversity, increased greenhouse gases, soil erosion, disruption of water cycles, and climate change.", "output_text": "Logging and agriculture cause deforestation, leading to increased greenhouse gases and loss of biodiversity." } }
+  ,{ "item": { "input": "List five features and five global impacts of the Himalayas.", "reference": "The Himalayas feature the world's highest peaks, vast glaciers, deep valleys, unique biodiversity, and spiritual significance. Their global impacts include regulating climate, supplying freshwater, influencing monsoons, supporting livelihoods, and attracting tourism.", "output_text": "The Himalayas have the world's highest peaks and vast glaciers, influencing monsoons and attracting tourism." } }
+  ,{ "item": { "input": "Identify five motifs and five effects found in 'Macbeth.'", "reference": "'Macbeth' features motifs of blood, darkness, supernatural elements, prophecy, and ambition. Effects include psychological torment, moral deterioration, disrupted order, guilt, and fear.", "output_text": "'Macbeth' contains the motifs of blood and ambition, leading to psychological torment and guilt." } }
+  ,{ "item": { "input": "List five principles and five challenges of democracy.", "reference": "Principles of democracy include free elections, equality before the law, separation of powers, protection of rights, and majority rule. Challenges include voter apathy, corruption, misinformation, polarization, and inequality.", "output_text": "Free elections and equality before the law are democratic principles, with challenges such as voter apathy and corruption." } }
+  ,{ "item": { "input": "List five properties and five uses of carbon.", "reference": "Carbon is nonmetallic, forms four bonds, is found in all living things, exists in several allotropes, and conducts electricity (in graphite). Uses include steel production, filters, fuels, nanotechnology, and as a reducing agent.", "output_text": "Carbon is nonmetallic and forms four bonds; it is used in steel production and as a reducing agent." } }
+  ,{ "item": { "input": "Describe five causes and five effects of World War I.", "reference": "World War I was caused by nationalism, alliances, militarism, imperialism, and the assassination of Archduke Ferdinand. Effects included the Treaty of Versailles, the League of Nations, major loss of life, redrawn borders, and political upheaval.", "output_text": "World War I was caused by militarism and alliances, leading to the Treaty of Versailles and major loss of life." } }
+  ,{ "item": { "input": "Name four major greenhouse gases and four effects of global warming.", "reference": "Major greenhouse gases include carbon dioxide, methane, nitrous oxide, and fluorinated gases. Effects of global warming are sea level rise, more extreme weather, ocean acidification, and loss of biodiversity.", "output_text": "Carbon dioxide and methane are greenhouse gases; global warming causes sea level rise and more extreme weather." } }
+  ,{ "item": { "input": "List four properties of water and their significance.", "reference": "Properties of water include high specific heat (temperature regulation), solvent ability (dissolves substances), cohesion (surface tension), and density anomaly (ice floats).", "output_text": "Water has high specific heat and acts as a solvent." } }
+  ,{ "item": { "input": "List four major contributions of Isaac Newton.", "reference": "Newton contributed the laws of motion, law of universal gravitation, calculus, and work on optics.", "output_text": "Newton is known for the laws of motion and gravity." } }
+  ,{ "item": { "input": "Name four types of economic systems and a characteristic of each.", "reference": "Economic systems include capitalism (private ownership), socialism (public ownership), mixed economy (blend), and traditional economy (custom-based).", "output_text": "Capitalism and socialism are economic systems." } }
 
-  ,{ "item": { "input": "List five causes and five effects of ocean pollution.", "reference": "Ocean pollution is caused by plastic waste, oil spills, agricultural runoff, untreated sewage, and chemical dumping. Effects include harm to marine life, bioaccumulation of toxins, destruction of coral reefs, reduction in fish stocks, and contamination of seafood.", "output_text": "Ocean pollution is caused by plastic waste, oil spills, and agricultural runoff, which harm marine life, cause bioaccumulation of toxins, and destroy coral reefs.", "target_score": 3 } }
-  ,{ "item": { "input": "Describe five events and five outcomes of the Industrial Revolution.", "reference": "Key events included the invention of the steam engine, the rise of factories, development of railways, urbanization, and mass production. Outcomes were economic growth, social inequality, child labor, environmental pollution, and advances in technology.", "output_text": "The invention of the steam engine, rise of factories, and mass production were events of the Industrial Revolution, leading to economic growth, child labor, and advances in technology.", "target_score": 3 } }
-  ,{ "item": { "input": "List five amendments and five impacts of the U.S. Constitution's Bill of Rights.", "reference": "The Bill of Rights includes the First, Second, Fourth, Fifth, and Eighth Amendments. Impacts include protection of free speech, right to bear arms, prevention of unreasonable searches, due process of law, and ban on cruel punishment.", "output_text": "The First, Second, and Fifth Amendments are included in the Bill of Rights, which protects free speech, the right to bear arms, and ensures due process of law.", "target_score": 3 } }
-  ,{ "item": { "input": "List five chemical properties and five uses of oxygen.", "reference": "Oxygen is highly reactive, supports combustion, forms oxides, is colorless, and is paramagnetic. Uses include respiration, medical therapy, welding, water treatment, and rocket fuel.", "output_text": "Oxygen supports combustion, forms oxides, and is colorless. It is used in respiration, medical therapy, and welding.", "target_score": 3 } }
-  ,{ "item": { "input": "Describe five features and five roles of the Amazon River.", "reference": "The Amazon River is the second longest river, has the largest drainage basin, features extensive wetlands, is home to diverse species, and has seasonal flooding. Its roles include supporting transportation, providing water, influencing climate, sustaining fisheries, and enabling trade.", "output_text": "The Amazon River is the second longest river, has the largest drainage basin, and features extensive wetlands. It supports transportation, provides water, and sustains fisheries.", "target_score": 3 } }
-  ,{ "item": { "input": "Describe five goals and five achievements of the United Nations.", "reference": "The UN's goals include promoting peace, protecting human rights, fostering development, combating climate change, and providing humanitarian aid. Achievements include peacekeeping missions, Universal Declaration of Human Rights, eradication of diseases, disaster relief, and sustainable development programs.", "output_text": "The United Nations promotes peace, fosters development, and provides humanitarian aid, and has carried out peacekeeping missions, disaster relief, and sustainable development programs.", "target_score": 3 } }
-  ,{ "item": { "input": "State five major inventions and five impacts of the 20th century.", "reference": "Major inventions: airplane, computer, television, antibiotic drugs, and nuclear power. Impacts: increased global communication, longer life expectancy, rapid information exchange, new warfare, and energy transformation.", "output_text": "The airplane and the computer were major 20th-century inventions, leading to increased global communication, longer life expectancy, rapid information exchange, new warfare, and energy transformation.", "target_score": 3 } }
-  ,{ "item": { "input": "List five forms of renewable energy and five challenges associated with their adoption.", "reference": "Forms: solar, wind, hydro, geothermal, tidal. Challenges: cost, intermittency, storage, land use, and grid integration.", "output_text": "Solar, wind, hydro, and geothermal are renewable energy forms, facing challenges like cost and intermittency.", "target_score": 3 } }
-  ,{ "item": { "input": "Describe five major battles and five outcomes of World War II.", "reference": "Battles: Stalingrad, Midway, Normandy, El Alamein, Bulge. Outcomes: Allied victory, end of the Holocaust, UN formation, Europe's division, start of Cold War.", "output_text": "Stalingrad, Midway, and Normandy were major battles of World War II, which resulted in Allied victorly, end of the Holocaust, UN formation, Europe's division, and start of the Cold War.", "target_score": 3 } }
-  ,{ "item": { "input": "List five composers and five genres they influenced.", "reference": "Composers: Bach, Mozart, Beethoven, Tchaikovsky, Stravinsky. Genres: Baroque, Classical, Romantic, Ballet, Modern.", "output_text": "Bach and Mozart were influential composers in Baroque and Classical music, along with Beethoven, who influenced Romantic, Ballet, and Modern genres.", "target_score": 3 } }
+  ,{ "item": { "input": "List five causes and five effects of ocean pollution.", "reference": "Ocean pollution is caused by plastic waste, oil spills, agricultural runoff, untreated sewage, and chemical dumping. Effects include harm to marine life, bioaccumulation of toxins, destruction of coral reefs, reduction in fish stocks, and contamination of seafood.", "output_text": "Ocean pollution is caused by plastic waste, oil spills, and agricultural runoff, which harm marine life, cause bioaccumulation of toxins, and destroy coral reefs." } }
+  ,{ "item": { "input": "Describe five events and five outcomes of the Industrial Revolution.", "reference": "Key events included the invention of the steam engine, the rise of factories, development of railways, urbanization, and mass production. Outcomes were economic growth, social inequality, child labor, environmental pollution, and advances in technology.", "output_text": "The invention of the steam engine, rise of factories, and mass production were events of the Industrial Revolution, leading to economic growth, child labor, and advances in technology." } }
+  ,{ "item": { "input": "List five amendments and five impacts of the U.S. Constitution's Bill of Rights.", "reference": "The Bill of Rights includes the First, Second, Fourth, Fifth, and Eighth Amendments. Impacts include protection of free speech, right to bear arms, prevention of unreasonable searches, due process of law, and ban on cruel punishment.", "output_text": "The First, Second, and Fifth Amendments are included in the Bill of Rights, which protects free speech, the right to bear arms, and ensures due process of law." } }
+  ,{ "item": { "input": "List five chemical properties and five uses of oxygen.", "reference": "Oxygen is highly reactive, supports combustion, forms oxides, is colorless, and is paramagnetic. Uses include respiration, medical therapy, welding, water treatment, and rocket fuel.", "output_text": "Oxygen supports combustion, forms oxides, and is colorless. It is used in respiration, medical therapy, and welding." } }
+  ,{ "item": { "input": "Describe five features and five roles of the Amazon River.", "reference": "The Amazon River is the second longest river, has the largest drainage basin, features extensive wetlands, is home to diverse species, and has seasonal flooding. Its roles include supporting transportation, providing water, influencing climate, sustaining fisheries, and enabling trade.", "output_text": "The Amazon River is the second longest river, has the largest drainage basin, and features extensive wetlands. It supports transportation, provides water, and sustains fisheries." } }
+  ,{ "item": { "input": "Describe five goals and five achievements of the United Nations.", "reference": "The UN's goals include promoting peace, protecting human rights, fostering development, combating climate change, and providing humanitarian aid. Achievements include peacekeeping missions, Universal Declaration of Human Rights, eradication of diseases, disaster relief, and sustainable development programs.", "output_text": "The United Nations promotes peace, fosters development, and provides humanitarian aid, and has carried out peacekeeping missions, disaster relief, and sustainable development programs." } }
+  ,{ "item": { "input": "State five major inventions and five impacts of the 20th century.", "reference": "Major inventions: airplane, computer, television, antibiotic drugs, and nuclear power. Impacts: increased global communication, longer life expectancy, rapid information exchange, new warfare, and energy transformation.", "output_text": "The airplane and the computer were major 20th-century inventions, leading to increased global communication, longer life expectancy, rapid information exchange, new warfare, and energy transformation." } }
+  ,{ "item": { "input": "List five forms of renewable energy and five challenges associated with their adoption.", "reference": "Forms: solar, wind, hydro, geothermal, tidal. Challenges: cost, intermittency, storage, land use, and grid integration.", "output_text": "Solar, wind, hydro, and geothermal are renewable energy forms, facing challenges like cost and intermittency." } }
+  ,{ "item": { "input": "Describe five major battles and five outcomes of World War II.", "reference": "Battles: Stalingrad, Midway, Normandy, El Alamein, Bulge. Outcomes: Allied victory, end of the Holocaust, UN formation, Europe's division, start of Cold War.", "output_text": "Stalingrad, Midway, and Normandy were major battles of World War II, which resulted in Allied victorly, end of the Holocaust, UN formation, Europe's division, and start of the Cold War." } }
+  ,{ "item": { "input": "List five composers and five genres they influenced.", "reference": "Composers: Bach, Mozart, Beethoven, Tchaikovsky, Stravinsky. Genres: Baroque, Classical, Romantic, Ballet, Modern.", "output_text": "Bach and Mozart were influential composers in Baroque and Classical music, along with Beethoven, who influenced Romantic, Ballet, and Modern genres." } }
 
-  ,{ "item": { "input": "List five features and five benefits of a market economy.", "reference": "Features: competition, private property, voluntary exchange, consumer choice, limited government intervention. Benefits: efficiency, innovation, variety, lower prices, higher quality.", "output_text": "A market economy features competition, private property, voluntary exchange, and consumer choice. It results in efficiency, innovation, variety, and lower prices.", "target_score": 4 } }
-  ,{ "item": { "input": "Describe five features and five global impacts of the Sahara Desert.", "reference": "Features: world's largest hot desert, vast sand dunes, extreme temperatures, scarce water, unique flora and fauna. Impacts: climate influence, migration patterns, trade routes, mineral resources, tourism.", "output_text": "The Sahara is the world's largest hot desert, with vast sand dunes, extreme temperatures, and scarce water. Its impacts include climate influence, migration patterns, trade routes, and mineral resources.", "target_score": 4 } }
-  ,{ "item": { "input": "List five symptoms and five possible complications of untreated diabetes.", "reference": "Symptoms: excessive thirst, frequent urination, fatigue, blurred vision, slow wound healing. Complications: nerve damage, kidney failure, heart disease, blindness, infections.", "output_text": "Untreated diabetes can cause excessive thirst, frequent urination, fatigue, and blurred vision, and may lead to nerve damage, kidney failure, heart disease, and blindness.", "target_score": 4 } }
-  ,{ "item": { "input": "Describe five features and five advantages of electric cars.", "reference": "Features: battery-powered, regenerative braking, silent operation, instant torque, remote monitoring. Advantages: zero emissions, lower operating cost, quiet ride, fast acceleration, reduced maintenance.", "output_text": "Electric cars have battery power, regenerative braking, silent operation, and instant torque. They offer zero emissions, lower operating cost, quiet ride, and fast acceleration.", "target_score": 4 } }
-  ,{ "item": { "input": "List five ancient civilizations and five of their achievements.", "reference": "Civilizations: Sumer, Egypt, Indus Valley, China, Mesoamerica. Achievements: writing, monumental architecture, irrigation, mathematics, astronomy.", "output_text": "Sumer, Egypt, Indus Valley, and China were ancient civilizations. Their achievements included writing, monumental architecture, irrigation, and mathematics.", "target_score": 4 } }
-  ,{ "item": { "input": "List five endangered species and five conservation efforts to protect them.", "reference": "Endangered species: Amur leopard, Sumatran orangutan, Javan rhino, Hawksbill turtle, Vaquita. Efforts: habitat protection, anti-poaching laws, captive breeding, pollution control, international agreements.", "output_text": "The Amur leopard, Sumatran orangutan, Javan rhino, and Hawksbill turtle are endangered species. Conservation efforts include habitat protection, anti-poaching laws, captive breeding, pollution control, and international agreements.", "target_score": 4 } }
-  ,{ "item": { "input": "List five major world religions and four of their core beliefs.", "reference": "Religions: Christianity, Islam, Hinduism, Buddhism, Judaism. Core beliefs: monotheism, afterlife, compassion, ritual, reincarnation.", "output_text": "Christianity, Islam, Hinduism, Buddhism, and Judaism are major world religions. They share beliefs in monotheism, afterlife, compassion, and ritual.", "target_score": 4 } }
-  ,{ "item": { "input": "List five world capitals and describe three of their cultural contributions.", "reference": "Capitals: London, Paris, Tokyo, Cairo, Sydney. Contributions: art, fashion, cuisine, literature, festivals.", "output_text": "London, Paris, Tokyo, Cairo, and Sydney are world capitals, famous for art, fashion, and cuisine.", "target_score": 4 } }
-  ,{ "item": { "input": "Describe five major U.S. Supreme Court cases and four of their legal precedents.", "reference": "Cases: Marbury v. Madison, Brown v. Board, Roe v. Wade, Miranda v. Arizona, Obergefell v. Hodges. Precedents: judicial review, desegregation, abortion rights, self-incrimination, marriage equality.", "output_text": "Marbury v. Madison, Brown v. Board, Roe v. Wade, and Miranda v. Arizona are major cases that established judicial review, desegregation, abortion rights, and self-incrimination rights.", "target_score": 4 } }
-  ,{ "item": { "input": "Identify five symbols and five meanings in 'The Lord of the Flies.'", "reference": "Symbols: conch shell, Piggys glasses, the fire, the beast, the Lord of the Flies. Meanings: order, knowledge, hope, fear, savagery.", "output_text": "The conch shell, Piggy's glasses, the fire, and the beast are symbols in 'The Lord of the Flies.' They represent order, knowledge, hope, and fear.", "target_score": 4 } }
+  ,{ "item": { "input": "List five features and five benefits of a market economy.", "reference": "Features: competition, private property, voluntary exchange, consumer choice, limited government intervention. Benefits: efficiency, innovation, variety, lower prices, higher quality.", "output_text": "A market economy features competition, private property, voluntary exchange, and consumer choice. It results in efficiency, innovation, variety, and lower prices."} }
+  ,{ "item": { "input": "Describe five features and five global impacts of the Sahara Desert.", "reference": "Features: world's largest hot desert, vast sand dunes, extreme temperatures, scarce water, unique flora and fauna. Impacts: climate influence, migration patterns, trade routes, mineral resources, tourism.", "output_text": "The Sahara is the world's largest hot desert, with vast sand dunes, extreme temperatures, and scarce water. Its impacts include climate influence, migration patterns, trade routes, and mineral resources."} }
+  ,{ "item": { "input": "List five symptoms and five possible complications of untreated diabetes.", "reference": "Symptoms: excessive thirst, frequent urination, fatigue, blurred vision, slow wound healing. Complications: nerve damage, kidney failure, heart disease, blindness, infections.", "output_text": "Untreated diabetes can cause excessive thirst, frequent urination, fatigue, and blurred vision, and may lead to nerve damage, kidney failure, heart disease, and blindness."} }
+  ,{ "item": { "input": "Describe five features and five advantages of electric cars.", "reference": "Features: battery-powered, regenerative braking, silent operation, instant torque, remote monitoring. Advantages: zero emissions, lower operating cost, quiet ride, fast acceleration, reduced maintenance.", "output_text": "Electric cars have battery power, regenerative braking, silent operation, and instant torque. They offer zero emissions, lower operating cost, quiet ride, and fast acceleration."} }
+  ,{ "item": { "input": "List five ancient civilizations and five of their achievements.", "reference": "Civilizations: Sumer, Egypt, Indus Valley, China, Mesoamerica. Achievements: writing, monumental architecture, irrigation, mathematics, astronomy.", "output_text": "Sumer, Egypt, Indus Valley, and China were ancient civilizations. Their achievements included writing, monumental architecture, irrigation, and mathematics."} }
+  ,{ "item": { "input": "List five endangered species and five conservation efforts to protect them.", "reference": "Endangered species: Amur leopard, Sumatran orangutan, Javan rhino, Hawksbill turtle, Vaquita. Efforts: habitat protection, anti-poaching laws, captive breeding, pollution control, international agreements.", "output_text": "The Amur leopard, Sumatran orangutan, Javan rhino, and Hawksbill turtle are endangered species. Conservation efforts include habitat protection, anti-poaching laws, captive breeding, pollution control, and international agreements."} }
+  ,{ "item": { "input": "List five major world religions and four of their core beliefs.", "reference": "Religions: Christianity, Islam, Hinduism, Buddhism, Judaism. Core beliefs: monotheism, afterlife, compassion, ritual, reincarnation.", "output_text": "Christianity, Islam, Hinduism, Buddhism, and Judaism are major world religions. They share beliefs in monotheism, afterlife, compassion, and ritual."} }
+  ,{ "item": { "input": "List five world capitals and describe three of their cultural contributions.", "reference": "Capitals: London, Paris, Tokyo, Cairo, Sydney. Contributions: art, fashion, cuisine, literature, festivals.", "output_text": "London, Paris, Tokyo, Cairo, and Sydney are world capitals, famous for art, fashion, and cuisine."} }
+  ,{ "item": { "input": "Describe five major U.S. Supreme Court cases and four of their legal precedents.", "reference": "Cases: Marbury v. Madison, Brown v. Board, Roe v. Wade, Miranda v. Arizona, Obergefell v. Hodges. Precedents: judicial review, desegregation, abortion rights, self-incrimination, marriage equality.", "output_text": "Marbury v. Madison, Brown v. Board, Roe v. Wade, and Miranda v. Arizona are major cases that established judicial review, desegregation, abortion rights, and self-incrimination rights."} }
+  ,{ "item": { "input": "Identify five symbols and five meanings in 'The Lord of the Flies.'", "reference": "Symbols: conch shell, Piggys glasses, the fire, the beast, the Lord of the Flies. Meanings: order, knowledge, hope, fear, savagery.", "output_text": "The conch shell, Piggy's glasses, the fire, and the beast are symbols in 'The Lord of the Flies.' They represent order, knowledge, hope, and fear."} }
 
-  ,{ "item": { "input": "List five components and five functions of the human circulatory system.", "reference": "The circulatory system includes the heart, arteries, veins, capillaries, and blood. Its functions are transporting oxygen, removing waste, delivering nutrients, regulating temperature, and supporting immune response.", "output_text": "Key components of the circulatory system are blood, capillaries, arteries, heart, and veins. Its main functions include delivering nutrients, regulating body temperature, supporting immune response, transporting oxygen, and removing waste.", "target_score": 5 } }
-  ,{ "item": { "input": "List five symptoms and five possible complications of untreated diabetes.", "reference": "Symptoms of untreated diabetes include excessive thirst, frequent urination, fatigue, blurred vision, and slow wound healing. Complications can be nerve damage, kidney failure, heart disease, blindness, and infections.", "output_text": "Untreated diabetes symptoms include blurred vision, excessive thirst, fatigue, slow wound healing, and frequent urination. Possible complications are infections, blindness, heart disease, nerve damage, and kidney failure.", "target_score": 5 } }
-  ,{ "item": { "input": "Identify five Impressionist painters and five hallmarks of the movement.", "reference": "Impressionist painters include Monet, Renoir, Degas, Pissarro, and Sisley. Hallmarks of Impressionism are loose brushwork, vibrant color, focus on light, open composition, and modern life subjects.", "output_text": "Among Impressionist painters are Pissarro, Monet, Degas, Renoir, and Sisley. Impressionism is noted for vibrant color, open composition, loose brushwork, a focus on light, and modern life subjects.", "target_score": 5 } }
-  ,{ "item": { "input": "List five Nobel Prize categories and five notable recipients for each.", "reference": "Categories: Peace, Literature, Physics, Chemistry, Medicine. Notable recipients: Mother Teresa, Ernest Hemingway, Albert Einstein, Marie Curie, Alexander Fleming.", "output_text": "Nobel Prize categories are Medicine, Chemistry, Peace, Literature, and Physics. Notable winners include Ernest Hemingway, Albert Einstein, Mother Teresa, Marie Curie, and Alexander Fleming.", "target_score": 5 } }
-  ,{ "item": { "input": "List five branches of biology and five research focuses for each.", "reference": "Branches: zoology, botany, microbiology, genetics, ecology. Focuses: animal life, plant life, microorganisms, heredity, ecosystems.", "output_text": "Five branches of biology are genetics, botany, zoology, ecology, and microbiology. Their focuses are animal life, plant life, heredity, ecosystems, and microorganisms.", "target_score": 5 } }
-  ,{ "item": { "input": "List five fundamental forces of nature and their five main effects.", "reference": "Forces: gravity, electromagnetism, strong nuclear, weak nuclear, friction. Effects: planetary orbits, electricity, atomic stability, radioactive decay, resistance to motion.", "output_text": "The five fundamental forces are strong nuclear, gravity, weak nuclear, friction, and electromagnetism. Their main effects include electricity, resistance to motion, atomic stability, planetary orbits, and radioactive decay.", "target_score": 5 } }
-  ,{ "item": { "input": "List five elements of the periodic table and five ways each is used in industry.", "reference": "Elements: hydrogen, oxygen, carbon, iron, copper. Uses: fuel, water treatment, steel, construction, electrical wiring.", "output_text": "Oxygen, hydrogen, carbon, iron, and copper are elements of the periodic table. They are used in water treatment, fuel, steel, construction, and electrical wiring.", "target_score": 5 } }
-  ,{ "item": { "input": "List five continents and five distinctive geographic features of each.", "reference": "Continents: Africa, Asia, Europe, North America, South America. Features: Sahara Desert, Himalayas, Alps, Rocky Mountains, Amazon River.", "output_text": "Asia, Africa, North America, South America, and Europe are continents. Their features include the Himalayas, Sahara Desert, Rocky Mountains, Amazon River, and Alps.", "target_score": 5 } }
-  ,{ "item": { "input": "Name five Shakespearean tragedies and five central themes present in each.", "reference": "Tragedies: Hamlet, Macbeth, Othello, King Lear, Romeo and Juliet. Themes: ambition, betrayal, fate, madness, love.", "output_text": "Central Shakespearean tragedies include Macbeth, King Lear, Romeo and Juliet, Hamlet, and Othello. Common themes are ambition, love, madness, betrayal, and fate.", "target_score": 5 } }
-  ,{ "item": { "input": "List five major mountain ranges and five countries in which they are found.", "reference": "Ranges: Andes, Alps, Himalayas, Rockies, Appalachians. Countries: Chile, Switzerland, Nepal, United States, Canada.", "output_text": "Major mountain ranges are the Rockies, Andes, Himalayas, Alps, and Appalachians. Countries where these are found include United States, Nepal, Canada, Chile, and Switzerland.", "target_score": 5 } }
+  ,{ "item": { "input": "List five components and five functions of the human circulatory system.", "reference": "The circulatory system includes the heart, arteries, veins, capillaries, and blood. Its functions are transporting oxygen, removing waste, delivering nutrients, regulating temperature, and supporting immune response.", "output_text": "Key components of the circulatory system are blood, capillaries, arteries, heart, and veins. Its main functions include delivering nutrients, regulating body temperature, supporting immune response, transporting oxygen, and removing waste." } }
+  ,{ "item": { "input": "List five symptoms and five possible complications of untreated diabetes.", "reference": "Symptoms of untreated diabetes include excessive thirst, frequent urination, fatigue, blurred vision, and slow wound healing. Complications can be nerve damage, kidney failure, heart disease, blindness, and infections.", "output_text": "Untreated diabetes symptoms include blurred vision, excessive thirst, fatigue, slow wound healing, and frequent urination. Possible complications are infections, blindness, heart disease, nerve damage, and kidney failure." } }
+  ,{ "item": { "input": "Identify five Impressionist painters and five hallmarks of the movement.", "reference": "Impressionist painters include Monet, Renoir, Degas, Pissarro, and Sisley. Hallmarks of Impressionism are loose brushwork, vibrant color, focus on light, open composition, and modern life subjects.", "output_text": "Among Impressionist painters are Pissarro, Monet, Degas, Renoir, and Sisley. Impressionism is noted for vibrant color, open composition, loose brushwork, a focus on light, and modern life subjects." } }
+  ,{ "item": { "input": "List five Nobel Prize categories and five notable recipients for each.", "reference": "Categories: Peace, Literature, Physics, Chemistry, Medicine. Notable recipients: Mother Teresa, Ernest Hemingway, Albert Einstein, Marie Curie, Alexander Fleming.", "output_text": "Nobel Prize categories are Medicine, Chemistry, Peace, Literature, and Physics. Notable winners include Ernest Hemingway, Albert Einstein, Mother Teresa, Marie Curie, and Alexander Fleming." } }
+  ,{ "item": { "input": "List five branches of biology and five research focuses for each.", "reference": "Branches: zoology, botany, microbiology, genetics, ecology. Focuses: animal life, plant life, microorganisms, heredity, ecosystems.", "output_text": "Five branches of biology are genetics, botany, zoology, ecology, and microbiology. Their focuses are animal life, plant life, heredity, ecosystems, and microorganisms." } }
+  ,{ "item": { "input": "List five fundamental forces of nature and their five main effects.", "reference": "Forces: gravity, electromagnetism, strong nuclear, weak nuclear, friction. Effects: planetary orbits, electricity, atomic stability, radioactive decay, resistance to motion.", "output_text": "The five fundamental forces are strong nuclear, gravity, weak nuclear, friction, and electromagnetism. Their main effects include electricity, resistance to motion, atomic stability, planetary orbits, and radioactive decay." } }
+  ,{ "item": { "input": "List five elements of the periodic table and five ways each is used in industry.", "reference": "Elements: hydrogen, oxygen, carbon, iron, copper. Uses: fuel, water treatment, steel, construction, electrical wiring.", "output_text": "Oxygen, hydrogen, carbon, iron, and copper are elements of the periodic table. They are used in water treatment, fuel, steel, construction, and electrical wiring." } }
+  ,{ "item": { "input": "List five continents and five distinctive geographic features of each.", "reference": "Continents: Africa, Asia, Europe, North America, South America. Features: Sahara Desert, Himalayas, Alps, Rocky Mountains, Amazon River.", "output_text": "Asia, Africa, North America, South America, and Europe are continents. Their features include the Himalayas, Sahara Desert, Rocky Mountains, Amazon River, and Alps." } }
+  ,{ "item": { "input": "Name five Shakespearean tragedies and five central themes present in each.", "reference": "Tragedies: Hamlet, Macbeth, Othello, King Lear, Romeo and Juliet. Themes: ambition, betrayal, fate, madness, love.", "output_text": "Central Shakespearean tragedies include Macbeth, King Lear, Romeo and Juliet, Hamlet, and Othello. Common themes are ambition, love, madness, betrayal, and fate." } }
+  ,{ "item": { "input": "List five major mountain ranges and five countries in which they are found.", "reference": "Ranges: Andes, Alps, Himalayas, Rockies, Appalachians. Countries: Chile, Switzerland, Nepal, United States, Canada.", "output_text": "Major mountain ranges are the Rockies, Andes, Himalayas, Alps, and Appalachians. Countries where these are found include United States, Nepal, Canada, Chile, and Switzerland." } }
 ]
 
 # ----------------------------------------------------- END: Evals ------------------------------------------------------------
@@ -260,192 +262,6 @@ Return exactly:
 {{ item.output_text }}
 </model_output>
 """
-
-# A detailed judge model prompt using multiple criteria
-# Optimized version (https://platform.openai.com/chat/edit?models=gpt-5&optimize=true)
-judge_model_prompt_template_2b = """
-Developer:
-## Role and Objective
-You are an evaluation assistant tasked with scoring a GPT model's output (`model_output`) by comparison to a given reference answer (`reference`).
-
-Begin with a concise checklist (3-7 bullets) of your evaluation steps before scoring. Evaluate according to all provided criteria and ensure outputs strictly match the requested format.
-
-## Instructions
-- Identify facts, conclusions, and key terms in the reference.
-- For each, determine if it is explicitly present in the model output, with justification.
-- Calculate coverage ratios for facts, conclusions, and terminology.
-- Calculate organization ratio as described.
-- Apply the appropriate scoring formula based on present categories.
-- Always round the final score to the nearest integer.
-
-### Sub-categories
-#### Definitions
-- **Facts:** Verifiable, objective statements describing reality. Exclude any interpretive or evaluative content.
-- **Conclusions:** Statements that interpret or derive meaning from facts, excluding facts themselves.
-- **Terms:** Essential, topic-specific non-numeric expressions. Numeric values are not counted as terms.
-
-#### Evaluation Steps
-1. Enumerate all reference facts, conclusions, and key terms.
-2. For each, indicate whether it is present in the model output, with brief justifications.
-3. Calculate these ratios:
-   - facts_ratio = (matched_facts / total_facts)
-   - conclusions_ratio = (matched_conclusions / total_conclusions) [if any conclusions]
-   - terms_ratio = (matched_terms / total_terms). Set terms_ratio = 1 if total_terms == 0.
-   - organization_ratio: 1 if comparable structure, 0 if very different.
-
-#### Scoring Formulas
-- If conclusions exist: score = 5 * (facts_ratio * 0.4 + conclusions_ratio * 0.3 + terms_ratio * 0.21 + organization_ratio * 0.09)
-- If no conclusions: score = 5 * (facts_ratio * 0.7 + terms_ratio * 0.21 + organization_ratio * 0.09)
-- If less than 1 fact matched: score = 5 * (facts_ratio * 0.7 + terms_ratio * 0.21)
-- Always round to the nearest integer.
-
-#### Ambiguity Handling
-- If any reference category is zero, note this and set relevant ratio rules (terms_ratio = 1 if total_terms == 0).
-- If content is ambiguous or missing, note this in rationale, assign a score of 0, and explain.
-
-## Context
-<input>
-{{ item.input }}
-</input>
-<reference>
-{{ item.reference }}
-</reference>
-<model_output>
-{{ item.output_text }}
-</model_output>
-
-## Output Format
-Return your result strictly in this format:
-```json
-{
-  "score": <0-5>,
-  "rationale": [
-    "Fact: <number_of_output_facts> of <number_of_reference_facts> correctly matched.",
-    "Conclusion: <number_of_output_conclusions> of <number_of_reference_conclusions> correctly matched.",
-    "Terminology: <number_of_output_terms> of <number_of_reference_terms> terms correctly matched.",
-    "Organization: matched/mismatched",
-    "Score: <score_rounded> ≈ <score_exact> = <score_calculation>"
-  ]
-}
-```
-- `score`: integer, 0-5, rounded.
-- `rationale`: 5 ordered bullets: Fact, Conclusion, Terminology, Organization, Score breakdown.
-- If any category is ambiguous or missing, reflect this in the rationale.
-- Field names and order must precisely match this output format.
-
-## Reasoning and Validation
-- Work internally: Analyze reference and output step-by-step, matching each element to the criteria. Only expose detailed calculations in the rationale per the output format.
-- After preparing output, validate that structure and field content match the required format. Only output valid JSON.
-
-## Verbosity and Stop Conditions
-- Explanations must be concise but fully address each evaluation category.
-- Stop after producing valid JSON output as specified, or escalate if required context is missing.
-"""
-
-judge_model_prompt_template_2c = """
-## Role and Objective
-You are an **evaluation assistant**.
-**Objective:** Score the model's output (`model_output`) against a given reference answer (`reference`) while regarding the question (`input`), following the exact steps, formulas, and output format.
-
-## Evaluation Checklist
-Always perform these steps in order:
-1. Extract all **facts**, **conclusions**, and **key terms** from the reference.
-2. Check whether each is explicitly present in the model output, with a brief justification.
-3. Compute coverage ratios for facts, conclusions, and terms.
-4. Evaluate **organization similarity**.
-5. Apply the scoring formula.
-6. Round the final score to the nearest integer.
-7. Return results in **strict JSON format**.
-
-## Definitions
-- **Facts:** Verifiable, objective statements about reality. Each must be independently checkable.
-- **Conclusions:** Interpretations, implications, or derived statements based on facts. Do not double-count something as both a fact and a conclusion.
-- **Terms:** Essential, topic-specific, non-numeric words/phrases (exclude generic stopwords and formatting words). Numeric values are not terms.
-
-## Ratios
-- `facts_ratio = matched_facts / total_facts`
-- `conclusions_ratio = matched_conclusions / total_conclusions` (if any; skip otherwise)
-- `terms_ratio = matched_terms / total_terms` (set to 1 if total_terms == 0)
-- `organization_ratio` (only 2 options):
-  - 1 = similar structure
-  - 0 = very different structure
-
-## Scoring Formulas
-- If conclusions exist:
-   `score = 5 * (facts_ratio * 0.4 + conclusions_ratio * 0.3 + terms_ratio * 0.21 + organization_ratio * 0.09)`
-- If no conclusions:
-   `score = 5 * (facts_ratio * 0.7 + terms_ratio * 0.21 + organization_ratio * 0.09)`
-- If fewer than 1 fact matched:
-   `score = 5 * (facts_ratio * 0.7 + terms_ratio * 0.21)`
-
-**Always round to nearest integer.**
-
-## Ambiguity & Missing Content
-- If a category is absent in the reference, apply the neutral rule (e.g., `terms_ratio = 1` if `total_terms == 0`).
-- If the model output is ambiguous or missing, count the item as 'not matched.'
-- If evaluation cannot proceed due to missing inputs, assign score `0` and explain in rationale.
-
-Fallback format in such cases:
-```
-{ "score": 0,
-  "rationale": [
-    "Fact: Evaluation not possible due to missing input.",
-    "Conclusion: N/A",
-    "Terminology: N/A",
-    "Organization: N/A",
-    "Score: 0 = forced due to missing context"
-  ]
-}
-```
-
-## Context
-<input>
-{{ item.input }}
-</input>
-<reference>
-{{ item.reference }}
-</reference>
-<model_output>
-{{ item.output_text }}
-</model_output>
-
-## Output Format
-Return **only** this JSON structure:
-```
-{
-  "score": <0-5>,
-  "rationale": [
-    "Fact: <number_of_output_facts> of <number_of_reference_facts> correctly matched.",
-    "Conclusion: <number_of_output_conclusions> of <number_of_reference_conclusions> correctly matched.",
-    "Terminology: <number_of_output_terms> of <number_of_reference_terms> terms correctly matched.",
-    "Organization: matched / mismatched",
-    "Score: <score_rounded> ≈ <score_exact> = <score_calculation>"
-  ]
-}
-```
-- `score`: integer (0-5, rounded).
-- `rationale`: exactly 5 ordered bullets (Fact, Conclusion, Terminology, Organization, Score breakdown).
-
-## Worked Example
-**Reference:**
- "The Eiffel Tower is in Paris. It was completed in 1889."
-**Model Output:**
- "The Eiffel Tower, built in 1889, is located in Paris, France."
-**Evaluation (expected JSON):**
-```
-{
-  "score": 5,
-  "rationale": [
-    "Fact: 2 of 2 facts correctly matched.",
-    "Conclusion: 0 of 0 conclusions correctly matched.",
-    "Terminology: 1 of 1 terms correctly matched.",
-    "Organization: matched",
-    "Score: 5 ≈ 5.0 = 5 * (facts_ratio 1.0 * 0.7 + terms_ratio 1.0 * 0.21 + organization_ratio 1.0 * 0.09)"
-  ]
-}
-```
-"""
-
 
 # This is the langchain open evals correctness prompt
 # https://github.com/langchain-ai/openevals/blob/main/python/openevals/prompts/correctness.py
@@ -620,6 +436,7 @@ score: 5
 {{ item.output_text }}
 </predicted_answer>
 """
+
 # ----------------------------------------------------- END: Prompts ----------------------------------------------------------
 
 # ----------------------------------------------------- START: Tests ----------------------------------------------------------
@@ -828,7 +645,10 @@ def score_answers_using_score_model_grader_and_return_items(client, items, eval_
   # Poll for completion
   attempts = 0; sleep_time_in_seconds = 10; max_attempts = math.ceil((10 * len(items)) / sleep_time_in_seconds) + 5 # 10 seconds per item + 5 additional retries
   while attempts < max_attempts:
-    status = client.evals.runs.retrieve(eval_run.id, eval_id=eval_cfg.id).status
+    try:
+      status = client.evals.runs.retrieve(eval_run.id, eval_id=eval_cfg.id).status
+    except (openai.APITimeoutError, httpx.ConnectTimeout) as e:
+      print(f"  Eval completion polling timeout occurred...")
     if status == "completed": print("  Evaluation completed."); break
     elif status == "failed": print("  ERROR: Evaluation failed.");
     else:
@@ -864,32 +684,99 @@ def score_answers_using_score_model_grader_and_return_items(client, items, eval_
                           and o.datasource_item['reference'].encode('utf-8', 'ignore').decode('utf-8').strip() == item['item']['reference'].encode('utf-8', 'ignore').decode('utf-8').strip())
       except StopIteration:
         print(f"    ERROR: No matching output found for input {idx + 1}: {truncate_string(item['item']['input'], 80)}")
-        item['item']['score'] = -1
-        item['item']['rationale'] = ["Error: No matching evaluation output found"]
-        continue
+        print(f"    FAILING: Evaluation run failed due to non-recoverable item")
+        return items_copy, "FAIL"
 
-    # first result is the only one with 1 grader; if we have multiple graders, we will get multiple results
-    first_test_result = output_item.results[0]
-    # first_test_passed = first_test_result['passed'] # True or False
-    # Scores from 0.0 to 5.0 as defined in the testing criteria and the prompt 
-    score = first_test_result['score']
-    model_output_content = first_test_result['sample']['output'][0]['content']
+    # Graceful retry mechanism to recover results
+    max_result_retries = 10
+    retry_delay = 10
     
-    # Parse the JSON output and create rationale string from the steps, each providing a 'description' and a 'conclusion'
-    try:
-      output_json = json.loads(model_output_content)
-      steps = output_json.get('steps', [])
-      rationale = ["Conclusion: " + step['conclusion'].replace('\n', ' ') + " Description: " + step['description'].replace('\n', ' ') for step in steps]
-    except json.JSONDecodeError:
-      rationale = ["Error parsing model output"]
-    item['item']['score'] = score
-    item['item']['rationale'] = rationale
-    if log_details:
-      print(f"    Reference: {truncate_string(item['item']['reference'], 120)}")
-      print(f"    Model output: {truncate_string(item['item']['output_text'], 120)}")
-      print(f"    Score: {score}")
-      for r in rationale:
-        print(f"      - {truncate_string(r, 140)}")
+    for retry_attempt in range(max_result_retries + 1):
+      try:
+        # Check if output_item has results
+        if not output_item.results:
+          if retry_attempt < max_result_retries:
+            print(f"    WARNING: No results found for input {idx + 1} (attempt {retry_attempt + 1}/{max_result_retries + 1}). Retrying in {retry_delay} seconds...")
+            time.sleep(retry_delay)
+            # Re-fetch the output items to see if results have populated
+            output_items = get_all_eval_run_output_items(client, run_id=eval_run.id, eval_id=eval_cfg.id, expected_count=len(items_copy), max_retries=3)
+            # Re-find the matching output item
+            try:
+              output_item = next(o for o in output_items if 'index' in o.datasource_item and o.datasource_item['index'] == item_index)
+            except StopIteration:
+              try:
+                output_item = next(o for o in output_items 
+                                  if o.datasource_item['input'].encode('utf-8', 'ignore').decode('utf-8').strip() == item['item']['input'].encode('utf-8', 'ignore').decode('utf-8').strip() 
+                                  and o.datasource_item['reference'].encode('utf-8', 'ignore').decode('utf-8').strip() == item['item']['reference'].encode('utf-8', 'ignore').decode('utf-8').strip())
+              except StopIteration:
+                print(f"    ERROR: Lost matching output during retry for input {idx + 1}")
+                return items_copy, "FAIL"
+            continue
+          else:
+            print(f"    ERROR: No results found for input {idx + 1} after {max_result_retries} retries")
+            print(f"    FAILING: Evaluation run failed due to non-recoverable item")
+            return items_copy, "FAIL"
+        
+        # Successfully found results - validate structure
+        first_test_result = output_item.results[0]
+        
+        if 'score' not in first_test_result:
+          if retry_attempt < max_result_retries:
+            print(f"    WARNING: Invalid result structure for input {idx + 1} (attempt {retry_attempt + 1}/{max_result_retries + 1}). Retrying...")
+            time.sleep(retry_delay)
+            continue
+          else:
+            print(f"    ERROR: Invalid result structure for input {idx + 1} after retries")
+            print(f"    FAILING: Evaluation run failed due to non-recoverable item")
+            return items_copy, "FAIL"
+        
+        # Extract score and content with error handling
+        score = first_test_result.get('score', -1)
+        
+        try:
+          model_output_content = first_test_result['sample']['output'][0]['content']
+        except (KeyError, IndexError, TypeError):
+          if retry_attempt < max_result_retries:
+            print(f"    WARNING: Cannot extract model output content for input {idx + 1} (attempt {retry_attempt + 1}/{max_result_retries + 1}). Retrying...")
+            time.sleep(retry_delay)
+            continue
+          else:
+            print(f"    ERROR: Cannot extract model output content for input {idx + 1} after retries")
+            print(f"    FAILING: Evaluation run failed due to non-recoverable item")
+            return items_copy, "FAIL"
+        
+        # Parse the JSON output and create rationale string from the steps
+        try:
+          output_json = json.loads(model_output_content)
+          steps = output_json.get('steps', [])
+          rationale = ["Conclusion: " + step.get('conclusion', 'N/A').replace('\n', ' ') + " Description: " + step.get('description', 'N/A').replace('\n', ' ') for step in steps]
+          if not rationale:
+            rationale = ["Successfully processed but no detailed steps available"]
+        except json.JSONDecodeError:
+          rationale = [f"Error parsing model output: {model_output_content[:100]}..."]
+        
+        # Successfully processed - update item and break retry loop
+        item['item']['score'] = score
+        item['item']['rationale'] = rationale
+        
+        if log_details:
+          print(f"    Reference: {truncate_string(item['item']['reference'], 120)}")
+          print(f"    Model output: {truncate_string(item['item']['output_text'], 120)}")
+          print(f"    Score: {score}")
+          for r in rationale:
+            print(f"      - {truncate_string(r, 140)}")
+        
+        break  # Success - exit retry loop
+        
+      except Exception as e:
+        if retry_attempt < max_result_retries:
+          print(f"    WARNING: Error processing input {idx + 1} (attempt {retry_attempt + 1}/{max_result_retries + 1}): {str(e)}. Retrying...")
+          time.sleep(retry_delay)
+          continue
+        else:
+          print(f"    ERROR: Failed to process input {idx + 1} after {max_result_retries} retries: {str(e)}")
+          print(f"    FAILING: Evaluation run failed due to non-recoverable item")
+          return items_copy, "FAIL"
 
   # Try delete evaluation after run if requested (can fail)
   if delete_eval_after_run:
@@ -897,7 +784,7 @@ def score_answers_using_score_model_grader_and_return_items(client, items, eval_
       except: print(f"    WARNING: Failed to delete eval ID={eval_cfg.id}")
 
   log_function_footer(function_name, start_time)
-  return items_copy
+  return items_copy, "OK"
 
 # calculates the accuracy of the evaluation model by using the calibration Batch02 where each score has 10 reference answers + model outputs
 # returns a string like this: Accuracy: 72%; Score 0: [9/10 = 90%], Score 1: [9/10 = 90%], Score 2: [9/10 = 90%], Score 3: [6/10 = 60%], Score 4: [9/10 = 90%], Score 5: [9/10 = 90%]
@@ -998,14 +885,27 @@ def measure_score_model_variability(client, items, eval_name, prompt_template, e
   item_scores = {i: [] for i in range(len(items_copy))}
 
   # Run the evaluation multiple times
+  successful_runs = 0
   for run in range(number_of_runs):
     print(f"-------------- Run {run + 1} of {number_of_runs} --------------")
     eval_name2 = f"{eval_name} - run {run + 1}"
     # Run evaluation and collect scores
-    scored_items = score_answers_using_score_model_grader_and_return_items( client, items_copy, eval_name2, prompt_template, eval_model, min_score, remove_input_from_prompt, delete_eval_after_run, log_details=False)
-    for i, item in enumerate(scored_items):
-      score = item['item']['score']
-      item_scores[i].append(score)
+    scored_items, status = score_answers_using_score_model_grader_and_return_items( client, items_copy, eval_name2, prompt_template, eval_model, min_score, remove_input_from_prompt, delete_eval_after_run, log_details=False)
+    
+    if status == "OK":
+      successful_runs += 1
+      for i, item in enumerate(scored_items):
+        score = item['item']['score']
+        item_scores[i].append(score)
+    else:
+      print(f"    SKIPPED: Run {run + 1} failed and will not be counted in variability analysis")
+  
+  if successful_runs == 0:
+    print(f"  ERROR: All {number_of_runs} runs failed. Cannot perform variability analysis.")
+    log_function_footer(function_name, start_time)
+    return
+  
+  print(f"  SUMMARY: {successful_runs} of {number_of_runs} runs completed successfully")
 
   # Calculate metrics for each item
   unstable_score_items = 0;all_std_devs = []
@@ -1156,7 +1056,7 @@ if __name__ == '__main__':
     ,folder_path="./RAGFiles/Batch01"
     # if you have a path to a JSON file with items, the code will load the items from the file instead of using the assigned batch objects
     ,eval_path=None 
-    ,items = Batch01
+    ,items = Batch02
     ,answer_model = answer_model_name
     ,eval_model = eval_model_name
     ,embedding_model="text-embedding-3-small"
@@ -1223,7 +1123,7 @@ if __name__ == '__main__':
   # measure_score_model_variability(client, params.items, "Eval Prompt 1 (Simple)", judge_model_prompt_template_1, params.eval_model, params.min_score, params.variability_runs, params.remove_input_from_prompt, params.delete_eval_after_run, params.log_details)
   # print("-"*140)
   # # Step 4B: Measure variablity of prompt 2
-  # measure_score_model_variability(client, params.items, "Eval Prompt 2 (Math Scoring Model B)", judge_model_prompt_template_2b, params.eval_model, params.min_score, params.variability_runs, params.remove_input_from_prompt, params.delete_eval_after_run, params.log_details)
+  # measure_score_model_variability(client, params.items, "Eval Prompt 2 (Math Scoring Model B)", judge_model_prompt_template_2, params.eval_model, params.min_score, params.variability_runs, params.remove_input_from_prompt, params.delete_eval_after_run, params.log_details)
   # print("-"*140)
   # # Step 4C: Measure variablity of prompt 3
   # measure_score_model_variability(client, params.items, "Eval Prompt 3 (Langchain Correctness)", judge_model_prompt_template_3, params.eval_model, params.min_score, params.variability_runs, params.remove_input_from_prompt, params.delete_eval_after_run, params.log_details)
@@ -1234,7 +1134,6 @@ if __name__ == '__main__':
   # # Step 4E: Measure variablity of prompt 5
   # measure_score_model_variability(client, params.items, "Eval Prompt 5 (AI Foundry Similarity)", judge_model_prompt_template_5, params.eval_model, params.min_score, params.variability_runs, params.remove_input_from_prompt, params.delete_eval_after_run, params.log_details)
   # print("-"*140)
-
 
   # Step 4: Delete vector store including all files
   if not use_predefined_model_outputs: delete_vector_store_by_name(client, params.vector_store_name)
