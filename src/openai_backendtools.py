@@ -946,7 +946,16 @@ def delete_vector_store_by_name(client, name, delete_files=False):
     client.vector_stores.delete(vs.id)
   else:
     print(f"  Vector store '{name}' not found.")
-  
+
+def delete_empty_vector_stores(client, dry_run=False):
+  vector_stores = get_all_vector_stores(client)
+  for vs in vector_stores:
+    if vs.usage_bytes == 0:
+      print(f"  Deleting empty vector store '{vs.name}' (ID={vs.id} , {format_timestamp(vs.created_at)})...")
+      if not dry_run:
+        try: client.vector_stores.delete(vs.id)
+        except Exception as e: print(f"      WARNING: Failed to delete empty vector store ID={vs.id} ({format_timestamp(vs.created_at)}). The vector store is probably already deleted.")
+
 # ----------------------------------------------------- END: Vector stores ----------------------------------------------------
 
 

@@ -28,6 +28,7 @@ if __name__ == '__main__':
   # delete_vector_store_by_name(client, "test_vector_store", True)
   # client.vector_stores.delete("vs_67b0ca3da1fc819186fc791943fce1a3")
   # delete_vector_store_by_id(client, "vs_67b0ca3da1fc819186fc791943fce1a3", True)
+  # delete_empty_vector_stores(client, dry_run=True)
 
   # delete_assistant_by_name(client, "test_assistant")
   # client.beta.assistants.delete("asst_bImGzB7olqLzO177ydqvRQNE")
