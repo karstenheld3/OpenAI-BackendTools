@@ -404,6 +404,8 @@ Creates a vector store and uploads files from the specified folder to it. Handle
 - `client`: The OpenAI client instance to use for API calls
 - `vector_store_name`: Name of the vector store to create
 - `folder_path`: Path to folder containing files to upload
+- `chunk_size`: Maximum number of tokens per chunk (default: 800, range: 100-4096)
+- `chunk_overlap`: Number of tokens that overlap between chunks (default: 400, must not exceed half of chunk_size)
 
 **Example output:**
 ```
@@ -430,6 +432,8 @@ Creates a vector store and uploads files from a folder path. This is a wrapper f
 - `folder_path`: Path to folder containing files to upload
 - `include_subfolders`: Boolean. Whether to include files from subdirectories (default: True)
 - `include_file_types`: List of file extensions to include (e.g., ["txt", "pdf"]) or ["*"] for all files (default: ["*"])
+- `chunk_size`: Maximum number of tokens per chunk (default: 800, range: 100-4096)
+- `chunk_overlap`: Number of tokens that overlap between chunks (default: 400, must not exceed half of chunk_size)
 
 **Returns:**
 - `TestVectorStoreWithFiles` object containing the vector store and file information
@@ -437,6 +441,12 @@ Creates a vector store and uploads files from a folder path. This is a wrapper f
 **Example output:**
 ```
 [2025-06-09 12:39:37] START: Create test vector store from folder path...
+  Creating vector store 'test_vector_store' with chunk_size=4096, chunk_overlap=2048...
+    OK. ID=vs_68c80407807c8191b00d3bfaa6115fd8
+  Uploading 2 files...
+    [ 1 / 2 ] OK: Upload, OK: Add to vector store ID=file-DBoJjUeo6zqP7UgMDZs4U8 'E:\dev\OpenAI-BackendTools\RAGFiles\Batch01\ArilenaDrovikCV.pdf'
+    [ 2 / 2 ] OK: Upload, OK: Add to vector store ID=file-PxjN1qMQdzciYU4THCHsWw 'E:\dev\OpenAI-BackendTools\RAGFiles\Batch01\Publications1.md'
+  Verifying all vector store files are 'completed'...
 [2025-06-09 12:39:55] END: Create test vector store from folder path (18 secs).
 ```
 
