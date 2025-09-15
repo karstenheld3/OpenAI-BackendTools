@@ -1,15 +1,15 @@
-from dataclasses import dataclass
-from dotenv import load_dotenv
-from openai_backendtools import *
-from test_rag_operations import *
-import json
+import os, json, math, time, re, copy
+import datetime as dt
+
 import openai
-import math
-import time
 import httpx
 import numpy as np
-import re
-import copy
+
+from dataclasses import dataclass
+from dotenv import load_dotenv
+from openai.types.shared import reasoning_effort
+from openai_backendtools import *
+from test_rag_operations import *
 
 load_dotenv()
 
@@ -470,9 +470,9 @@ The generated answer has the exact same metrics as the reference answer, \
 
 # ----------------------------------------------------- START: Tests ----------------------------------------------------------
 
-# Gets all answers for the 'input' in all items using response models and stores them in 'output_text' of each items
-def get_answers_from_model_and_return_items(client, vector_store_id, model, items):
-  function_name = 'Get answers from model and add to items'
+# Gets all answers for the 'input' in all items using responses API with enhanced parameters and stores them in 'output_text' of each items
+def get_answers_from_model_and_return_items(client, vector_store_id, model, items, instructions=None, temperature=0, reasoning_effort=None):
+  function_name = 'Get answers from model using responses API and add to items'
   start_time = log_function_header(function_name)
   
   # Make a deep copy of items to avoid modifying the original
@@ -481,23 +481,29 @@ def get_answers_from_model_and_return_items(client, vector_store_id, model, item
   for idx, item in enumerate(items_copy, 1):
     input = item['item']['input']
     print(f"  [ {idx} / {len(items)} ] Query: {input}")
+    
+    # Build request parameters for responses API
     request_params = {
       "model": model,
       "input": input,
       "tools": [{ "type": "file_search", "vector_store_ids": [vector_store_id] }],
-      "temperature": 0
+      "temperature": temperature
     }
     
+    # Add instructions if provided
+    if instructions: request_params["instructions"] = instructions
+    
     # Remove temperature parameter for reasoning models that don't support it
-    remove_temperature_from_request_params_for_reasoning_models(request_params, model)
+    # This function also handles adding reasoning configuration (effort)
+    remove_temperature_from_request_params_for_reasoning_models(request_params, model, reasoning_effort)
     
     response = retry_on_openai_errors(lambda: client.responses.create(**request_params), indentation=4)
     output_text = response.output_text
-    print(f"    Response: {truncate_string(output_text,80)}")
+    print(f"    Response: {truncate_string(remove_linebreaks(output_text),80)}")
     item['item']['output_text'] = output_text
 
   log_function_footer(function_name, start_time)
-  return items_copy
+  return items_copy, "OK"
 
 # Embedds (vectorizes) reference and model output, then gets scores for all items using cosine similarity and adds score and rationale to each item
 def score_answers_using_cosine_similarity_and_return_items(client, items, embedding_model="text-embedding-3-small", log_details: bool = True):
@@ -524,7 +530,7 @@ def score_answers_using_cosine_similarity_and_return_items(client, items, embedd
     print(f"  [ {idx} / {len(items)} ] Query: {truncate_string(input.replace('\n', ' '),120)}")
     if log_details:
       print(f"    Reference    : {truncate_string(reference.replace('\n', ' '),100)}")
-      print(f"    Model output : {truncate_string(output_text.replace('\n', ' '),100)}")
+      print(f"    Model output : {truncate_string(remove_linebreaks(output_text),100)}")
 
     try:
       # Get embeddings and calculate similarity
@@ -548,7 +554,7 @@ def score_answers_using_cosine_similarity_and_return_items(client, items, embedd
       item['item']['rationale'] = [f"Error calculating similarity score: {str(e)}"]
 
   log_function_footer(function_name, start_time)
-  return items_copy
+  return items_copy, "OK"
 
 # Gets scores for all items using the provided prompt template and add score and rationale to each item
 def score_answers_using_judge_model_and_return_items(client, items, prompt_template, judge_model_name, remove_input_from_prompt: bool = False, log_details: bool = True):
@@ -565,7 +571,7 @@ def score_answers_using_judge_model_and_return_items(client, items, prompt_templ
     print(f"  [ {idx} / {len(items)} ] Query: {truncate_string(input.replace('\n', ' '),120)}")
     if log_details:
       print(f"    Reference    : {truncate_string(reference.replace('\n', ' '),100)}")
-      print(f"    Model output : {truncate_string(output_text.replace('\n', ' '),100)}")
+      print(f"    Model output : {truncate_string(remove_linebreaks(output_text),100)}")
    
     # Replace placeholders in the prompt template
     prompt = re.sub(r'{{\s*item.reference\s*}}', reference, prompt_template)
@@ -610,7 +616,7 @@ def score_answers_using_judge_model_and_return_items(client, items, prompt_templ
       item['item']['rationale'] = ["Error: Could not parse evaluation"]
 
   log_function_footer(function_name, start_time)
-  return items_copy
+  return items_copy, "OK"
 
 def score_answers_using_score_model_grader_and_return_items(client, items, eval_name, prompt_template, eval_model, min_score: int, remove_input_from_prompt: bool, delete_eval_after_run: bool = False, log_details: bool = True):
   function_name = 'Evaluate answers using score model grader'
@@ -790,7 +796,7 @@ def score_answers_using_score_model_grader_and_return_items(client, items, eval_
         
         if log_details:
           print(f"    Reference: {truncate_string(item['item']['reference'], 120)}")
-          print(f"    Model output: {truncate_string(item['item']['output_text'], 120)}")
+          print(f"    Model output: {truncate_string(remove_linebreaks(item['item']['output_text']), 120)}")
           print(f"    Score: {score}")
           for r in rationale:
             print(f"      - {truncate_string(r, 140)}")
@@ -1057,7 +1063,19 @@ def measure_score_model_variability(client, items, eval_name, prompt_template, e
   print_as_box(0, content_lines, 60)
   
   log_function_footer(function_name, start_time)
-  return items_copy
+  return items_copy, "OK"
+
+def log_eval_items_to_file(items, log_filename, log_dir):  
+  # Create log directory if it doesn't exist
+  os.makedirs(log_dir, exist_ok=True)  
+  # Generate filename with timestamp and vector store ID
+  log_filepath = os.path.join(log_dir, log_filename)
+  # Convert to absolute path
+  absolute_log_filepath = os.path.abspath(log_filepath)
+  # Save model outputs to JSON file
+  with open(log_filepath, 'w', encoding='utf-8') as f:
+    json.dump(items, f, indent=2, ensure_ascii=False)
+  print(f"Model outputs logged to: '{absolute_log_filepath}'.")
 
 # ----------------------------------------------------- END: Tests ------------------------------------------------------------
 
@@ -1077,25 +1095,32 @@ if __name__ == '__main__':
     client = create_azure_openai_client(azure_openai_use_key_authentication)
 
   @dataclass
-  class EvalParams: vector_store_name: str; folder_path: str; eval_path: str; items: list; answer_model: str; eval_model: str; embedding_model: str; min_score: int; remove_input_from_prompt: bool; delete_eval_after_run: bool; log_details: bool; variability_runs: int
+  class EvalParams: vector_store_name: str; folder_path: str; eval_path: str; items: list; answer_model: str; eval_model: str; instructions: str; answer_temperature: int; answer_reasoning_effort: str; embedding_model: str; min_score: int; remove_input_from_prompt: bool; delete_eval_after_run: bool; log_details: bool; log_model_output: bool; log_eval_output: bool; variability_runs: int
+
+  eval_log_folder_path = "./eval-logs"
 
   params = EvalParams(
     vector_store_name="test_vector_store"
     ,folder_path="./RAGFiles/Batch01"
     # if you have a path to a JSON file with items, the code will load the items from the file instead of using the assigned batch objects
     ,eval_path=None 
-    ,items = Batch02
+    ,items = Batch01
     ,answer_model = answer_model_name
     ,eval_model = eval_model_name
+    ,instructions = None
+    ,answer_temperature=0
+    ,answer_reasoning_effort="low"
     ,embedding_model="text-embedding-3-small"
     ,min_score=4
     # By removing the input from the evaluation prompt templates we can demonstrate that evaluation needs the input to be able to provide a correct evaluation
     # CORRECT   -> reference="Jupiter" vs. output="Zeus" for input="Who is the master of the olympian gods?"
     # INCORRECT -> reference="Jupiter" vs. output="Zeus" for input="What is largest planet in our solar system?"
     ,remove_input_from_prompt=False
-    ,delete_eval_after_run=True
+    ,delete_eval_after_run=False
     ,log_details=True
-    ,variability_runs=5
+    ,log_model_output=True
+    ,log_eval_output=True
+    ,variability_runs=1
   )
 
   # If we have path to eval file, load items from eval file (JSON)
@@ -1105,68 +1130,99 @@ if __name__ == '__main__':
       params.items = eval_data
       # params.items = [item['item'] for item in eval_data]
 
-  # If use_predefined_model_outputs=False, create temporary vector store by uploading files and get answers from model
-  use_predefined_model_outputs = True
-  if not use_predefined_model_outputs:
+  # If re_create_vector_store_and_get_model_outputs=True, create temporary vector store by uploading files and get answers from model
+  re_create_vector_store_and_get_model_outputs = False
+  if re_create_vector_store_and_get_model_outputs:
     print("-"*140)
     # Step 1: Create vector store by uploading files
     test_vector_store_with_files = create_test_vector_store_from_folder_path(client,params.vector_store_name, params.folder_path)
     print("-"*140)
     # Step 2: Get answers from model and store in items
     params.items = get_answers_from_model_and_return_items(client, test_vector_store_with_files.vector_store.id, params.answer_model, params.items)
-    print("-"*140) 
+    print("-"*140)
+  
+  # If use_existing_vector_store_and_get_model_outputs=True, uses existing vector store to get answers from model
+  use_existing_vector_store_and_get_model_outputs = True
+  if use_existing_vector_store_and_get_model_outputs:
+    vector_store_name = "test_vector_store"; vector_store_id = None
+    if vector_store_id: vs = get_vector_store_by_id(client, vector_store_id)
+    elif vector_store_name: vs = get_vector_store_by_name(client, vector_store_name)
+    else: raise Exception("No vector store id or name provided")
+    if vs is None: raise Exception(f"Vector store '{vector_store_name}' not found. Please create it first or check the name.")
+    
+    print("-"*140)    
+    # Step 1: Get answers from model and store in items
+    params.items, status = get_answers_from_model_and_return_items(client, vs.id, params.answer_model, params.items, params.instructions, params.answer_temperature, params.answer_reasoning_effort)
+    print("-"*140)
+
+  # Log model output in "../eval-logs/[DATETIME]_[VSID]_modeloutputs.json"
+  if params.log_model_output:
+    timestamp = dt.datetime.now().strftime("%Y%m%d-%H%M%S")
+    log_filename = f"{timestamp}_{vs.id}_modeloutputs.json"
+    log_eval_items_to_file(params.items, log_filename, eval_log_folder_path)
 
   # Step 3A: Test eval using embedding and cosine similarity
-  params.items = score_answers_using_cosine_similarity_and_return_items(client, params.items, params.embedding_model, params.log_details)
+  params.items, status = score_answers_using_cosine_similarity_and_return_items(client, params.items, params.embedding_model, params.log_details)
   print("."*100 + f"\n    Evaluation results using embedding with '{params.embedding_model}' and cosine similiarity:")
   print(summarize_item_scores(params.items, params.min_score, 4))
   print("-"*140)
   # Step 3B: Test eval using judge model with prompt template 1 (Simple)
-  params.items = score_answers_using_judge_model_and_return_items(client, params.items, judge_model_prompt_template_1, params.eval_model, params.remove_input_from_prompt, params.log_details)
+  params.items, status = score_answers_using_judge_model_and_return_items(client, params.items, judge_model_prompt_template_1, params.eval_model, params.remove_input_from_prompt, params.log_details)
   print("."*100 + f"\n    Evaluation results using judge model '{params.eval_model}' with prompt template 1 (Simple):")
   print(summarize_item_scores(params.items, params.min_score, 4) )
   print("-"*140)
   # Step 3C: Test eval using judge model with prompt template 2 (Scoring Model)
-  params.items = score_answers_using_judge_model_and_return_items(client, params.items, judge_model_prompt_template_2, params.eval_model, params.remove_input_from_prompt, params.log_details)
+  params.items, status = score_answers_using_judge_model_and_return_items(client, params.items, judge_model_prompt_template_2, params.eval_model, params.remove_input_from_prompt, params.log_details)
   print("."*100 + f"\n    Evaluation results using judge model '{params.eval_model}' with prompt template 2 (Scoring Model):")
   print(summarize_item_scores(params.items, params.min_score, 4))
   print("-"*140)
   # Step 3D: Test eval using score model grader with prompt template 1 (Simple)
-  params.items = score_answers_using_score_model_grader_and_return_items(client, params.items, "test_eval - prompt_template_1", judge_model_prompt_template_1, params.eval_model, params.min_score, params.remove_input_from_prompt, params.delete_eval_after_run, params.log_details)
+  params.items, status = score_answers_using_score_model_grader_and_return_items(client, params.items, "test_eval - prompt_template_1", judge_model_prompt_template_1, params.eval_model, params.min_score, params.remove_input_from_prompt, params.delete_eval_after_run, params.log_details)
   print("."*100 + f"\n    Evaluation results using 'score_model' grader and prompt template 1 (Simple):")
   print(summarize_item_scores(params.items, params.min_score, 4))
   print("-"*140)
   # Step 3E: Test eval using score model grader with prompt template 2 (Scoring Model)
-  params.items = score_answers_using_score_model_grader_and_return_items(client, params.items, "test_eval - prompt_template_2", judge_model_prompt_template_2, params.eval_model, params.min_score, params.remove_input_from_prompt, params.delete_eval_after_run, params.log_details)
+  params.items, status = score_answers_using_score_model_grader_and_return_items(client, params.items, "test_eval - prompt_template_2", judge_model_prompt_template_2, params.eval_model, params.min_score, params.remove_input_from_prompt, params.delete_eval_after_run, params.log_details)
   print("."*100 + f"\n    Evaluation results using 'score_model' grader and prompt template 2 (Scoring Model):")
   print(summarize_item_scores(params.items, params.min_score, 4))
   print("-"*140)
   # Step 3F: Test eval using score model grader with prompt template 3 (Langchain Correctness)
-  params.items = score_answers_using_score_model_grader_and_return_items(client, params.items, "test_eval - prompt_template_3", judge_model_prompt_template_3, params.eval_model, params.min_score, params.remove_input_from_prompt, params.delete_eval_after_run, params.log_details)
+  params.items, status = score_answers_using_score_model_grader_and_return_items(client, params.items, "test_eval - prompt_template_3", judge_model_prompt_template_3, params.eval_model, params.min_score, params.remove_input_from_prompt, params.delete_eval_after_run, params.log_details)
   print("."*100 + f"\n    Evaluation results using 'score_model' grader and prompt template 3 (Langchain Correctness):")
   print(summarize_item_scores(params.items, params.min_score, 4))
   print("-"*140)
 
-  # Step 4A: Measure variablity of prompt 1
-  measure_score_model_variability(client, params.items, "Eval Prompt 1 (Simple)", judge_model_prompt_template_1, params.eval_model, params.min_score, params.variability_runs, params.remove_input_from_prompt, params.delete_eval_after_run, params.log_details)
-  print("-"*140)
-  # Step 4B: Measure variablity of prompt 2
-  measure_score_model_variability(client, params.items, "Eval Prompt 2 (Math Scoring Model B)", judge_model_prompt_template_2, params.eval_model, params.min_score, params.variability_runs, params.remove_input_from_prompt, params.delete_eval_after_run, params.log_details)
-  print("-"*140)
-  # Step 4C: Measure variablity of prompt 3
-  measure_score_model_variability(client, params.items, "Eval Prompt 3 (Langchain Correctness)", judge_model_prompt_template_3, params.eval_model, params.min_score, params.variability_runs, params.remove_input_from_prompt, params.delete_eval_after_run, params.log_details)
-  print("-"*140)
-  # Step 4D: Measure variablity of prompt 4
-  measure_score_model_variability(client, params.items, "Eval Prompt 4 (AI Foundry Semantic Similarity)", judge_model_prompt_template_4, params.eval_model, params.min_score, params.variability_runs, params.remove_input_from_prompt, params.delete_eval_after_run, params.log_details)
-  print("-"*140)
-  # Step 4E: Measure variablity of prompt 5
-  measure_score_model_variability(client, params.items, "Eval Prompt 5 (AI Foundry Similarity)", judge_model_prompt_template_5, params.eval_model, params.min_score, params.variability_runs, params.remove_input_from_prompt, params.delete_eval_after_run, params.log_details)
-  print("-"*140)
-  # Step 4F: Measure variablity of prompt 6
-  measure_score_model_variability(client, params.items, "Eval Prompt 6 (LlamaIndex Correctness)", judge_model_prompt_template_6, params.eval_model, params.min_score, params.variability_runs, params.remove_input_from_prompt, params.delete_eval_after_run, params.log_details)
-  print("-"*140)
+  # params.items, status = score_answers_using_score_model_grader_and_return_items(client, params.items, "eval - azure similarity", judge_model_prompt_template_5, params.eval_model, params.min_score, params.remove_input_from_prompt, params.delete_eval_after_run, params.log_details)
+  # print("."*100 + f"\n    Evaluation results using 'score_model' grader and prompt template 5 (Azure Similarity):")
+  # print(summarize_item_scores(params.items, params.min_score, 4))
+  # print("-"*140)
+
+  # Log eval output in "../eval-logs/[DATETIME]_[VSID]_evaloutputs.json"
+  if params.log_eval_output:
+    timestamp = dt.datetime.now().strftime("%Y%m%d-%H%M%S")
+    log_filename = f"{timestamp}_{vs.id}_evaloutputs.json"
+    log_eval_items_to_file(params.items, log_filename, eval_log_folder_path)
+
+  # # Step 4A: Measure variablity of prompt 1
+  # measure_score_model_variability(client, params.items, "Eval Prompt 1 (Simple)", judge_model_prompt_template_1, params.eval_model, params.min_score, params.variability_runs, params.remove_input_from_prompt, params.delete_eval_after_run, params.log_details)
+  # print("-"*140)
+  # # Step 4B: Measure variablity of prompt 2
+  # measure_score_model_variability(client, params.items, "Eval Prompt 2 (Math Scoring Model B)", judge_model_prompt_template_2, params.eval_model, params.min_score, params.variability_runs, params.remove_input_from_prompt, params.delete_eval_after_run, params.log_details)
+  # print("-"*140)
+  # # Step 4C: Measure variablity of prompt 3
+  # measure_score_model_variability(client, params.items, "Eval Prompt 3 (Langchain Correctness)", judge_model_prompt_template_3, params.eval_model, params.min_score, params.variability_runs, params.remove_input_from_prompt, params.delete_eval_after_run, params.log_details)
+  # print("-"*140)
+  # # Step 4D: Measure variablity of prompt 4
+  # measure_score_model_variability(client, params.items, "Eval Prompt 4 (AI Foundry Semantic Similarity)", judge_model_prompt_template_4, params.eval_model, params.min_score, params.variability_runs, params.remove_input_from_prompt, params.delete_eval_after_run, params.log_details)
+  # print("-"*140)
+  # # Step 4E: Measure variablity of prompt 5
+  # measure_score_model_variability(client, params.items, "Eval Prompt 5 (AI Foundry Similarity)", judge_model_prompt_template_5, params.eval_model, params.min_score, params.variability_runs, params.remove_input_from_prompt, params.delete_eval_after_run, params.log_details)
+  # print("-"*140)
+  # # Step 4F: Measure variablity of prompt 6
+  # measure_score_model_variability(client, params.items, "Eval Prompt 6 (LlamaIndex Correctness)", judge_model_prompt_template_6, params.eval_model, params.min_score, params.variability_runs, params.remove_input_from_prompt, params.delete_eval_after_run, params.log_details)
+  # print("-"*140)
 
   # Step 4: Delete vector store including all files
-  if not use_predefined_model_outputs: delete_vector_store_by_name(client, params.vector_store_name)
+  if re_create_vector_store_and_get_model_outputs: delete_vector_store_by_name(client, params.vector_store_name)
 
 # ----------------------------------------------------- END: Main -------------------------------------------------------------

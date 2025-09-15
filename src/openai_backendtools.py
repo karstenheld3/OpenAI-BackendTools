@@ -49,6 +49,14 @@ def truncate_string(string, max_length):
     return string[:max_length] + "..."
   return string
 
+def clean_response(string):
+  if len(string) > 0: return string.replace("\n", "").replace("\r", "").replace("'","").replace('"',"").strip()
+  return string
+
+def remove_linebreaks(string):
+  if len(string) > 0: return string.replace("\n", " ").replace("\r", " ").strip()
+  return string
+
 # Format a file size in bytes into a human-readable string
 def format_filesize(num_bytes):
   if not num_bytes: return ''
@@ -164,9 +172,18 @@ def remove_temperature_from_request_params_for_reasoning_models(request_params, 
   # Add reasoning parameter for reasoning models if reasoning_effort is specified
   if reasoning_effort and reasoning_effort in ["minimal", "low", "medium", "high"]:
     if model_name.startswith('o') or model_name.startswith('gpt-5'):
-      # For 'o' models, 'minimal' is invalid and will be mapped to 'low'
-      if model_name.startswith('o') and reasoning_effort == "minimal": request_params["reasoning"] = {"effort": "low"}
-      else: request_params["reasoning"] = {"effort": reasoning_effort}
+      reasoning_config = {}
+      
+      # Add effort if specified
+      if reasoning_effort and reasoning_effort in ["minimal", "low", "medium", "high"]:
+        # For 'o' models, 'minimal' is invalid and will be mapped to 'low'
+        if model_name.startswith('o') and reasoning_effort == "minimal": 
+          reasoning_config["effort"] = "low"
+        else: 
+          reasoning_config["effort"] = reasoning_effort
+            
+      if reasoning_config:
+        request_params["reasoning"] = reasoning_config
 
 # ----------------------------------------------------- END: Utilities --------------------------------------------------------
 
