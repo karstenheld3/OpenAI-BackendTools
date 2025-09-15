@@ -202,13 +202,20 @@ def build_test_vector_store_by_adding_collected_files(client, vector_store, file
   log_function_footer(function_name, start_time)
   return VectorStoreFiles(vector_store, files, files_metadata, files_data)
 
-def create_test_vector_store_from_collected_files(client, vector_store_name, files, files_metadata, files_data, log_headers=True) -> VectorStoreFiles:
+def create_test_vector_store_from_collected_files(client, vector_store_name, files, files_metadata, files_data, log_headers=True, chunk_size=800, chunk_overlap=400) -> VectorStoreFiles:
   function_name = 'Create test vector store from collected files'
   start_time = log_function_header(function_name) if log_headers else datetime.datetime.now()
 
-  # Create vector store
-  print(f"  Creating vector store '{vector_store_name}'...")
-  vector_store = client.vector_stores.create(name=vector_store_name)
+  # Create vector store with chunking strategy
+  print(f"  Creating vector store '{vector_store_name}' with chunk_size={chunk_size}, chunk_overlap={chunk_overlap}...")
+  chunking_strategy = {
+    "type": "static",
+    "static": {
+      "max_chunk_size_tokens": chunk_size,
+      "chunk_overlap_tokens": chunk_overlap
+    }
+  }
+  vector_store = client.vector_stores.create(name=vector_store_name, chunking_strategy=chunking_strategy)
   print(f"    OK. ID={vector_store.id}") if vector_store.id else print("  FAIL.")
 
   vector_store_with_files = build_test_vector_store_by_adding_collected_files(client, vector_store, files, files_metadata, files_data, False)
@@ -217,11 +224,11 @@ def create_test_vector_store_from_collected_files(client, vector_store_name, fil
   return vector_store_with_files
 
 # Creates a vector store and uploads files from the given folder recursively
-def create_test_vector_store_from_folder_path(client, vector_store_name, folder_path, include_subfolders=True, include_file_types=["*"]) -> VectorStoreFiles:
+def create_test_vector_store_from_folder_path(client, vector_store_name, folder_path, include_subfolders=True, include_file_types=["*"], chunk_size=800, chunk_overlap=400) -> VectorStoreFiles:
   function_name = 'Create test vector store from folder path'
   start_time = log_function_header(function_name)
   files, files_metadata, files_data = collect_files_from_folder_path(folder_path, include_subfolders=include_subfolders, include_file_types=include_file_types)
-  test_vector_store_with_files = create_test_vector_store_from_collected_files(client, vector_store_name, files, files_metadata, files_data, False)
+  test_vector_store_with_files = create_test_vector_store_from_collected_files(client, vector_store_name, files, files_metadata, files_data, False, chunk_size, chunk_overlap)
   log_function_footer(function_name, start_time)
   return test_vector_store_with_files
 
@@ -295,7 +302,7 @@ if __name__ == '__main__':
     client = create_azure_openai_client(azure_openai_use_key_authentication)
 
   @dataclass
-  class RAGParams: vector_store_name: str; folder_path: str; query: str; use_existing_vector_store: bool; truncate_output: bool; delete_vector_store_after_run: bool
+  class RAGParams: vector_store_name: str; folder_path: str; query: str; use_existing_vector_store: bool; truncate_output: bool; delete_vector_store_after_run: bool; chunk_size: int; chunk_overlap: int
 
   params = RAGParams(
     vector_store_name="test_vector_store"
@@ -304,13 +311,15 @@ if __name__ == '__main__':
     ,use_existing_vector_store=False
     ,truncate_output=True
     ,delete_vector_store_after_run=True
+    ,chunk_size=4096
+    ,chunk_overlap=2048
   )
 
   # Step 1: Create vector store by uploading files or get existing vector store
   if params.use_existing_vector_store:
     vs = get_vector_store_by_name(client, params.vector_store_name)
   else:
-    test_vector_store_with_files = create_test_vector_store_from_folder_path(client, params.vector_store_name, params.folder_path)
+    test_vector_store_with_files = create_test_vector_store_from_folder_path(client, params.vector_store_name, params.folder_path, chunk_size=params.chunk_size, chunk_overlap=params.chunk_overlap)
     vs = test_vector_store_with_files.vector_store
 
   # Step 2: Test file RAG functionalities
