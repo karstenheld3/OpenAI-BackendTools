@@ -1118,8 +1118,8 @@ if __name__ == '__main__':
     ,remove_input_from_prompt=False
     ,delete_eval_after_run=False
     ,log_details=True
-    ,log_model_output=True
-    ,log_eval_output=True
+    ,log_model_output=False
+    ,log_eval_output=False
     ,variability_runs=1
   )
 
@@ -1131,7 +1131,7 @@ if __name__ == '__main__':
       # params.items = [item['item'] for item in eval_data]
 
   # If re_create_vector_store_and_get_model_outputs=True, create temporary vector store by uploading files and get answers from model
-  re_create_vector_store_and_get_model_outputs = False
+  re_create_vector_store_and_get_model_outputs = True
   if re_create_vector_store_and_get_model_outputs:
     print("-"*140)
     # Step 1: Create vector store by uploading files
@@ -1142,7 +1142,7 @@ if __name__ == '__main__':
     print("-"*140)
   
   # If use_existing_vector_store_and_get_model_outputs=True, uses existing vector store to get answers from model
-  use_existing_vector_store_and_get_model_outputs = True
+  use_existing_vector_store_and_get_model_outputs = False
   if use_existing_vector_store_and_get_model_outputs:
     vector_store_name = "test_vector_store"; vector_store_id = None
     if vector_store_id: vs = get_vector_store_by_id(client, vector_store_id)
