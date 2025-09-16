@@ -7,7 +7,7 @@ import json
 def convert_from_openai_json_to_azure_ai_jsonl(input_file, output_file):
   
   items = []
-  with open(input_file, 'r') as f:
+  with open(input_file, 'r', encoding='utf-8') as f:
     data = json.load(f)
     
     for entry in data:
@@ -21,9 +21,9 @@ def convert_from_openai_json_to_azure_ai_jsonl(input_file, output_file):
       items.append(converted_item)
   
   # Write to JSONL format (one JSON object per line)
-  with open(output_file, 'w') as f:
+  with open(output_file, 'w', encoding='utf-8') as f:
     for item in items:
-      f.write(json.dumps(item) + '\n')
+      f.write(json.dumps(item, ensure_ascii=False) + '\n')
   
   print(f"Converted {len(items)} items from {input_file} to {output_file}")
   return items
@@ -34,7 +34,7 @@ def convert_from_openai_json_to_azure_ai_jsonl(input_file, output_file):
 def convert_from_azure_ai_jsonl_to_openai_json(input_file, output_file):
   
   items = []
-  with open(input_file, 'r') as f:
+  with open(input_file, 'r', encoding='utf-8') as f:
     for line in f:
       data = json.loads(line)
       items.append({
@@ -47,8 +47,8 @@ def convert_from_azure_ai_jsonl_to_openai_json(input_file, output_file):
       })
   
   # Write the JSON array
-  with open(output_file, 'w') as f:
-    json.dump(items, f, indent=2)  
+  with open(output_file, 'w', encoding='utf-8') as f:
+    json.dump(items, f, indent=2, ensure_ascii=False)  
   
   print(f"Converted {len(items)} items from {input_file} to {output_file}")
   return items

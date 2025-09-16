@@ -1,4 +1,4 @@
-import os, json, math, time, re, copy
+import os, json, math, time, re, copy, csv
 import datetime as dt
 
 import openai
@@ -7,7 +7,6 @@ import numpy as np
 
 from dataclasses import dataclass
 from dotenv import load_dotenv
-from openai.types.shared import reasoning_effort
 from openai_backendtools import *
 from test_rag_operations import *
 
@@ -1065,6 +1064,26 @@ def measure_score_model_variability(client, items, eval_name, prompt_template, e
   log_function_footer(function_name, start_time)
   return items_copy, "OK"
 
+# ----------------------------------------------------- END: Tests ------------------------------------------------------------
+
+# ----------------------------------------------------- START: Helpers --------------------------------------------------------
+
+def replace_invalid_chars_for_filename(text):
+  if not text: return "unnamed"
+  # Replace invalid characters with underscores
+  # Invalid characters for Windows: < > : " | ? * \ /
+  # Also replace spaces and other problematic characters
+  invalid_chars = r'[<>:"|?*\\/\s]'
+  sanitized = re.sub(invalid_chars, '_', text)  
+  # Remove multiple consecutive underscores
+  sanitized = re.sub(r'_+', '_', sanitized)  
+  # Remove leading/trailing underscores
+  sanitized = sanitized.strip('_')
+  # Ensure the result is not empty
+  if not sanitized: return "unnamed"
+  # Limit length to avoid filesystem issues
+  return sanitized[:50]
+
 def log_eval_items_to_file(items, log_filename, log_dir):  
   # Create log directory if it doesn't exist
   os.makedirs(log_dir, exist_ok=True)  
@@ -1077,7 +1096,44 @@ def log_eval_items_to_file(items, log_filename, log_dir):
     json.dump(items, f, indent=2, ensure_ascii=False)
   print(f"Model outputs logged to: '{absolute_log_filepath}'.")
 
-# ----------------------------------------------------- END: Tests ------------------------------------------------------------
+def log_eval_items_to_csv(items, log_filename, log_dir):
+  # Create log directory if it doesn't exist
+  os.makedirs(log_dir, exist_ok=True)
+  # Generate filename with timestamp and vector store ID
+  log_filepath = os.path.join(log_dir, log_filename)
+  # Convert to absolute path
+  absolute_log_filepath = os.path.abspath(log_filepath)
+  
+  # Define CSV columns
+  fieldnames = ['input', 'reference', 'output_text', 'score', 'rationale']
+  
+  # Save items to CSV file
+  with open(log_filepath, 'w', newline='', encoding='utf-8') as f:
+    writer = csv.DictWriter(f, fieldnames=fieldnames)
+    writer.writeheader()
+    
+    for item_data in items:
+      item = item_data.get('item', {})
+      
+      # Join rationale array items with ASCII char 10 (newline) for Excel compatibility
+      rationale_text = ''
+      if 'rationale' in item and isinstance(item['rationale'], list):
+        rationale_text = '\n'.join(item['rationale'])
+      elif 'rationale' in item:
+        rationale_text = str(item['rationale'])
+      
+      row = {
+        'input': item.get('input', ''),
+        'reference': item.get('reference', ''),
+        'output_text': item.get('output_text', ''),
+        'score': item.get('score', ''),
+        'rationale': rationale_text
+      }
+      writer.writerow(row)
+  
+  print(f"Model outputs logged to CSV: '{absolute_log_filepath}'.")
+
+# ----------------------------------------------------- END: Helpers ----------------------------------------------------------
 
 
 # ----------------------------------------------------- START: Main -----------------------------------------------------------
@@ -1125,40 +1181,47 @@ if __name__ == '__main__':
 
   # If we have path to eval file, load items from eval file (JSON)
   if params.eval_path:
-    with open(params.eval_path, 'r') as f:
+    with open(params.eval_path, 'r', encoding='utf-8') as f:
       eval_data = json.load(f)
       params.items = eval_data
       # params.items = [item['item'] for item in eval_data]
 
+  # Initialize vs variable
+  vs = None
+  
   # If re_create_vector_store_and_get_model_outputs=True, create temporary vector store by uploading files and get answers from model
-  re_create_vector_store_and_get_model_outputs = True
+  re_create_vector_store_and_get_model_outputs = False
   if re_create_vector_store_and_get_model_outputs:
     print("-"*140)
     # Step 1: Create vector store by uploading files
     test_vector_store_with_files = create_test_vector_store_from_folder_path(client,params.vector_store_name, params.folder_path)
+    vs = test_vector_store_with_files.vector_store
     print("-"*140)
     # Step 2: Get answers from model and store in items
     params.items = get_answers_from_model_and_return_items(client, test_vector_store_with_files.vector_store.id, params.answer_model, params.items)
     print("-"*140)
   
   # If use_existing_vector_store_and_get_model_outputs=True, uses existing vector store to get answers from model
-  use_existing_vector_store_and_get_model_outputs = False
+  use_existing_vector_store_and_get_model_outputs = True
   if use_existing_vector_store_and_get_model_outputs:
-    vector_store_name = "test_vector_store"; vector_store_id = None
+    vector_store_id = None # overwrite params.vector_store_name with your vector store id
     if vector_store_id: vs = get_vector_store_by_id(client, vector_store_id)
-    elif vector_store_name: vs = get_vector_store_by_name(client, vector_store_name)
+    elif params.vector_store_name: vs = get_vector_store_by_name(client, params.vector_store_name)
     else: raise Exception("No vector store id or name provided")
     if vs is None: raise Exception(f"Vector store '{vector_store_name}' not found. Please create it first or check the name.")
-    
     print("-"*140)    
     # Step 1: Get answers from model and store in items
     params.items, status = get_answers_from_model_and_return_items(client, vs.id, params.answer_model, params.items, params.instructions, params.answer_temperature, params.answer_reasoning_effort)
     print("-"*140)
 
-  # Log model output in "../eval-logs/[DATETIME]_[VSID]_modeloutputs.json"
+  # Log model output in "../eval-logs/[DATETIME]_[VS_NAME]_modeloutputs.json"
   if params.log_model_output:
+    if vs: vs_name = vs.name
+    else:
+      try: vs_name = get_vector_store_by_name(client, params.vector_store_name).name
+      except: vs_name = "[UNKNOWN_VS]"
     timestamp = dt.datetime.now().strftime("%Y%m%d-%H%M%S")
-    log_filename = f"{timestamp}_{vs.id}_modeloutputs.json"
+    log_filename = f"{timestamp}_{replace_invalid_chars_for_filename(vs_name)}_modeloutputs.json"
     log_eval_items_to_file(params.items, log_filename, eval_log_folder_path)
 
   # Step 3A: Test eval using embedding and cosine similarity
@@ -1197,11 +1260,22 @@ if __name__ == '__main__':
   # print(summarize_item_scores(params.items, params.min_score, 4))
   # print("-"*140)
 
-  # Log eval output in "../eval-logs/[DATETIME]_[VSID]_evaloutputs.json"
+  params.items, status = score_answers_using_score_model_grader_and_return_items(client, params.items, "eval - azure similarity", judge_model_prompt_template_5, params.eval_model, params.min_score, params.remove_input_from_prompt, params.delete_eval_after_run, params.log_details)
+  print("."*100 + f"\n    Evaluation results using 'score_model' grader and prompt template 5 (Azure Similarity):")
+  print(summarize_item_scores(params.items, params.min_score, 4))
+  print("-"*140)
+
+  # Log eval output in "../eval-logs/[DATETIME]_[VS_NAME]_evaloutputs.json"
   if params.log_eval_output:
+    if vs: vs_name = vs.name
+    else:
+      try: vs_name = get_vector_store_by_name(client, params.vector_store_name).name
+      except: vs_name = "[UNKNOWN_VS]"
     timestamp = dt.datetime.now().strftime("%Y%m%d-%H%M%S")
-    log_filename = f"{timestamp}_{vs.id}_evaloutputs.json"
+    log_filename = f"{timestamp}_{replace_invalid_chars_for_filename(vs_name)}_evaloutputs.json"
     log_eval_items_to_file(params.items, log_filename, eval_log_folder_path)
+    log_filename = f"{timestamp}_{replace_invalid_chars_for_filename(vs_name)}_evaloutputs.csv"
+    log_eval_items_to_csv(params.items, log_filename, eval_log_folder_path)
 
   # # Step 4A: Measure variablity of prompt 1
   # measure_score_model_variability(client, params.items, "Eval Prompt 1 (Simple)", judge_model_prompt_template_1, params.eval_model, params.min_score, params.variability_runs, params.remove_input_from_prompt, params.delete_eval_after_run, params.log_details)
