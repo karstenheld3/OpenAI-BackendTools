@@ -69,6 +69,22 @@ def format_filesize(num_bytes):
 def format_timestamp(ts):
   return ('' if not ts else datetime.datetime.fromtimestamp(ts).strftime('%Y-%m-%d %H:%M:%S'))
 
+# Format milliseconds into a human-readable string
+def format_milliseconds(millisecs: int) -> str:
+  if millisecs < 1000: return f"{millisecs} ms"
+  # For durations under 50 seconds, show one decimal for seconds
+  if millisecs < 50000:
+    seconds_float = round(millisecs / 1000.0, 1)
+    unit = "sec" if seconds_float == 1.0 else "secs"
+    return f"{seconds_float:.1f} {unit}"
+  secs = millisecs // 1000; hours = secs // 3600; minutes = (secs % 3600) // 60; seconds = secs % 60
+  parts = []
+  if hours: parts.append(f"{hours} hour{'s' if hours != 1 else ''}")
+  if minutes: parts.append(f"{minutes} min{'s' if minutes != 1 else ''}")
+  if seconds: parts.append(f"{seconds} sec{'s' if seconds != 1 else ''}")
+  return ', '.join(parts) if parts else "0 sec"
+
+
 def log_function_header(name):
   start_time = datetime.datetime.now()
   print(f"[{start_time.strftime('%Y-%m-%d %H:%M:%S')}] START: {name}...")
@@ -493,6 +509,28 @@ def get_vector_store_by_id(client, vector_store_id):
       return vector_store
   return None
 
+
+# Get all files from a vector store and add attributes from from global files list
+def get_vector_store_files_with_filenames(client, vector_store):
+  vector_store_files = get_vector_store_files(client, vector_store)
+  global_files = get_all_files(client)
+  
+  # Create a dictionary for quick lookup of global files by ID
+  global_files_dict = {getattr(f, 'id', None): f for f in global_files}
+  
+  # Add attributes from global files to vector store files
+  for vs_file in vector_store_files:
+    file_id = getattr(vs_file, 'id', None)
+    if file_id and file_id in global_files_dict:
+      global_file = global_files_dict[file_id]
+      # Add filename and other attributes from global file
+      if hasattr(global_file, 'filename'): setattr(vs_file, 'filename', global_file.filename)
+      if hasattr(global_file, 'bytes'): setattr(vs_file, 'bytes', global_file.bytes)
+      if hasattr(global_file, 'purpose'): setattr(vs_file, 'purpose', global_file.purpose)
+      if hasattr(global_file, 'created_at') and not hasattr(vs_file, 'created_at'): setattr(vs_file, 'created_at', global_file.created_at)
+  
+  return vector_store_files
+
 def get_vector_store_files(client, vector_store):
   if isinstance(vector_store, str):
     # if it's a name or ID, retrieve the vector store
@@ -534,6 +572,41 @@ def get_vector_store_files(client, vector_store):
     setattr(file, 'vector_store_name', vector_store_name)
   
   return all_files
+
+def get_vector_store_file_ids_with_status(client, vector_store, status):
+  if isinstance(vector_store, str):
+    vector_stores = get_all_vector_stores(client)
+    for temp_vs in vector_stores:
+      if temp_vs.name == vector_store or temp_vs.id == vector_store:
+        vector_store = temp_vs
+        break
+
+  if not vector_store:
+    raise ValueError(f"Vector store '{vector_store}' not found")
+
+  vector_store_id = getattr(vector_store, 'id', None)
+  if not vector_store_id:
+    return []
+
+  valid_statuses = ["in_progress", "completed", "failed", "cancelled"]
+  if status not in valid_statuses:
+    raise ValueError(f"Invalid status '{status}'. Must be one of: {', '.join(valid_statuses)}")
+
+  files_page = client.vector_stores.files.list(vector_store_id=vector_store_id, filter=status)
+  all_files = list(files_page.data)
+
+  has_more = hasattr(files_page, 'has_more') and files_page.has_more
+  current_page = files_page
+
+  while has_more:
+    last_id = current_page.data[-1].id if current_page.data else None
+    if not last_id: break
+    next_page = client.vector_stores.files.list(vector_store_id=vector_store_id, filter=status, after=last_id)
+    all_files.extend(next_page.data)
+    current_page = next_page
+    has_more = hasattr(next_page, 'has_more') and next_page.has_more
+
+  return [getattr(f, 'id', None) for f in all_files if getattr(f, 'id', None)]
 
 # Gets the file metrics for a vector store as dictionary with keys: total, failed, cancelled, in_progress, completed
 def get_vector_store_file_metrics(client, vector_store):
@@ -675,15 +748,17 @@ def format_file_attributes_table(vector_store_files):
   return '\n'.join(lines)
 
 # Delete files with 'failed' or 'cancelled' status from both vector store and global storage
-def delete_failed_vector_store_files(client, vector_store_id):
+def delete_failed_vector_store_files(client, vector_store_id, dry_run=False):
   files = get_vector_store_files(client, vector_store_id)
   failed_files = [f for f in files if getattr(f, 'status', None) in ['failed', 'cancelled']]
   for i, file in enumerate(failed_files):
-    print(f"[ {i+1} / {len(failed_files)} ] Deleting file ID={file.id} with status='{getattr(file, 'status', '')}'...")
+    print(f"[ {i+1} / {len(failed_files)} ] Removing and deleting file ID={file.id} with status='{getattr(file, 'status', '')}'...")
+    if dry_run: return failed_files
     try: client.vector_stores.files.delete(vector_store_id=vector_store_id, file_id=file.id)
-    except Exception as e: print(f"  WARNING: Failed to delete file_id='{file.id}' from vector_store_id='{vector_store_id}'. The file is probably already deleted in the global file storage.")
+    except Exception as e: print(f"  WARNING: Failed to remove file_id='{file.id}' from vector_store_id='{vector_store_id}'. The file is probably already deleted in the global file storage.")
     try: client.files.delete(file_id=file.id)
     except Exception as e: print(f"  WARNING: Failed to delete file_id='{file.id}' from global file storage.")
+  return failed_files
 
 def delete_vector_store_files_added_after_date(client, vector_store_id, date, dry_run=False):
   function_name = 'Delete vector store files added after date'
@@ -972,6 +1047,35 @@ def delete_empty_vector_stores(client, dry_run=False):
       if not dry_run:
         try: client.vector_stores.delete(vs.id)
         except Exception as e: print(f"      WARNING: Failed to delete empty vector store ID={vs.id} ({format_timestamp(vs.created_at)}). The vector store is probably already deleted.")
+
+def create_vector_store(client, vector_store_name: str, chunk_size=4096, chunk_overlap=2048) -> any:
+  """Create a new vector store with specified chunking strategy.
+  
+  Args:
+    client: OpenAI client
+    vector_store_name: Name of the vector store to create
+    chunk_size: Maximum chunk size in tokens (default: 4096)
+    chunk_overlap: Chunk overlap in tokens (default: 2048)
+  
+  Returns:
+    Created vector store
+  """
+  print(f"  Creating vector store '{vector_store_name}' with chunk_size={chunk_size}, chunk_overlap={chunk_overlap}...")
+  
+  # Set up chunking strategy
+  chunking_strategy = {
+    "type": "static",
+    "static": {
+      "max_chunk_size_tokens": chunk_size,
+      "chunk_overlap_tokens": chunk_overlap
+    }
+  }
+  
+  # Create vector store
+  vector_store = client.vector_stores.create(name=vector_store_name, chunking_strategy=chunking_strategy)
+  print(f"    OK. ID={vector_store.id}") if vector_store.id else print("  FAIL.")
+  
+  return vector_store
 
 # ----------------------------------------------------- END: Vector stores ----------------------------------------------------
 

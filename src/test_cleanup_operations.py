@@ -24,6 +24,10 @@ if __name__ == '__main__':
   # Run this after you have deleted vector stores to remove unused files
   # -------------------------------------------------------------------------------------------------
   # delete_failed_and_unused_files(client, dry_run=True)
+
+  # Run this after you have created a vector store and want to remove failed and cancelled files
+  # -------------------------------------------------------------------------------------------------
+  # delete_failed_vector_store_files(client,"vs_67b0ca3da1fc819186fc791943fce1a3", dry_run=True)
   
   # delete_vector_store_by_name(client, "test_vector_store", True)
   # client.vector_stores.delete("vs_67b0ca3da1fc819186fc791943fce1a3")

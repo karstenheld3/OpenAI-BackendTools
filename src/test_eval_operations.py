@@ -504,6 +504,159 @@ def get_answers_from_model_and_return_items(client, vector_store_id, model, item
   log_function_footer(function_name, start_time)
   return items_copy, "OK"
 
+# Gets all answers for the 'input' in all items using batch API with enhanced parameters and stores them in 'output_text' of each items
+def get_answers_from_model_and_return_items_using_batch_api(client, vector_store_id, model, items, instructions=None, temperature=0, reasoning_effort=None):
+  function_name = 'Get answers from model using batch API and add to items'
+  start_time = log_function_header(function_name)
+  
+  # Make a deep copy of items to avoid modifying the original
+  items_copy = copy.deepcopy(items)
+  
+  # Step 1: Create JSONL content for batch requests
+  batch_requests = []
+  for idx, item in enumerate(items_copy):
+    input_text = item['item']['input']
+    
+    # Build request parameters for responses API
+    request_params = {
+      "model": model,
+      "input": input_text,
+      "tools": [{ "type": "file_search", "vector_store_ids": [vector_store_id] }],
+      "temperature": temperature
+    }
+    
+    # Add instructions if provided
+    if instructions: 
+      request_params["instructions"] = instructions
+    
+    # Remove temperature parameter for reasoning models that don't support it
+    # This function also handles adding reasoning configuration (effort)
+    remove_temperature_from_request_params_for_reasoning_models(request_params, model, reasoning_effort)
+    
+    # Create batch request in JSONL format
+    batch_request = {
+      "custom_id": f"request-{idx}",
+      "method": "POST",
+      "url": "/v1/responses",
+      "body": request_params
+    }
+    batch_requests.append(batch_request)
+  
+  # Step 2: Create JSONL file content
+  jsonl_content = "\n".join([json.dumps(req) for req in batch_requests])
+  
+  # Step 3: Upload file for batch processing
+  print(f"  Uploading batch file with {len(batch_requests)} requests...")
+  file_response = retry_on_openai_errors(
+    lambda: client.files.create(
+      file=("eval_batch_requests.jsonl", jsonl_content.encode('utf-8')),
+      purpose="batch"
+    ), 
+    indentation=4
+  )
+  input_file_id = file_response.id
+  print(f"    File uploaded with ID: {input_file_id}")
+  
+  # Step 4: Create batch job
+  print(f"  Creating batch job...")
+  batch_response = retry_on_openai_errors(
+    lambda: client.batches.create(
+      input_file_id=input_file_id,
+      endpoint="/v1/responses",
+      completion_window="24h"
+    ),
+    indentation=4
+  )
+  batch_id = batch_response.id
+  print(f"    Batch created with ID: {batch_id}")
+  
+  # Step 5: Poll for batch completion
+  print(f"  Waiting for batch completion...")
+  max_wait_time = 3600  # 1 hour max wait
+  poll_interval = 20    # Poll every 30 seconds
+  elapsed_time = 0
+  
+  while elapsed_time < max_wait_time:
+    batch_status = retry_on_openai_errors(
+      lambda: client.batches.retrieve(batch_id),
+      indentation=4
+    )
+    
+    print(f"    Batch status: '{batch_status.status}' (elapsed: {format_milliseconds(elapsed_time*1000)}, {poll_interval}s poll interval)")
+    
+    if batch_status.status == "completed":
+      break
+    elif batch_status.status in ["failed", "expired", "cancelled"]:
+      error_msg = f"Batch failed with status: '{batch_status.status}'"
+      print(f"    ERROR: {error_msg}")
+      log_function_footer(function_name, start_time)
+      return items_copy, error_msg
+    
+    time.sleep(poll_interval)
+    elapsed_time += poll_interval
+  
+  if elapsed_time >= max_wait_time:
+    error_msg = "Batch processing timed out"
+    print(f"    ERROR: {error_msg}")
+    log_function_footer(function_name, start_time)
+    return items_copy, error_msg
+  
+  # Step 6: Download and process results
+  print(f"  Downloading batch results...")
+  output_file_id = batch_status.output_file_id
+  
+  if not output_file_id:
+    error_msg = "No output file available"
+    print(f"    ERROR: {error_msg}")
+    log_function_footer(function_name, start_time)
+    return items_copy, error_msg
+  
+  # Download the results file
+  output_content = retry_on_openai_errors(
+    lambda: client.files.content(output_file_id),
+    indentation=4
+  )
+  
+  # Parse JSONL results
+  results_text = output_content.read().decode('utf-8')
+  results_lines = results_text.strip().split('\n')
+  
+  # Create mapping from custom_id to result
+  results_map = {}
+  for line in results_lines:
+    if line.strip():
+      result = json.loads(line)
+      custom_id = result.get('custom_id')
+      if custom_id and 'response' in result and 'body' in result['response']:
+        results_map[custom_id] = result['response']['body']
+  
+  # Step 7: Update items with results
+  for idx, item in enumerate(items_copy):
+    custom_id = f"request-{idx}"
+    input_text = item['item']['input']
+    print(f"  [ {idx + 1} / {len(items_copy)} ] Query: {input_text}")
+    
+    if custom_id in results_map:
+      result_body = results_map[custom_id]
+      output_text = result_body.get('output_text', '')
+      print(f"    Response: {truncate_string(remove_linebreaks(output_text), 80)}")
+      item['item']['output_text'] = output_text
+    else:
+      print(f"    WARNING: No result found for request {custom_id}")
+      item['item']['output_text'] = ""
+  
+  # Step 8: Cleanup - delete uploaded files
+  try:
+    client.files.delete(input_file_id)
+    client.files.delete(output_file_id)
+    print(f"  Cleaned up batch files")
+  except Exception as e:
+    print(f"  WARNING: Could not cleanup files: {e}")
+  
+  log_function_footer(function_name, start_time)
+  return items_copy, "OK"
+
+
 # Embedds (vectorizes) reference and model output, then gets scores for all items using cosine similarity and adds score and rationale to each item
 def score_answers_using_cosine_similarity_and_return_items(client, items, embedding_model="text-embedding-3-small", log_details: bool = True):
   function_name = 'Evaluate answers using cosine similarity'
@@ -1174,8 +1327,8 @@ if __name__ == '__main__':
     ,remove_input_from_prompt=False
     ,delete_eval_after_run=False
     ,log_details=True
-    ,log_model_output=False
-    ,log_eval_output=False
+    ,log_model_output=True
+    ,log_eval_output=True
     ,variability_runs=1
   )
 
@@ -1190,7 +1343,7 @@ if __name__ == '__main__':
   vs = None
   
   # If re_create_vector_store_and_get_model_outputs=True, create temporary vector store by uploading files and get answers from model
-  re_create_vector_store_and_get_model_outputs = False
+  re_create_vector_store_and_get_model_outputs = True
   if re_create_vector_store_and_get_model_outputs:
     print("-"*140)
     # Step 1: Create vector store by uploading files
@@ -1198,11 +1351,11 @@ if __name__ == '__main__':
     vs = test_vector_store_with_files.vector_store
     print("-"*140)
     # Step 2: Get answers from model and store in items
-    params.items = get_answers_from_model_and_return_items(client, test_vector_store_with_files.vector_store.id, params.answer_model, params.items)
+    params.items = get_answers_from_model_and_return_items_using_batch_api(client, test_vector_store_with_files.vector_store.id, params.answer_model, params.items)
     print("-"*140)
   
   # If use_existing_vector_store_and_get_model_outputs=True, uses existing vector store to get answers from model
-  use_existing_vector_store_and_get_model_outputs = True
+  use_existing_vector_store_and_get_model_outputs = False
   if use_existing_vector_store_and_get_model_outputs:
     vector_store_id = None # overwrite params.vector_store_name with your vector store id
     if vector_store_id: vs = get_vector_store_by_id(client, vector_store_id)
@@ -1224,39 +1377,34 @@ if __name__ == '__main__':
     log_filename = f"{timestamp}_{replace_invalid_chars_for_filename(vs_name)}_modeloutputs.json"
     log_eval_items_to_file(params.items, log_filename, eval_log_folder_path)
 
-  # Step 3A: Test eval using embedding and cosine similarity
-  params.items, status = score_answers_using_cosine_similarity_and_return_items(client, params.items, params.embedding_model, params.log_details)
-  print("."*100 + f"\n    Evaluation results using embedding with '{params.embedding_model}' and cosine similiarity:")
-  print(summarize_item_scores(params.items, params.min_score, 4))
-  print("-"*140)
-  # Step 3B: Test eval using judge model with prompt template 1 (Simple)
-  params.items, status = score_answers_using_judge_model_and_return_items(client, params.items, judge_model_prompt_template_1, params.eval_model, params.remove_input_from_prompt, params.log_details)
-  print("."*100 + f"\n    Evaluation results using judge model '{params.eval_model}' with prompt template 1 (Simple):")
-  print(summarize_item_scores(params.items, params.min_score, 4) )
-  print("-"*140)
-  # Step 3C: Test eval using judge model with prompt template 2 (Scoring Model)
-  params.items, status = score_answers_using_judge_model_and_return_items(client, params.items, judge_model_prompt_template_2, params.eval_model, params.remove_input_from_prompt, params.log_details)
-  print("."*100 + f"\n    Evaluation results using judge model '{params.eval_model}' with prompt template 2 (Scoring Model):")
-  print(summarize_item_scores(params.items, params.min_score, 4))
-  print("-"*140)
-  # Step 3D: Test eval using score model grader with prompt template 1 (Simple)
-  params.items, status = score_answers_using_score_model_grader_and_return_items(client, params.items, "test_eval - prompt_template_1", judge_model_prompt_template_1, params.eval_model, params.min_score, params.remove_input_from_prompt, params.delete_eval_after_run, params.log_details)
-  print("."*100 + f"\n    Evaluation results using 'score_model' grader and prompt template 1 (Simple):")
-  print(summarize_item_scores(params.items, params.min_score, 4))
-  print("-"*140)
-  # Step 3E: Test eval using score model grader with prompt template 2 (Scoring Model)
-  params.items, status = score_answers_using_score_model_grader_and_return_items(client, params.items, "test_eval - prompt_template_2", judge_model_prompt_template_2, params.eval_model, params.min_score, params.remove_input_from_prompt, params.delete_eval_after_run, params.log_details)
-  print("."*100 + f"\n    Evaluation results using 'score_model' grader and prompt template 2 (Scoring Model):")
-  print(summarize_item_scores(params.items, params.min_score, 4))
-  print("-"*140)
-  # Step 3F: Test eval using score model grader with prompt template 3 (Langchain Correctness)
-  params.items, status = score_answers_using_score_model_grader_and_return_items(client, params.items, "test_eval - prompt_template_3", judge_model_prompt_template_3, params.eval_model, params.min_score, params.remove_input_from_prompt, params.delete_eval_after_run, params.log_details)
-  print("."*100 + f"\n    Evaluation results using 'score_model' grader and prompt template 3 (Langchain Correctness):")
-  print(summarize_item_scores(params.items, params.min_score, 4))
-  print("-"*140)
-
-  # params.items, status = score_answers_using_score_model_grader_and_return_items(client, params.items, "eval - azure similarity", judge_model_prompt_template_5, params.eval_model, params.min_score, params.remove_input_from_prompt, params.delete_eval_after_run, params.log_details)
-  # print("."*100 + f"\n    Evaluation results using 'score_model' grader and prompt template 5 (Azure Similarity):")
+  # # Step 3A: Test eval using embedding and cosine similarity
+  # params.items, status = score_answers_using_cosine_similarity_and_return_items(client, params.items, params.embedding_model, params.log_details)
+  # print("."*100 + f"\n    Evaluation results using embedding with '{params.embedding_model}' and cosine similiarity:")
+  # print(summarize_item_scores(params.items, params.min_score, 4))
+  # print("-"*140)
+  # # Step 3B: Test eval using judge model with prompt template 1 (Simple)
+  # params.items, status = score_answers_using_judge_model_and_return_items(client, params.items, judge_model_prompt_template_1, params.eval_model, params.remove_input_from_prompt, params.log_details)
+  # print("."*100 + f"\n    Evaluation results using judge model '{params.eval_model}' with prompt template 1 (Simple):")
+  # print(summarize_item_scores(params.items, params.min_score, 4) )
+  # print("-"*140)
+  # # Step 3C: Test eval using judge model with prompt template 2 (Scoring Model)
+  # params.items, status = score_answers_using_judge_model_and_return_items(client, params.items, judge_model_prompt_template_2, params.eval_model, params.remove_input_from_prompt, params.log_details)
+  # print("."*100 + f"\n    Evaluation results using judge model '{params.eval_model}' with prompt template 2 (Scoring Model):")
+  # print(summarize_item_scores(params.items, params.min_score, 4))
+  # print("-"*140)
+  # # Step 3D: Test eval using score model grader with prompt template 1 (Simple)
+  # params.items, status = score_answers_using_score_model_grader_and_return_items(client, params.items, "test_eval - prompt_template_1", judge_model_prompt_template_1, params.eval_model, params.min_score, params.remove_input_from_prompt, params.delete_eval_after_run, params.log_details)
+  # print("."*100 + f"\n    Evaluation results using 'score_model' grader and prompt template 1 (Simple):")
+  # print(summarize_item_scores(params.items, params.min_score, 4))
+  # print("-"*140)
+  # # Step 3E: Test eval using score model grader with prompt template 2 (Scoring Model)
+  # params.items, status = score_answers_using_score_model_grader_and_return_items(client, params.items, "test_eval - prompt_template_2", judge_model_prompt_template_2, params.eval_model, params.min_score, params.remove_input_from_prompt, params.delete_eval_after_run, params.log_details)
+  # print("."*100 + f"\n    Evaluation results using 'score_model' grader and prompt template 2 (Scoring Model):")
+  # print(summarize_item_scores(params.items, params.min_score, 4))
+  # print("-"*140)
+  # # Step 3F: Test eval using score model grader with prompt template 3 (Langchain Correctness)
+  # params.items, status = score_answers_using_score_model_grader_and_return_items(client, params.items, "test_eval - prompt_template_3", judge_model_prompt_template_3, params.eval_model, params.min_score, params.remove_input_from_prompt, params.delete_eval_after_run, params.log_details)
+  # print("."*100 + f"\n    Evaluation results using 'score_model' grader and prompt template 3 (Langchain Correctness):")
   # print(summarize_item_scores(params.items, params.min_score, 4))
   # print("-"*140)
 

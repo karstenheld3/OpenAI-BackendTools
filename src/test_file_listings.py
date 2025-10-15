@@ -27,6 +27,14 @@ def list_all_files(client):
   print("\n")
   return all_files
 
+def list_vector_store_files_with_filenames(client, vector_store_id):
+  vector_store_files = get_vector_store_files_with_filenames(client, vector_store_id)
+  print(f"Total files in vector store '{vector_store_id}': {len(vector_store_files)}")
+  print("-"*140)
+  print(format_files_table(truncate_list_if_too_long(vector_store_files)))
+  print("\n")
+  return vector_store_files
+
 # Display the vector stores with top row showing total count and expired count
 def list_vector_stores(client):
   all_vector_stores = get_all_vector_stores(client)
@@ -118,6 +126,9 @@ if __name__ == '__main__':
 
   all_vector_stores = list_vector_stores(client)
 
+  if all_vector_stores and len(all_vector_stores) > 0:
+    list_vector_store_files_with_filenames(client, all_vector_stores[-1].id)
+  
   all_assistants = list_assistants(client)
 
   files_used_by_vector_stores = list_files_used_by_vector_stores(client)

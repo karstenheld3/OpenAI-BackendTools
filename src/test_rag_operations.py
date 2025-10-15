@@ -117,7 +117,7 @@ def build_test_vector_store_by_adding_collected_files(client, vector_store, file
         status = f"OK: Upload (skipped)"
 
       # Step 2: Add file to vector store
-      file_id = files_data[file_path]['file_id']
+      file_id = files_data[file_path].get('file_id') if files_data[file_path] else None
       if file_id:
         try:
           metadata = files_metadata[file_path]
@@ -133,9 +133,10 @@ def build_test_vector_store_by_adding_collected_files(client, vector_store, file
 
     # Try to delete files globally that are marked as not retryable
     for file_path in do_not_retry_files:
-      file_id = files_data[file_path]['file_id']
-      try: client.files.delete(file_id=file_id)
-      except Exception as e: pass
+      file_id = files_data[file_path].get('file_id') if files_data[file_path] else None
+      if file_id:
+        try: client.files.delete(file_id=file_id)
+        except Exception as e: pass
     
     # Ensure all files in the vector store are of status 'completed'
     # Otherwise delete them from vector store and add them to failed files
@@ -172,8 +173,8 @@ def build_test_vector_store_by_adding_collected_files(client, vector_store, file
         # Find file data by searching through files_data
         file_path = None; file_size = None
         for path, data in files_data.items():
-            if data['file_id'] == file_id:
-              file_path = path; file_size = data['file_size'];
+            if data.get('file_id') == file_id:
+              file_path = path; file_size = data.get('file_size');
               break        
         print(f"    WARNING: '{error_msg}' - status: '{file_status}', id: {file_id}, file_path: '{file_path}', size: {format_filesize(file_size)}.")
         # delete file from vector store
@@ -188,13 +189,14 @@ def build_test_vector_store_by_adding_collected_files(client, vector_store, file
   if len(failed_files) > 0:
     print(f"  WARNING: {len(failed_files)} files could not be added to vector store. Deleting them...")
     for idx, file_path in enumerate(failed_files, 1):
-      file_id = files_data[file_path]['file_id']
+      file_id = files_data[file_path].get('file_id') if files_data[file_path] else None
       print(f"    [ {idx} / {len(failed_files)} ] ID={file_id} '{file_path}'")    
       # Delete file from vector store and from global file storage
-      try: client.vector_stores.files.delete(vector_store_id=vector_store.id, file_id=file_id)
-      except Exception as e: pass
-      try: client.files.delete(file_id=file_id)
-      except Exception as e: pass
+      if file_id:
+        try: client.vector_stores.files.delete(vector_store_id=vector_store.id, file_id=file_id)
+        except Exception as e: pass
+        try: client.files.delete(file_id=file_id)
+        except Exception as e: pass
       del files_data[file_path]
       del files_metadata[file_path]
       del files[files.index(file_path)]
