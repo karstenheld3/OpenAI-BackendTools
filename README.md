@@ -536,8 +536,8 @@ Tests RAG operations by querying a vector store using the responses API, with an
     File search tool call status: 'completed', results: 2
     Index | File ID                     | Filename            | Score | Attributes | Content
     ----- | --------------------------- | ------------------- | ----- | ---------- | ------------------------------------------------------------
-    00000 | file-NYFxgXFYqp2xTgYquTM4Z5 | ArilenaDrovikCV.pdf | 0.92  | 0 of 0     | (anonymous)  Arilena Drovik PhD Molecular Biology Princip...
-    00001 | file-TwCGYwub7ho7USKninPcEh | Publications1.md    | 0.66  | 0 of 0     | | Title | Author(s) | Year | Publisher | Link | |-------|...
+    00000 | file-4jBk3m2aJtGEaKNW18q67x | ArilenaDrovikCV.pdf | 0.87  | 3 of 3     | Arilena Drovik PhD Molecular Biology Principal Investigat...
+    00001 | file-YUUtMc245iMXNMpNssy2nZ | Publications1.md    | 0.66  | 3 of 3     | | Title | Author(s) | Year | Publisher | Link | |-------|...
 [2025-06-09 12:40:05] END: RAG operations using responses API (10 secs).
 ```
 
@@ -561,6 +561,29 @@ response_file_search_tool_call = next((item for item in response.output if item.
 response_file_search_results = response_file_search_tool_call.results
 ```
 
+### Function: `test_rag_operations_using_assistants_api`
+
+Tests RAG operations by querying a vector store using the assistants API.
+
+**Location:** `test_rag_operations.py`
+
+**Parameters:** 
+- `client`: The OpenAI client instance to use for API calls
+- `assistant_id`: ID of the assistant configured with file search capabilities
+- `query`: The query to test RAG operations with
+- `truncate_output`: Boolean flag to truncate the response output (default: True)
+
+**Returns:**
+- The assistant's answer as a string
+
+**Example output:**
+```
+[2025-11-16 21:00:01] START: RAG operations using assistants API...
+--------------------------------------------------------------------------------------------------------------------------------------------
+  Test query with 'assistant' tool: Who is Arilena Drovik?
+    Response: Arilena Drovik is a highly accomplished molecular biologist and geneticist with ...
+[2025-11-16 21:00:14] END: RAG operations using assistants API (12 secs).
+```
 
 
 ## 4. Search operations

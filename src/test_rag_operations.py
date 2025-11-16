@@ -353,8 +353,8 @@ if __name__ == '__main__':
     ,assistant_instructions=default_assistant_instruction
     ,assistant_model="gpt-4o-mini"
     ,assistant_temperature=0
-    ,delete_vector_store_after_run=False
-    ,delete_assistant_after_run=False
+    ,delete_vector_store_after_run=True
+    ,delete_assistant_after_run=True
   )
 
   # delete_vector_store_by_name(client, params.vector_store_name, True)
