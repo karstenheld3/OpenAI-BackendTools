@@ -41,7 +41,7 @@ except ResourceNotFoundError:
 
 data_id = dataset.id
 
-# 2) Configure evaluators (QA-ish example: relevance + BLEU; add others as needed)
+# 2) Configure evaluator
 # Use exact field names from QA evaluator signature: query, response, context, ground_truth
 evaluators = {
     "relevance": EvaluatorConfiguration(

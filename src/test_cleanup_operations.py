@@ -30,7 +30,8 @@ if __name__ == '__main__':
   # delete_failed_vector_store_files(client,"vs_67b0ca3da1fc819186fc791943fce1a3", dry_run=True)
   
   # delete_vector_store_by_name(client, "test_vector_store", True)
-  # client.vector_stores.delete("vs_67b0ca3da1fc819186fc791943fce1a3")
+  # try: client.vector_stores.delete("vs_6919b051ac448191bd150509d9910399")
+  # except Exception as e: print(e)
   # delete_vector_store_by_id(client, "vs_67b0ca3da1fc819186fc791943fce1a3", True)
   # delete_empty_vector_stores(client, dry_run=True)
 

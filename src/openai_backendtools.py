@@ -415,6 +415,18 @@ def delete_assistant_by_name(client, name):
   print(f"  Deleting assistant '{name}'...")
   client.beta.assistants.delete(assistant.id)
 
+# Delete an assistant by ID
+def delete_assistant_by_id(client, assistant_id):
+  assistants = get_all_assistants(client)
+  assistant = next((a for a in assistants if a.id == assistant_id), None)
+  if not assistant:
+    print(f"  Assistant id='{assistant_id}' not found.")
+    return
+
+  print(f"  Deleting assistant '{assistant.name}' (ID={assistant.id}, {format_timestamp(assistant.created_at)})...")
+  client.beta.assistants.delete(assistant.id)
+  print(f"  OK: Assistant deleted")
+
 # Format a list of assistants into a table
 def format_assistants_table(assistant_list):
   # assistant_list: List of Assistant objects
@@ -459,6 +471,90 @@ def format_assistants_table(assistant_list):
     lines.append(' | '.join(str(cell).ljust(col_widths[i]) for i, cell in enumerate(row)))
   
   return '\n'.join(lines)
+
+# Creates an assistant with optional file_search capabilities
+def create_assistant(client, name, instructions, vs_id, model, temperature=0.01):
+  # Build assistant parameters
+  assistant_params = {
+    "name": name,
+    "instructions": instructions,
+    "model": model,
+    "temperature": temperature
+  }
+  
+  # Add file_search tool only if vector store ID is provided
+  if vs_id:
+    assistant_params["tools"] = [{"type": "file_search"}]
+    assistant_params["tool_resources"] = {"file_search": {"vector_store_ids": [vs_id]}}
+  
+  assistant = client.beta.assistants.create(**assistant_params)
+  return assistant
+
+# Gets an answer from an assistant for a given query with retry logic
+def get_assistant_answer(client, assistant_id, query):
+    
+  # Run the assistant on the thread with retries
+  max_attempts = 5; attempt = 1; wait_seconds = 3
+  
+  while attempt <= max_attempts:
+    try:
+      
+      # Create a thread
+      thread = client.beta.threads.create()
+      
+      # Create message with query
+      client.beta.threads.messages.create(
+        thread_id=thread.id,
+        role="user",
+        content=query
+      )
+      
+      # Create and run
+      run = client.beta.threads.runs.create(
+        thread_id=thread.id,
+        assistant_id=assistant_id
+      )
+      
+      # Wait for the run to complete
+      while True:
+        run_status = client.beta.threads.runs.retrieve(
+          thread_id=thread.id,
+          run_id=run.id
+        )
+        
+        if run_status.status == 'completed':
+          break
+        elif run_status.status == 'failed':
+          error_msg = run_status.last_error.message if hasattr(run_status, 'last_error') else 'Unknown error'
+          # Delete thread before raising exception
+          client.beta.threads.delete(thread_id=thread.id)
+          raise Exception(f"Run failed: {error_msg}")
+        
+        time.sleep(1)
+      
+      # Get the assistant's response
+      messages = client.beta.threads.messages.list(thread_id=thread.id)
+      
+      # Get the latest assistant message
+      assistant_message = next(msg for msg in messages if msg.role == 'assistant')
+      answer = assistant_message.content[0].text.value
+      
+      # Delete thread
+      client.beta.threads.delete(thread_id=thread.id)
+      
+      return answer
+      
+    except Exception as e:
+      if attempt == max_attempts:
+        print(f"  FAIL: Assistant run failed after {max_attempts} attempts: {str(e)}")
+        raise Exception(f"Assistant run failed after {max_attempts} attempts: {str(e)}")
+      
+      print(f"  WARNING: Attempt [ {attempt} / {max_attempts} ] failed: {str(e)}")
+      print(f"  Retrying in {wait_seconds} seconds...")
+      attempt += 1
+      time.sleep(wait_seconds)
+
+
 
 # ----------------------------------------------------- END: Assistants -------------------------------------------------------
 
@@ -1006,10 +1102,22 @@ def delete_files_in_vector_store_by_file_type(client, vector_store_id, file_type
 
 
 def delete_vector_store_by_id(client, vector_store_id, delete_files=False):
-  vector_stores = get_all_vector_stores(client)
-  vs = [vs for vs in vector_stores if vs.id == vector_store_id]
+  vs = None
+  try:
+    vector_stores = get_all_vector_stores(client)
+    vs = [vs for vs in vector_stores if vs.id == vector_store_id]
+    if vs:
+      vs = vs[0]
+  except Exception as e:
+    print(f"  WARNING: Failed to get all vector stores: {str(e)}")
+    print(f"  Attempting to retrieve vector store directly...")
+    try:
+      vs = client.vector_stores.retrieve(vector_store_id)
+    except Exception as e2:
+      print(f"  ERROR: Failed to retrieve vector store: {str(e2)}")
+      vs = None
+  
   if vs:
-    vs = vs[0]
     print(f"  Deleting vector store '{vs.name}' (ID={vs.id} , {format_timestamp(vs.created_at)})...")
     if delete_files:
       files = get_vector_store_files(client, vs)

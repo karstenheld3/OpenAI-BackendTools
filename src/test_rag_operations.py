@@ -11,6 +11,11 @@ load_dotenv()
 # https://platform.openai.com/docs/assistants/tools/file-search/supported-files#supported-files
 default_filetypes_accepted_by_vector_stores = ["c", "cpp", "cs", "css", "doc", "docx", "go", "html", "java", "js", "json", "md", "pdf", "php", "pptx", "py", "rb", "sh", "tex", "ts", "txt"]
 
+default_assistant_instruction = """You are a helpful assistant that can search through files to answer questions about their content.
+
+When referencing documents in the vector store, add a "Sources" section at the end of the answer. In this section, list the document name and the referenced page numbers. Like this: "[FILENAME] (page 93 - [user_topic])" or "[FILENAME] (pages 21, 45 - [user_topic])" or "[FILENAME] (pages 21 - 25, [user_topic])" Note: [user_topic] is the main topic of the citation (less than 6 words)
+"""
+
 # ----------------------------------------------------- START: Tests ----------------------------------------------------------
 
 @dataclass
@@ -58,20 +63,25 @@ def collect_files_from_folder_path(folder_path, include_subfolders=True, include
     for filename in filenames:
       file_path = os.path.join(root, filename)
       if os.path.isfile(file_path):
-        # Get file type from extension (handles multiple dots in filename)
-        file_type = filename.split('.')[-1].lower() if '.' in filename else ''
-        
-        # Check if file type should be included
-        if not include_all_files and file_type not in normalized_filetypes: continue
+        try:
+          # Get file type from extension (handles multiple dots in filename)
+          file_type = filename.split('.')[-1].lower() if '.' in filename else ''
           
-        # Extract year from file's last modification date
-        mod_timestamp = os.path.getmtime(file_path)
-        last_modified = datetime.datetime.fromtimestamp(mod_timestamp).strftime('%Y-%m-%d')
-        file_size = os.path.getsize(file_path)
-        # Store file source path and metadata
-        files.append(file_path)
-        files_metadata[file_path] = { 'source': file_path, 'filename': filename, 'file_type': file_type }
-        files_data[file_path] = { 'file_size': file_size, 'last_modified': last_modified}
+          # Check if file type should be included
+          if not include_all_files and file_type not in normalized_filetypes: continue
+            
+          # Extract year from file's last modification date
+          mod_timestamp = os.path.getmtime(file_path)
+          last_modified = datetime.datetime.fromtimestamp(mod_timestamp).strftime('%Y-%m-%d')
+          file_size = os.path.getsize(file_path)
+          # Store file source path and metadata
+          files.append(file_path)
+          files_metadata[file_path] = { 'source': file_path, 'filename': filename, 'file_type': file_type }
+          files_data[file_path] = { 'file_size': file_size, 'last_modified': last_modified}
+        except (PermissionError, OSError) as e:
+          # Skip files that can't be accessed (lock files, permission issues, etc.)
+          print(f"  Skipping inaccessible file: {filename}")
+          continue
   
   return files, files_metadata, files_data
 
@@ -100,19 +110,24 @@ def build_test_vector_store_by_adding_collected_files(client, vector_store, file
     for idx, file_path in enumerate(files_to_upload, 1):
       # Step 1: Upload file, but only if not already uploaded
       file_id = files_data[file_path].get('file_id') if files_data[file_path] else None
-      if not file_id:    
-        with open(file_path, 'rb') as f:
-          try:
-            vector_store_file = client.files.create(file=f, purpose="assistants")
-            if vector_store_file.id:
-              status = f"OK: Upload"
-              files_data[file_path]['file_id'] = vector_store_file.id
-            else:
-              status = f"FAIL: Upload"
+      if not file_id:
+        try:
+          with open(file_path, 'rb') as f:
+            try:
+              vector_store_file = client.files.create(file=f, purpose="assistants")
+              if vector_store_file.id:
+                status = f"OK: Upload"
+                files_data[file_path]['file_id'] = vector_store_file.id
+              else:
+                status = f"FAIL: Upload"
+                failed_files.append(file_path)
+            except Exception as e:
+              status = f"FAIL: Upload '{file_path}' - {str(e)}"
               failed_files.append(file_path)
-          except Exception as e:
-            status = f"FAIL: Upload '{file_path}' - {str(e)}"
-            failed_files.append(file_path)
+        except (PermissionError, OSError) as e:
+          # Skip files that can't be opened (lock files, permission issues, etc.)
+          status = f"SKIPPED: Cannot access file - {os.path.basename(file_path)}"
+          # Don't add to failed_files since this is expected for inaccessible files
       else:
         status = f"OK: Upload (skipped)"
 
@@ -288,6 +303,25 @@ def test_rag_operations_using_responses_api(client, vector_store_id, openai_mode
 
   log_function_footer(function_name, start_time)
 
+def test_rag_operations_using_assistants_api(client, assistant_id, query, truncate_output=True):
+  function_name = 'RAG operations using assistants API'
+  start_time = log_function_header(function_name)
+
+  # Ask question
+  print("-"*140)
+  print(f"  Test query with 'assistant' tool: {query}")
+
+  # Get answer from assistant
+  answer = get_assistant_answer(client, assistant_id, query)
+  
+  # Display the answer
+  model_output = ("\n" + answer) if not truncate_output else truncate_string(answer.replace("\n", " "), 80)
+  print(f"    Response: {model_output}")
+
+  log_function_footer(function_name, start_time)
+  
+  return answer
+
 
 # ----------------------------------------------------- END: Tests ------------------------------------------------------------
 
@@ -304,7 +338,7 @@ if __name__ == '__main__':
     client = create_azure_openai_client(azure_openai_use_key_authentication)
 
   @dataclass
-  class RAGParams: vector_store_name: str; folder_path: str; query: str; use_existing_vector_store: bool; truncate_output: bool; delete_vector_store_after_run: bool; chunk_size: int; chunk_overlap: int
+  class RAGParams: vector_store_name: str; folder_path: str; query: str; use_existing_vector_store: bool; create_assistant: bool; truncate_output: bool; chunk_size: int; chunk_overlap: int; create_assistant: bool; assistant_name: str; assistant_instructions: str; assistant_model: str; assistant_temperature: float; delete_vector_store_after_run: bool; delete_assistant_after_run: bool
 
   params = RAGParams(
     vector_store_name="test_vector_store"
@@ -312,25 +346,50 @@ if __name__ == '__main__':
     ,query="Who is Arilena Drovik?"
     ,use_existing_vector_store=False
     ,truncate_output=True
-    ,delete_vector_store_after_run=True
     ,chunk_size=4096
     ,chunk_overlap=2048
+    ,create_assistant=True
+    ,assistant_name="CIRUU Aetheris Documents Seb's Corner"
+    ,assistant_instructions=default_assistant_instruction
+    ,assistant_model="gpt-4o-mini"
+    ,assistant_temperature=0
+    ,delete_vector_store_after_run=False
+    ,delete_assistant_after_run=False
   )
 
+  # delete_vector_store_by_name(client, params.vector_store_name, True)
+  # delete_vector_store_by_id(client, "vs_691a141a371c8191aa52c48d059889d0", True)
+  # delete_assistant_by_name(client, params.assistant_name)
+
   # Step 1: Create vector store by uploading files or get existing vector store
+  vs = None
   if params.use_existing_vector_store:
     vs = get_vector_store_by_name(client, params.vector_store_name)
   else:
     test_vector_store_with_files = create_test_vector_store_from_folder_path(client, params.vector_store_name, params.folder_path, chunk_size=params.chunk_size, chunk_overlap=params.chunk_overlap)
     vs = test_vector_store_with_files.vector_store
+    print(f"Vector store created: '{vs.id}'")
+
+  assistant = None
+  if params.create_assistant:
+    vs_id = vs.id if vs else ""
+    assistant = create_assistant(client, params.assistant_name, params.assistant_instructions, vs_id, params.assistant_model, params.assistant_temperature)
+    print(f"Assistant created: '{assistant.id}'")
 
   # Step 2: Test file RAG functionalities
   test_rag_operations_using_responses_api(client, vs.id, openai_model_name, params.query, params.truncate_output)
 
+  if assistant:
+    test_rag_operations_using_assistants_api(client, assistant.id, params.query, params.truncate_output)
+
   print("-"*140)
 
   # Step 3: Delete vector store including all files
-  if params.delete_vector_store_after_run:
-    delete_vector_store_by_name(client, params.vector_store_name, True)
+  if params.delete_vector_store_after_run and vs:
+    delete_vector_store_by_id(client, vs.id, True)
+  
+  # Step 4: Delete assistant
+  if params.delete_assistant_after_run and assistant:
+    delete_assistant_by_id(client, assistant.id)
 
 # ----------------------------------------------------- END: Main -------------------------------------------------------------
