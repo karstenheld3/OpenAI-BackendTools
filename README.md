@@ -21,7 +21,7 @@ A collection of tools and demo code to test, operate and maintain Open AI and Az
 - **Evaluation Operations** with `test_eval_operations.py`: Tools for evaluating RAG responses using judge models with scoring and grading.
 - **File Crawling** with `test_file_crawling.py`: Data classes and utilities for file crawling operations.
 
-#### 👉 How to set up your Azure Open AI Service to use this toolkit: [AzureOpenAI.md](AzureOpenAI.md)
+#### 👉 How to set up your Azure Open AI Service to use this toolkit: [AZURE_OPENAI_SETUP.md](AZURE_OPENAI_SETUP.md)
 - Creating your .env file and where to get the information from
 - Example .env files for access via API keys, Managed Identity, and Service Principal
 - Azure Open AI deployment and access types
@@ -73,10 +73,10 @@ A collection of tools and demo code to test, operate and maintain Open AI and Az
 │   └── replicate_vector_store_content.py      # Vector store content replication tool
 ├── RAGFiles/                                  # Directory for RAG-related test files
 ├── .env                                       # Environment configuration for Azure and OpenAI
-├── env-file-template.txt                      # Template for .env file (documented in AzureOpenAI.md)
+├── env-file-template.txt                      # Template for .env file (documented in AZURE_OPENAI_SETUP.md)
 ├── requirements.txt                           # Python package dependencies
 ├── LICENSE                                    # Project license information
-├── AzureOpenAI.md                             # Azure setup instructions
+├── AZURE_OPENAI_SETUP.md                             # Azure setup instructions
 └── README.md                                  # Project documentation
 ```
 
@@ -325,7 +325,7 @@ Index | ID                                 | Filename                           
 
 ### Function: `test_basic_file_operations`
 
-Performs basic file operations: upload, add to vector store, deletion. With Azure Open AI Services, if vector store and file deletion fails and you are using a Service Principal or Managed Identity, you need to assign it the 'Cognitive Services OpenAI Contributor' role. See [AzureOpenAI.md](AzureOpenAI.md) for more information.  
+Performs basic file operations: upload, add to vector store, deletion. With Azure Open AI Services, if vector store and file deletion fails and you are using a Service Principal or Managed Identity, you need to assign it the 'Cognitive Services OpenAI Contributor' role. See [AZURE_OPENAI_SETUP.md](AZURE_OPENAI_SETUP.md) for more information.  
 
 **Location:** `test_file_operations.py`
 
