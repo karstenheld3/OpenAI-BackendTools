@@ -36,8 +36,8 @@ def list_vector_store_files_with_filenames(client, vector_store_id):
   return vector_store_files
 
 # Display the vector stores with top row showing total count and expired count
-def list_vector_stores(client):
-  all_vector_stores = get_all_vector_stores(client)
+def list_vector_stores(client, include_broken_ones: bool= False):
+  all_vector_stores = get_all_vector_stores(client,include_broken_ones)
   all_vector_stores_expired = [v for v in all_vector_stores if getattr(v, 'status', None) == 'expired']
   total_usage_bytes = sum([vs.usage_bytes for vs in all_vector_stores if hasattr(vs, 'usage_bytes')])
   print(f"Total vector stores: {len(all_vector_stores)} ({len(all_vector_stores_expired)} expired, {format_filesize(total_usage_bytes)} total storage)")
@@ -122,9 +122,12 @@ if __name__ == '__main__':
   if openai_service_type == "openai": client = create_openai_client()
   elif openai_service_type == "azure_openai": client = create_azure_openai_client(azure_openai_use_key_authentication)
 
-  all_files = list_all_files(client)
+  all_vector_stores = list_vector_stores(client, True)
+  
+  # Filter out vector stores with ID = "[UNKNOWN]"
+  all_vector_stores = [vs for vs in all_vector_stores if vs.id != "[UNKNOWN]"] 
 
-  all_vector_stores = list_vector_stores(client)
+  all_files = list_all_files(client)
 
   if all_vector_stores and len(all_vector_stores) > 0:
     list_vector_store_files_with_filenames(client, all_vector_stores[-1].id)

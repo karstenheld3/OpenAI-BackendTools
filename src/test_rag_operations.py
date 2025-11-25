@@ -323,6 +323,23 @@ def test_rag_operations_using_assistants_api(client, assistant_id, query, trunca
   return answer
 
 
+# retrives the chunks for each file and writes the chunks to console
+def test_vector_store_files_content_retrieval(client, vector_store_id):
+  function_name = 'File content retrieval from vector store'
+  start_time = log_function_header(function_name)
+  
+  print(f"  Retrieving all files and chunks from vector store '{vector_store_id}'...")
+  file_contents = get_all_vector_store_file_contents(client, vector_store_id)
+  print(f"    OK: {len(file_contents)} file(s)")
+  
+  # Display formatted table
+  lines = format_vector_store_file_content_table(file_contents)
+  print("    " + lines.replace("\n","\n    "))
+  
+  log_function_footer(function_name, start_time)
+
+
+
 # ----------------------------------------------------- END: Tests ------------------------------------------------------------
 
 # ----------------------------------------------------- START: Main -----------------------------------------------------------
@@ -348,8 +365,8 @@ if __name__ == '__main__':
     ,truncate_output=True
     ,chunk_size=4096
     ,chunk_overlap=2048
-    ,create_assistant=True
-    ,assistant_name="CIRUU Aetheris Documents Seb's Corner"
+    ,create_assistant=False
+    ,assistant_name="Test RAG Assistant"
     ,assistant_instructions=default_assistant_instruction
     ,assistant_model="gpt-4o-mini"
     ,assistant_temperature=0
@@ -358,7 +375,7 @@ if __name__ == '__main__':
   )
 
   # delete_vector_store_by_name(client, params.vector_store_name, True)
-  # delete_vector_store_by_id(client, "vs_691a141a371c8191aa52c48d059889d0", True)
+  # delete_vector_store_by_id(client, "vs_6922fa4676748191bc426a115ed8e2ab", True)
   # delete_assistant_by_name(client, params.assistant_name)
 
   # Step 1: Create vector store by uploading files or get existing vector store
@@ -379,16 +396,21 @@ if __name__ == '__main__':
   # Step 2: Test file RAG functionalities
   test_rag_operations_using_responses_api(client, vs.id, openai_model_name, params.query, params.truncate_output)
 
+  print("-"*140)
+
   if assistant:
     test_rag_operations_using_assistants_api(client, assistant.id, params.query, params.truncate_output)
 
+  # Step 3: Test file chunk retrieval
+  test_vector_store_files_content_retrieval(client, vs.id)
+  
   print("-"*140)
 
-  # Step 3: Delete vector store including all files
+  # Step 4: Delete vector store including all files
   if params.delete_vector_store_after_run and vs:
     delete_vector_store_by_id(client, vs.id, True)
   
-  # Step 4: Delete assistant
+  # Step 5: Delete assistant
   if params.delete_assistant_after_run and assistant:
     delete_assistant_by_id(client, assistant.id)
 

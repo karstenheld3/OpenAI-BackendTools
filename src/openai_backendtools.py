@@ -558,38 +558,259 @@ def get_assistant_answer(client, assistant_id, query):
 
 # ----------------------------------------------------- END: Assistants -------------------------------------------------------
 
-# ----------------------------------------------------- START: Vector stores --------------------------------------------------
-
 # Gets all vector stores from Azure OpenAI with pagination handling.
 # Adds a zero-based 'index' attribute to each vector store.
-def get_all_vector_stores(client):
-  first_page = client.vector_stores.list()
-  has_more = hasattr(first_page, 'has_more') and first_page.has_more
+# Implements fallback as broken vector stores can cause the REST API to return 404 Not Found
+def get_all_vector_stores(client, include_broken_ones: bool = False):
+  # Dummy class to mark 404 errors in vector store lists
+  class DummyVectorStore404:
+    def __init__(self, error_context):
+      self.id = "[UNKNOWN]"
+      self.name = f"[404: {error_context}]"
+      self.created_at = 0
+      self.file_counts = None
+      self.status = ""
+      self.error_context = error_context
   
-  # If only one page, add 'index' and return
-  if not has_more:
-    for idx, vector_store in enumerate(first_page.data): setattr(vector_store, 'index', idx)
-    return first_page.data
-  
-  # Initialize collection with first page data
-  all_vector_stores = list(first_page.data)
-  total_vector_stores = len(all_vector_stores)
-  
-  # Continue fetching pages while there are more results
-  current_page = first_page
-  while has_more:
-    last_id = current_page.data[-1].id if current_page.data else None    
-    if not last_id: break
-    next_page = client.vector_stores.list(after=last_id)
-    all_vector_stores.extend(next_page.data)
-    total_vector_stores += len(next_page.data)
-    current_page = next_page
-    has_more = hasattr(next_page, 'has_more') and next_page.has_more
-  
-  # Add index attribute to all vector stores
-  for idx, vector_store in enumerate(all_vector_stores): setattr(vector_store, 'index', idx)
+  try:
+    first_page = client.vector_stores.list()
+    has_more = hasattr(first_page, 'has_more') and first_page.has_more
     
-  return all_vector_stores
+    # If only one page, add 'index' and return
+    if not has_more:
+      result = first_page.data if include_broken_ones else [vs for vs in first_page.data if vs.id != "[UNKNOWN]"]
+      for idx, vector_store in enumerate(result): setattr(vector_store, 'index', idx)
+      return result
+    
+    # Initialize collection with first page data
+    all_vector_stores = list(first_page.data)
+    total_vector_stores = len(all_vector_stores)
+    
+    # Continue fetching pages while there are more results
+    current_page = first_page
+    while has_more:
+      last_id = current_page.data[-1].id if current_page.data else None    
+      if not last_id: break
+      
+      try:
+        next_page = client.vector_stores.list(after=last_id)
+      except openai.NotFoundError:
+        # Insert 404 marker
+        all_vector_stores.append(DummyVectorStore404(f"Pagination after={last_id}"))
+        # Fallback: Try fetching with desc order and limit=1
+        fetched_ids = {vs.id for vs in all_vector_stores}
+        try:
+          desc_page = client.vector_stores.list(order='desc', limit=1)
+          desc_has_more = hasattr(desc_page, 'has_more') and desc_page.has_more
+          desc_current = desc_page
+          
+          # Add if not already fetched
+          if desc_page.data and desc_page.data[0].id not in fetched_ids:
+            all_vector_stores.extend(desc_page.data)
+            fetched_ids.add(desc_page.data[0].id)
+          
+          # Continue fetching in desc order until 404 or duplicate
+          while desc_has_more:
+            last_desc_id = desc_current.data[-1].id if desc_current.data else None
+            if not last_desc_id: break
+            try:
+              desc_next = client.vector_stores.list(order='desc', limit=1, after=last_desc_id)
+              # Check if already fetched
+              if desc_next.data and desc_next.data[0].id in fetched_ids:
+                break
+              all_vector_stores.extend(desc_next.data)
+              fetched_ids.update(vs.id for vs in desc_next.data)
+              desc_current = desc_next
+              desc_has_more = hasattr(desc_next, 'has_more') and desc_next.has_more
+            except openai.NotFoundError:
+              # Insert 404 marker and switch to asc order
+              all_vector_stores.append(DummyVectorStore404(f"DESC order after={last_desc_id}"))
+              break
+          
+          # Now fetch with asc order
+          try:
+            asc_page = client.vector_stores.list(order='asc', limit=1)
+            asc_has_more = hasattr(asc_page, 'has_more') and asc_page.has_more
+            asc_current = asc_page
+            
+            # Add if not already fetched
+            if asc_page.data and asc_page.data[0].id not in fetched_ids:
+              all_vector_stores.extend(asc_page.data)
+              fetched_ids.add(asc_page.data[0].id)
+            
+            # Continue fetching in asc order
+            while asc_has_more:
+              last_asc_id = asc_current.data[-1].id if asc_current.data else None
+              if not last_asc_id: break
+              try:
+                asc_next = client.vector_stores.list(order='asc', limit=1, after=last_asc_id)
+                # Check if already fetched
+                if asc_next.data and asc_next.data[0].id in fetched_ids:
+                  break
+                all_vector_stores.extend(asc_next.data)
+                fetched_ids.update(vs.id for vs in asc_next.data)
+                asc_current = asc_next
+                asc_has_more = hasattr(asc_next, 'has_more') and asc_next.has_more
+              except openai.NotFoundError:
+                all_vector_stores.append(DummyVectorStore404(f"ASC order after={last_asc_id}"))
+                break
+          except openai.NotFoundError:
+            # ASC initial fetch failed as part of fallback
+            pass
+        except openai.NotFoundError:
+          # If desc fails, try asc directly
+          pass
+          try:
+            asc_page = client.vector_stores.list(order='asc', limit=1)
+            asc_has_more = hasattr(asc_page, 'has_more') and asc_page.has_more
+            asc_current = asc_page
+            
+            # Add if not already fetched
+            if asc_page.data and asc_page.data[0].id not in fetched_ids:
+              all_vector_stores.extend(asc_page.data)
+              fetched_ids.add(asc_page.data[0].id)
+            
+            # Continue fetching in asc order
+            while asc_has_more:
+              last_asc_id = asc_current.data[-1].id if asc_current.data else None
+              if not last_asc_id: break
+              try:
+                asc_next = client.vector_stores.list(order='asc', limit=1, after=last_asc_id)
+                # Check if already fetched
+                if asc_next.data and asc_next.data[0].id in fetched_ids:
+                  break
+                all_vector_stores.extend(asc_next.data)
+                fetched_ids.update(vs.id for vs in asc_next.data)
+                asc_current = asc_next
+                asc_has_more = hasattr(asc_next, 'has_more') and asc_next.has_more
+              except openai.NotFoundError:
+                all_vector_stores.append(DummyVectorStore404(f"Fallback ASC after={last_asc_id}"))
+                break
+          except openai.NotFoundError:
+            # Fallback ASC initial failed
+            pass
+        break
+      
+      all_vector_stores.extend(next_page.data)
+      total_vector_stores += len(next_page.data)
+      current_page = next_page
+      has_more = hasattr(next_page, 'has_more') and next_page.has_more
+    
+    # Filter out dummy markers if requested
+    if not include_broken_ones: all_vector_stores = [vs for vs in all_vector_stores if vs.id != "[UNKNOWN]"]
+    
+    # Add index attribute to all vector stores
+    for idx, vector_store in enumerate(all_vector_stores): setattr(vector_store, 'index', idx)
+      
+    return all_vector_stores
+    
+  except openai.NotFoundError:
+    # If initial request fails with 404, try desc order with limit=1
+    all_vector_stores = []
+    try:
+      desc_page = client.vector_stores.list(order='desc', limit=1)
+      all_vector_stores.extend(desc_page.data)
+      
+      # Add index and return if no more pages
+      if not (hasattr(desc_page, 'has_more') and desc_page.has_more):
+        if not include_broken_ones: all_vector_stores = [vs for vs in all_vector_stores if vs.id != "[UNKNOWN]"]
+        for idx, vector_store in enumerate(all_vector_stores): setattr(vector_store, 'index', idx)
+        return all_vector_stores
+      
+      # Continue fetching in desc order until 404
+      current_page = desc_page
+      has_more = True
+      fetched_ids = {vs.id for vs in all_vector_stores}
+      
+      while has_more:
+        last_id = current_page.data[-1].id if current_page.data else None
+        if not last_id: break
+        try:
+          next_page = client.vector_stores.list(order='desc', limit=1, after=last_id)
+          all_vector_stores.extend(next_page.data)
+          fetched_ids.update(vs.id for vs in next_page.data)
+          current_page = next_page
+          has_more = hasattr(next_page, 'has_more') and next_page.has_more
+        except openai.NotFoundError:
+          # Switch to asc order to fetch remaining vector stores
+          # Collect ASC items separately to insert them before the 404 marker
+          asc_items = []
+          try:
+            asc_page = client.vector_stores.list(order='asc', limit=1)
+            asc_has_more = hasattr(asc_page, 'has_more') and asc_page.has_more
+            asc_current = asc_page
+            
+            # Add if not already fetched
+            if asc_page.data and asc_page.data[0].id not in fetched_ids:
+              asc_items.extend(asc_page.data)
+              fetched_ids.add(asc_page.data[0].id)
+            
+            # Continue fetching in asc order
+            while asc_has_more:
+              last_asc_id = asc_current.data[-1].id if asc_current.data else None
+              if not last_asc_id: break
+              try:
+                asc_next = client.vector_stores.list(order='asc', limit=1, after=last_asc_id)
+                # Check if already fetched
+                if asc_next.data and asc_next.data[0].id in fetched_ids:
+                  break
+                asc_items.extend(asc_next.data)
+                asc_current = asc_next
+                asc_has_more = hasattr(asc_next, 'has_more') and asc_next.has_more
+              except openai.NotFoundError:
+                asc_items.append(DummyVectorStore404(f"ASC after={last_asc_id}"))
+                break
+          except openai.NotFoundError:
+            # ASC initial fetch failed, but this is expected as part of fallback
+            pass
+          
+          # Insert ASC items before adding the DESC 404 marker
+          all_vector_stores.extend(asc_items)
+          all_vector_stores.append(DummyVectorStore404(f"DESC after={last_id}"))
+          break
+      
+      if not include_broken_ones:
+        all_vector_stores = [vs for vs in all_vector_stores if vs.id != "[UNKNOWN]"]
+      for idx, vector_store in enumerate(all_vector_stores): setattr(vector_store, 'index', idx)
+      return all_vector_stores
+      
+    except openai.NotFoundError:
+      # Final fallback: Fetch one-by-one with asc order
+      try:
+        asc_page = client.vector_stores.list(order='asc', limit=1)
+        all_vector_stores.extend(asc_page.data)
+        
+        # Continue fetching one-by-one in ascending order
+        asc_has_more = hasattr(asc_page, 'has_more') and asc_page.has_more
+        asc_current = asc_page
+        fetched_ids = {vs.id for vs in all_vector_stores if hasattr(vs, 'id') and vs.id != "[UNKNOWN]"}
+        
+        while asc_has_more:
+          last_asc_id = asc_current.data[-1].id if asc_current.data else None
+          if not last_asc_id: break
+          try:
+            asc_next = client.vector_stores.list(order='asc', limit=1, after=last_asc_id)
+            # Check if already fetched
+            if asc_next.data and asc_next.data[0].id in fetched_ids:
+              break
+            all_vector_stores.extend(asc_next.data)
+            asc_current = asc_next
+            asc_has_more = hasattr(asc_next, 'has_more') and asc_next.has_more
+          except openai.NotFoundError:
+            all_vector_stores.append(DummyVectorStore404(f"ASC after={last_asc_id}"))
+            break
+        
+        if not include_broken_ones:
+          all_vector_stores = [vs for vs in all_vector_stores if vs.id != "[UNKNOWN]"]
+        for idx, vector_store in enumerate(all_vector_stores): setattr(vector_store, 'index', idx)
+        return all_vector_stores
+      except openai.NotFoundError:
+        # If all strategies fail, return list with error marker
+        all_vector_stores.append(DummyVectorStore404("All fallbacks failed"))
+        if not include_broken_ones:
+          all_vector_stores = [vs for vs in all_vector_stores if vs.id != "[UNKNOWN]"]
+        for idx, vector_store in enumerate(all_vector_stores): setattr(vector_store, 'index', idx)
+        return all_vector_stores
 
 def get_vector_store_by_name(client, vector_store_name):
   vector_stores = get_all_vector_stores(client)
@@ -644,7 +865,8 @@ def get_vector_store_files(client, vector_store):
   vector_store_name = getattr(vector_store, 'name', None)
   if not vector_store_id:
     return []
-    
+  
+
   files_page = client.vector_stores.files.list(vector_store_id=vector_store_id)
   all_files = list(files_page.data)
   
@@ -1184,6 +1406,110 @@ def create_vector_store(client, vector_store_name: str, chunk_size=4096, chunk_o
   print(f"    OK. ID={vector_store.id}") if vector_store.id else print("  FAIL.")
   
   return vector_store
+
+# Retrieve the parsed contents of a vector store file
+# Example return type: [{"type": "text", "text": "..."}, {"type": "text", "text": "..."}, ...]
+def get_vector_store_file_content(client, vector_store_id, file_id):
+  if not vector_store_id: raise ValueError(f"Expected a non-empty value for 'vector_store_id' but received {vector_store_id!r}")
+  if not file_id: raise ValueError(f"Expected a non-empty value for 'file_id' but received {file_id!r}")
+
+  content_page = client.vector_stores.files.content(vector_store_id=vector_store_id, file_id=file_id)
+  all_chunks = list(content_page.data)
+
+  has_more = hasattr(content_page, 'has_more') and content_page.has_more
+  current_page = content_page
+
+  while has_more:
+    last_id = current_page.data[-1].id if current_page.data else None
+    if not last_id: break
+
+    next_page = client.vector_stores.files.content(vector_store_id=vector_store_id, file_id=file_id, after=last_id)
+    all_chunks.extend(next_page.data)
+    current_page = next_page
+    has_more = hasattr(next_page, 'has_more') and next_page.has_more
+
+  return all_chunks
+
+# Retrieve all files and chunks of a vector store
+# Example return type: [{"file": <file_object>, "chunks": [{"type": "text", "text": "..."}, ...]}, ...]
+def get_all_vector_store_file_contents(client, vector_store_id):
+  if not vector_store_id: raise ValueError(f"Expected a non-empty value for 'vector_store_id' but received {vector_store_id!r}")
+  
+  vs = get_vector_store_by_id(client, vector_store_id)
+  all_vector_store_files = get_vector_store_files(client, vs)
+  
+  # For each file, retrieve its chunks
+  results = []
+  for file in all_vector_store_files:
+    chunks = get_vector_store_file_content(client, vector_store_id, file.id)
+    results.append({"file": file, "chunks": chunks})
+  
+  return results
+
+# formats a list of vector store file contents
+def format_vector_store_file_content_table(array_of_file_dicts):
+  if not array_of_file_dicts: return '(No file contents found)'
+  
+  # Define headers and max column widths
+  headers = ['Filename', 'Chunks', 'Chunk 1', 'Chunk 2']
+  max_widths = [60, 8, 40, 40]
+  
+  # Initialize column widths with header lengths, but respect max widths
+  col_widths = [min(len(h), max_widths[i]) for i, h in enumerate(headers)]
+  
+  rows = []
+  for item in array_of_file_dicts:
+    file = item.get('file')
+    chunks = item.get('chunks', [])
+    
+    # Get filename - check direct attribute first, then attributes dict
+    filename = '...'
+    if file:
+      # According to the documentation the data below should be returned but as of 2025-11-23 / SDK 2.8.1 'filename' is not included
+      # {"file_id":"file-abc123","filename":"example.txt","attributes":{"key":"value"},"content":[{"type":"text","text":"..."},...]}
+      # https://platform.openai.com/docs/api-reference/vector-stores-files/getContent
+      filename = getattr(file, 'filename', None)
+      # That's why we are using the file attributes as a fallback
+      if not filename:
+        attributes = getattr(file, 'attributes', {})
+        filename = attributes.get('filename', '...') if attributes else '...'
+    
+    # Get chunk count
+    chunk_count = str(len(chunks))
+    
+    # Get chunk texts for first 2 chunks
+    chunk_texts = []
+    for i in range(2):
+      chunk_text = ''
+      if chunks and len(chunks) > i:
+        chunk = chunks[i]
+        if hasattr(chunk, 'text'): chunk_text = chunk.text
+        elif isinstance(chunk, dict) and 'text' in chunk: chunk_text = chunk['text']
+        if chunk_text: chunk_text = chunk_text.replace('\n', ' ').replace('\r', ' ').replace('\t', ' ').replace('  ', ' ')
+      chunk_texts.append(chunk_text)
+    
+    # Prepare row data
+    row_data = [filename, chunk_count] + chunk_texts
+    
+    # Truncate cells (except filename which should not be truncated per requirements)
+    row_data = truncate_row_data(row_data, max_widths, except_indices=[0])
+    for i, cell_str in enumerate(row_data):
+      col_widths[i] = min(max(col_widths[i], len(cell_str)), max_widths[i])
+    
+    rows.append(row_data)
+  
+  # Build table as string
+  lines = []
+  header_line = ' | '.join(h.ljust(col_widths[i]) for i, h in enumerate(headers))
+  sep_line = ' | '.join('-'*col_widths[i] for i in range(len(headers)))
+  lines.append(header_line)
+  lines.append(sep_line)
+  
+  for row in rows:
+    lines.append(' | '.join(str(cell).ljust(col_widths[i]) for i, cell in enumerate(row)))
+  
+  return '\n'.join(lines)
+
 
 # ----------------------------------------------------- END: Vector stores ----------------------------------------------------
 
