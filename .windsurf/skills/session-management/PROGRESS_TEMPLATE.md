@@ -1,5 +1,7 @@
 # Session Progress
 
+Populated by `/session-new` workflow. Tracks implementation progress and task completion.
+
 **Doc ID**: YYYY-MM-DD_[SessionTopicCamelCase]-PROGRESS
 
 Track implementation progress and decisions.

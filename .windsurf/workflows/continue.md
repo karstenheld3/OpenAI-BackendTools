@@ -7,34 +7,105 @@ auto_execution_mode: 1
 
 Forward-looking execution of next steps in a plan.
 
-## Step 1: Identify Next Action
+## Step 1: Build Execution Sequence
 
-1. Read PROGRESS.md for current phase and status
-2. Read TASKS document (if exists) for next unchecked task
-3. If no TASKS, use IMPL plan steps
+Construct an ordered list of next actions by analyzing multiple sources:
 
-## Step 2: Execute Next Item
+**Mandatory re-read before continuing:**
 
-1. Execute the next task
-2. Update PROGRESS.md / TASKS (mark as Done)
-3. Proceed to next item
+**SESSION-BASED mode** - Re-read session folder documents:
+- NOTES.md
+- PROBLEMS.md
+- PROGRESS.md
+- FAILS.md
+- LEARNINGS.md (if exists)
+
+**PROJECT-WIDE mode** - Re-read workspace-level documents:
+- README.md
+- !NOTES.md or NOTES.md
+- !PROBLEMS.md or PROBLEMS.md (if exists)
+- !PROGRESS.md or PROGRESS.md (if exists)
+- FAILS.md
+- LEARNINGS.md (if exists)
+
+Then build execution sequence:
+
+**1.1 Analyze conversation context:**
+- Scan recent messages for workflow suggestions (e.g., "Run `/session-archive` when ready")
+- Check previous workflow outputs for successor workflows
+- Note any explicit user instructions about next steps
+
+**1.2 Check session lifecycle state** (SESSION-BASED mode):
+- Lifecycle: Init → Work → Save → Resume → Close → Archive
+- If resuming → check NOTES.md "Workflows to Run on Resume"
+- Session lifecycle workflows (`/session-close`, `/session-archive`) may appear in sequence from conversation context (Step 1.1), but require `[CONFIRM]` before execution (see Step 2)
+
+**1.3 Check progress and tasks:**
+- Read PROGRESS.md for unchecked items in To Do / In Progress
+- Read TASKS document (if exists) for next unchecked task
+- If no TASKS, check IMPL plan for next step
+
+**1.4 Merge into execution sequence:**
+- Combine all sources into ordered list
+- Workflow succession comes before task execution
+- Format:
+
+```markdown
+## Execution Sequence
+
+1. `/session-resume` - Session resumed, ready to continue
+2. [Next task from PROGRESS.md]
+3. ...
+```
+
+**1.5 If sequence is empty:** Report "No pending work" and STOP.
+
+## Step 2: Execute First Item
+
+Take the first item from the execution sequence:
+
+**If session lifecycle workflow** (`/session-close`, `/session-archive`):
+- Output sequence with `[CONFIRM]` - do NOT execute automatically
+- Wait for user to confirm with `/continue` or `/go`
+- Only then execute the workflow
+
+**If other workflow** (starts with `/`):
+- Execute the workflow
+- Remove from sequence when complete
+
+**If task**:
+- Execute the task
+- Update PROGRESS.md / TASKS (mark as Done)
 
 ## Step 3: Loop or Stop
 
-- **More tasks?** Continue to next item
-- **Phase complete?** Check gate, transition if passes
-- **All done?** Report completion
+After each execution:
+
+- **More items in sequence?** Return to Step 2
+- **Phase gate reached?** Run gate check before proceeding
+- **Sequence empty?** Report completion
+- **Blocker encountered?** Report and wait for user
 
 ## Output
 
-After each task:
+**After building sequence (Step 1):**
+
+```markdown
+## Execution Sequence
+
+1. `/session-archive` - Session closed, ready to archive
+2. Update README.md - From PROGRESS.md To Do
+3. Run tests - From TASKS TK-005
+```
+
+**After each execution (Step 2-3):**
 
 ```markdown
 ## Continue
 
-**Executed**: [task description]
+**Executed**: [item description]
 **Result**: [OK/FAIL]
-**Next**: [next task or gate check]
+**Remaining**: [count] items in sequence
 ```
 
 ## When to Use

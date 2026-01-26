@@ -121,9 +121,23 @@ Formulate three statements:
 
 Add entry to LEARNINGS.md using LEARNINGS_TEMPLATE.md structure:
 
-- Assign ID: `[TOPIC]-LN-[NNN]`
-- Fill all sections from steps 2-9
-- Place at top of Active Learnings section
+1. **Determine location (SESSION-FIRST rule)**:
+   
+   Check current work mode using AGEN states:
+   
+   **If SESSION-BASED** (working in `[SESSION_FOLDER]`):
+   - Write to `[SESSION_FOLDER]/LEARNINGS.md`
+   - Create file if it doesn't exist
+   - Session entries sync to workspace on `/session-close`
+   
+   **If PROJECT-WIDE** (no active session):
+   - Write to `[WORKSPACE_FOLDER]/LEARNINGS.md`
+
+2. Assign ID: `[TOPIC]-LN-[NNN]`
+
+3. Fill all sections from steps 2-9
+
+4. Place at top of file
 
 ## Step 11: Update Linked FAILS Entries
 

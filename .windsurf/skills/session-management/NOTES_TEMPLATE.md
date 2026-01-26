@@ -1,6 +1,16 @@
 # Session Notes
 
+Populated by `/session-new` workflow. Captures session context, decisions, and agent instructions for a specific development task.
+
 **Doc ID**: YYYY-MM-DD_[SessionTopicCamelCase]-NOTES
+
+## Initial Request
+
+If user provided a large initial prompt (>120 tokens), record it verbatim here for reference. Derived problems should be extracted and tracked in PROBLEMS.md with unique IDs.
+
+```
+[User's original request if >120 tokens]
+```
 
 ## Session Info
 
@@ -31,3 +41,15 @@ Maintain list of TOPIC IDs used in this session/project:
 
 - `AUTH` - Authentication and authorization system
 - `API` - API client and request handling
+
+# User Prompts
+
+[2026-01-20 12:24] <context descrtiption 1>
+````
+<prompt 1>
+````
+
+[2026-01-21 09:52] <context descrtiption 2>
+````
+<prompt 2>
+````

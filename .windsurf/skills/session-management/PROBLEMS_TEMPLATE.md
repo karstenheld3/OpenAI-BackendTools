@@ -1,8 +1,26 @@
 # Session Problems
 
+Populated by `/session-new` workflow. Tracks ALL problems to be addressed in this session.
+
 **Doc ID**: YYYY-MM-DD_[SessionTopicCamelCase]-PROBLEMS
 
-Track problems discovered during this session using ID format: `[TOPIC]-PR-[NNN]`
+**Purpose**: Comprehensive problem tracking - initial prompts, questions, feature requests, bugs, strange behavior, investigation topics. Everything that can be stated as a problem should be recorded here with a unique ID.
+
+**What goes here:**
+- Initial user requests (derived from large prompts in NOTES.md)
+- Questions requiring investigation
+- Feature requests and enhancements
+- Bugs and defects discovered
+- Strange behavior for later investigation
+- Architectural concerns
+- Performance issues
+
+**What does NOT go here:**
+- Failures and lessons learned (use FAILS.md)
+- General context or decisions (use NOTES.md)
+- Task execution status (use PROGRESS.md)
+
+Track problems using ID format: `[TOPIC]-PR-[NNN]`
 
 ## Open
 
@@ -17,6 +35,12 @@ Track problems discovered during this session using ID format: `[TOPIC]-PR-[NNN]
 - **Description**: Client-side expiration check uses local time, which may be out of sync with server
 - **Impact**: Valid tokens rejected as expired, or expired tokens used causing 401 errors
 - **Next Steps**: Use server time from response headers or implement server-side expiration check
+
+**UI-PR-003: How should we handle offline mode for the dashboard?**
+- **History**: Added 2026-01-15 14:20 (derived from initial prompt in NOTES.md)
+- **Description**: User requested offline capability but unclear on scope - full offline or read-only cache?
+- **Impact**: Affects architecture decisions for data sync and storage
+- **Next Steps**: Research offline-first patterns, propose options to user
 
 ## Resolved
 

@@ -6,7 +6,7 @@ trigger: always_on
 
 Universal formatting and writing conventions for all documents.
 
-## Text Style
+## Text Style (Exception: transcribed or external documents)
 
 - Use ASCII "double quotes" or 'single quotes'. Never use Non-ASCII quotes unless explicitly asked.
 - No emojis in documentation (see Document Rule Exceptions below)
@@ -107,6 +107,9 @@ Files starting with `.tmp` are temporary helper scripts created during operation
 ## Transcription Output
 
 Transcribed content MUST contain only the original document's content. No processing metadata, agent annotations, or workflow artifacts.
+
+**IMPORTANT: Text Style rules do NOT apply to transcribed content.**
+Transcriptions preserve the original exactly - including curly quotes, typos, unusual punctuation, and formatting choices. Only markdown structural elements (headers, lists, emphasis) are agent-created.
 
 **Prohibited in transcription output:**
 - Source filename, path, or URL

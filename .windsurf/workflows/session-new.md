@@ -23,9 +23,9 @@ If no [SESSION_FOLDER] provided, create one in the default sessions folder with 
 
 In the [SESSION_FOLDER], create tracking files from @session-management templates:
 
-- `NOTES.md` - Include "Current Phase" section for phase tracking
+- `NOTES.md` - Include "Current Phase" section for phase tracking. If user provides large prompts (>120 tokens), record them verbatim in "User Prompts" section
 - `PROGRESS.md` - Include "Phase Plan" section with 5 phases
-- `PROBLEMS.md` - Track issues discovered during session
+- `PROBLEMS.md` - Derive and list all problems from user's initial request. Each problem gets unique ID `[TOPIC]-PR-[NNN]` and goes in "Open" section
 
 ## Step 4: Initialize Phase Tracking
 

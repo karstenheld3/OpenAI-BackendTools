@@ -1,0 +1,13 @@
+{
+  "categories": [
+    {"name": "easy", "count": 2, "description": "Simple facts - single numbers, names, titles, dates"},
+    {"name": "medium_facts", "count": 2, "description": "Combined facts requiring synthesis of 2-3 pieces of information"},
+    {"name": "medium_inference", "count": 2, "description": "Questions requiring simple logical inference from stated facts"},
+    {"name": "hard_reasoning", "count": 2, "description": "Questions requiring multi-step reasoning or analysis"},
+    {"name": "hard_details", "count": 2, "description": "Questions about specific details that require careful reading"}
+  ],
+  "output_format": {
+    "require_reference_answer": true,
+    "require_answerable_flag": true
+  }
+}

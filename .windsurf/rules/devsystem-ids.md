@@ -18,6 +18,18 @@ All documents and items must have unique IDs for traceability.
 3. Use consistent TOPIC across all related documents
 4. Never create duplicate or conflicting TOPICs
 
+**GLOB Usage:**
+
+Use `GLOB` for **tracking IDs only** (workspace-level failures, problems, tasks):
+- `GLOB-FL-*` - DevSystem failures (sync errors, gate bypasses, tool issues)
+- `GLOB-PR-*` - Cross-cutting problems affecting multiple components
+- `GLOB-TK-*` - Workspace-wide tasks (deployments, refactoring)
+
+Do NOT use `GLOB` for **document IDs** (IN, SP, IP, TP, TK):
+- Named concepts get their own TOPIC: `MEPI-IN01`, `EDIRD-SP01`, `STRUT-SP01`
+- Features get their own TOPIC: `AUTH-SP01`, `CRWL-IP01`
+- If a document has a name, it has a TOPIC
+
 **Example: SINGLE-PROJECT**
 ```
 ## Topic Registry

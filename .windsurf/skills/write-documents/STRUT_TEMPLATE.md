@@ -2,7 +2,7 @@
 
 Template for creating STRUT plans (Structured Thinking notation) that can be embedded in any document.
 
-**Source**: `SPEC_STRUT_STRUCTURED_THINKING.md [STRUT-SP01]`
+**Source**: `docs/specs/SPEC_STRUT_STRUCTURED_THINKING.md [STRUT-SP01]`
 
 ## When to Use
 
@@ -68,6 +68,68 @@ STRUT plans can be inserted into:
 - `[PHASE-NAME]` - Next phase (e.g., `[DESIGN]`, `[IMPLEMENT]`)
 - `[CONSULT]` - Escalate to [ACTOR]
 - `[END]` - Plan complete
+
+## Concurrent Blocks
+
+Group steps that can run in parallel under a `Concurrent:` virtual step.
+
+### Syntax
+
+```
+├─ [ ] P1-S1 [VERB](params)
+├─ Concurrent: <strategy explaining why parallel>
+│   ├─ [ ] P1-S2 [VERB](params)
+│   ├─ [ ] P1-S3 [VERB](params)
+│   └─ [ ] P1-S4 [VERB](params)
+├─ [ ] P1-S5 [VERB](params)          ← implicit barrier, waits for S2-S4
+```
+
+### Rules
+
+- `Concurrent: <strategy>` - Virtual step (no checkbox) describing parallel group
+- Steps inside run concurrently
+- First step after Concurrent block is implicit barrier (waits for all)
+- Concurrent blocks can nest (discouraged beyond 1 level)
+
+### Step Dependencies
+
+Use `← Px-Sy` suffix for explicit dependencies within or after Concurrent blocks.
+
+```
+├─ Concurrent: Services layer
+│   ├─ [ ] P1-S2 [IMPLEMENT](password hashing)
+│   ├─ [ ] P1-S3 [IMPLEMENT](JWT tokens) ← P1-S2
+│   └─ [ ] P1-S4 [IMPLEMENT](email service)
+├─ [ ] P1-S5 [IMPLEMENT](login endpoint) ← P1-S2, P1-S3
+```
+
+**Dependency syntax:**
+- `← P1-S2` - Wait only for S2 (starts when S2 completes)
+- `← P1-S2, P1-S3` - Wait for S2 AND S3
+- No arrow after Concurrent block = wait for ALL steps in block
+- No arrow within Concurrent block = no dependencies (truly parallel)
+
+### Example: Auth System with Mixed Dependencies
+
+```
+[ ] P1 [IMPLEMENT]: Build auth system
+├─ [ ] P1-S1 [IMPLEMENT](User model)
+├─ Concurrent: Independent services, build in parallel
+│   ├─ [ ] P1-S2 [IMPLEMENT](password hashing)
+│   ├─ [ ] P1-S3 [IMPLEMENT](JWT tokens) ← P1-S2
+│   └─ [ ] P1-S4 [IMPLEMENT](email service)
+├─ [ ] P1-S5 [IMPLEMENT](login endpoint) ← P1-S2, P1-S3
+├─ [ ] P1-S6 [IMPLEMENT](register endpoint) ← P1-S4, P1-S5
+├─ [ ] P1-S7 [TEST]
+```
+
+**Execution order:**
+1. S1 runs first (sequential)
+2. S2, S4 start concurrently (S3 waits for S2)
+3. S3 starts when S2 completes
+4. S5 starts when S2 AND S3 complete (S4 may still be running)
+5. S6 starts when S4 AND S5 complete
+6. S7 starts when S6 completes (default sequential)
 
 ## Example: Simple Hotfix
 

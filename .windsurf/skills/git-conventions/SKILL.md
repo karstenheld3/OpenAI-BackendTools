@@ -52,6 +52,60 @@ refactor(domains): simplify source validation logic
 chore: update dependencies to latest versions
 ```
 
+## Safe Undo Commit
+
+**CRITICAL**: Choose the right reset mode to avoid data loss.
+
+### Undo Last Commit (Keep Files)
+
+```bash
+git reset --soft HEAD~1   # Undo commit, keep files STAGED
+git reset HEAD~1          # Undo commit, keep files UNSTAGED
+```
+
+### Undo Last Commit (Discard Files) - DESTRUCTIVE
+
+```bash
+git reset --hard HEAD~1   # Undo commit AND DELETE all changes
+```
+
+**WARNING**: `--hard` deletes uncommitted files permanently (unless recoverable via reflog).
+
+### Recovery After Accidental --hard Reset
+
+If files were committed before reset, recover from reflog:
+
+```bash
+git reflog                              # Find commit hash (e.g., abc1234)
+git checkout abc1234 -- path/to/file    # Recover specific file
+git checkout abc1234 -- .               # Recover all files from that commit
+```
+
+### Recovery From Remote
+
+If commit was pushed before local reset:
+
+```bash
+git fetch origin                        # Get latest from remote
+git log --oneline origin/master -5      # Check what's on remote
+git checkout origin/master -- path/to   # Recover file from remote
+```
+
+### Amend Last Commit (Not Yet Pushed)
+
+```bash
+git add <files>
+git commit --amend -m "new message"     # Replace last commit
+```
+
+### Force Push After Amend/Reset (Remote Has Old Commit)
+
+```bash
+git push --force-with-lease             # Safer than --force
+```
+
+**Use `--force-with-lease`**: Fails if remote changed since last fetch (prevents overwriting others' work).
+
 ## .gitignore Rules
 
 1. **NEVER commit secrets**: `.env` files, certificates (*.cer, *.pfx, *.pem, *.key), API keys

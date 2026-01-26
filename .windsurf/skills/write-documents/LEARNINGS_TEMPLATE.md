@@ -1,5 +1,7 @@
 # Learnings Log
 
+Populated by `/learn` workflow. Extracts transferable lessons from resolved problems.
+
 **Goal**: Extract transferable lessons from resolved problems through structured retrospective analysis
 
 ## Table of Contents

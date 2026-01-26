@@ -217,12 +217,17 @@ Files starting with `.tmp` are temporary helper scripts created during operation
 - `/verify` - Verify work against specs and rules
 - `/write-impl-plan` - Create implementation plan from spec
 - `/write-spec` - Create specification from requirements
+- `/write-strut` - Create STRUT plans with proper format
 - `/write-tasks-plan` - Create tasks plan from IMPL/TEST
 - `/write-test-plan` - Create test plan from spec
 
 ## STRUT Execution
 
-STRUT plans use structured notation for progress tracking. Execution follows these rules:
+STRUT plans use structured notation for progress tracking.
+
+**Creating STRUTs**: Use `/write-strut` workflow or invoke `@write-documents` skill with `STRUT_TEMPLATE.md`.
+
+Execution follows these rules:
 
 ### Execution Algorithm
 

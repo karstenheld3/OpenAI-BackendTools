@@ -40,9 +40,14 @@ Sessions track EDIRD phases:
 
 Use templates from this skill folder:
 
-- **NOTES.md** (`NOTES_TEMPLATE.md`): Key information, agent instructions, working patterns
-- **PROBLEMS.md** (`PROBLEMS_TEMPLATE.md`): Problems found and their status (Open/Resolved/Deferred)
-- **PROGRESS.md** (`PROGRESS_TEMPLATE.md`): To-do list, done items, tried-but-not-used approaches
+- **NOTES.md** (`NOTES_TEMPLATE.md`): Key information, agent instructions, working patterns, large initial prompts (>120 tokens)
+- **PROBLEMS.md** (`PROBLEMS_TEMPLATE.md`): All problems to be addressed - initial prompts, questions, feature requests, bugs, strange behavior, investigation topics. Each problem gets a unique ID and tracks status (Open/Resolved/Deferred)
+- **PROGRESS.md** (`PROGRESS_TEMPLATE.md`): Task execution tracking - to-do list, done items, tried-but-not-used approaches
+
+**Key distinction:**
+- **NOTES.md** = Context and reference information (static knowledge)
+- **PROBLEMS.md** = All topics requiring attention (dynamic problem list with IDs)
+- **PROGRESS.md** = Task execution status (what's being worked on)
 
 ## Assumed Workflow
 

@@ -114,7 +114,7 @@ No brackets for tokens in **conditions** - things the agent checks for branching
 - **[STATUS]** - Write status report
 - **[PROPOSE]** - Present multiple options for [ACTOR] to choose from
 - **[RECOMMEND]** - Suggest single option with rationale
-- **[VALIDATE]** - Confirm approach or result with [ACTOR]
+- **[CONFIRMS]** - Confirm approach or result with [ACTOR]
 - **[PRESENT]** - Share findings or results with [ACTOR]
 
 ### Completion

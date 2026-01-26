@@ -95,13 +95,23 @@ Brief recommendation for resolution:
 
 Add entry to FAILS.md:
 
-1. Determine location:
-   - SESSION-BASED: `[SESSION_FOLDER]/FAILS.md`
-   - PROJECT-WIDE: `[WORKSPACE_FOLDER]/FAILS.md` or `[PROJECT_FOLDER]/FAILS.md`
+1. **Determine location (SESSION-FIRST rule)**:
+   
+   Check current work mode using AGEN states:
+   
+   **If SESSION-BASED** (working in `[SESSION_FOLDER]`):
+   - Write to `[SESSION_FOLDER]/FAILS.md`
+   - Create file if it doesn't exist
+   - Session entries sync to workspace on `/session-close`
+   
+   **If PROJECT-WIDE** (no active session):
+   - Write to `[WORKSPACE_FOLDER]/FAILS.md` or `[PROJECT_FOLDER]/FAILS.md`
+   - For workspace-wide issues (DevSystem, tooling, MCP servers)
+   - For issues affecting multiple projects
 
 2. Generate ID: `[TOPIC]-FL-[NNN]`
 
-3. Add entry at top of Active Issues section using FAILS_TEMPLATE.md structure
+3. Add entry at top of file using FAILS_TEMPLATE.md structure
 
 4. Include code example if applicable (before/after)
 

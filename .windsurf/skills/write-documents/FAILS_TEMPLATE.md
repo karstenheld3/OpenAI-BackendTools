@@ -1,5 +1,7 @@
 # Failure Log
 
+Populated by `/fail` workflow. Records mistakes and lessons learned to prevent repetition.
+
 **Goal**: Document failures, mistakes, and lessons learned to prevent repetition
 
 ## Table of Contents

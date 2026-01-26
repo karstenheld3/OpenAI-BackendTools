@@ -13,6 +13,25 @@ Invoke these skills based on context:
 - @write-documents for document verification
 - @coding-conventions for code verification
 
+**CRITICAL**: Skill invocation returns instructions only. You MUST also read the supporting files listed in skill output (e.g., `PYTHON-RULES.md`, `WORKFLOW-RULES.md`) to get actual verification rules.
+
+## Mandatory Re-read
+
+**SESSION-BASED mode** - Re-read session folder documents:
+- NOTES.md
+- PROBLEMS.md
+- PROGRESS.md
+- FAILS.md
+- LEARNINGS.md (if exists)
+
+**PROJECT-WIDE mode** - Re-read workspace-level documents:
+- README.md
+- !NOTES.md or NOTES.md
+- !PROBLEMS.md or PROBLEMS.md (if exists)
+- !PROGRESS.md or PROGRESS.md (if exists)
+- FAILS.md
+- LEARNINGS.md (if exists)
+
 ## Workflow
 
 1. First find out what the context is (INFO, SPEC, IMPL, Code, TEST, Session)
