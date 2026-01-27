@@ -11,7 +11,7 @@ Run this script and answer with a single character:
 
 # Define what can be removed
 $workspaceFolder = (Get-Location).Path
-$venvDir = "$workspaceFolder\.tools\llm-eval-venv"
+$venvDir = "$workspaceFolder\.tools\llm-venv"
 $envFile = "$workspaceFolder\.env"
 $toolsDir = "$workspaceFolder\.tools"
 
@@ -120,7 +120,7 @@ Write-Host "To completely remove the skill, delete that folder manually." -Foreg
 
 **Components:**
 
-- **Virtual environment**: Python venv at `.tools/llm-eval-venv/` (~100-200 MB)
+- **Virtual environment**: Python venv at `.tools/llm-venv/` (~100-200 MB)
   - Contains: openai, anthropic, and dependencies
   - Safe to remove: Can be recreated by running SETUP.md again
 

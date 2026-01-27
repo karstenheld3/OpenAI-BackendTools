@@ -227,6 +227,11 @@ def call_openai(client, model: str, prompt: str, api_params: dict,
         "model": response.model
     }
     
+    if hasattr(response.usage, 'prompt_tokens_details') and response.usage.prompt_tokens_details:
+        cached = getattr(response.usage.prompt_tokens_details, 'cached_tokens', 0)
+        if cached:
+            result["usage"]["cached_tokens"] = cached
+    
     if hasattr(response, 'system_fingerprint') and response.system_fingerprint:
         result['system_fingerprint'] = response.system_fingerprint
     
@@ -234,27 +239,59 @@ def call_openai(client, model: str, prompt: str, api_params: dict,
 
 
 def call_anthropic(client, model: str, prompt: str, api_params: dict, method: str,
-                   image_data: str = None, image_media_type: str = None):
-    """Call Anthropic API with configurable parameters."""
-    content = []
+                   image_data: str = None, image_media_type: str = None,
+                   use_prompt_caching: bool = False):
+    """Call Anthropic API with configurable parameters and optional prompt caching."""
     
-    if image_data:
-        content.append({
-            "type": "image",
-            "source": {
-                "type": "base64",
-                "media_type": image_media_type,
-                "data": image_data
-            }
+    if use_prompt_caching:
+        system_content = []
+        user_content = []
+        
+        if image_data:
+            user_content.append({
+                "type": "image",
+                "source": {
+                    "type": "base64",
+                    "media_type": image_media_type,
+                    "data": image_data
+                },
+                "cache_control": {"type": "ephemeral"}
+            })
+        
+        system_content.append({
+            "type": "text",
+            "text": prompt,
+            "cache_control": {"type": "ephemeral"}
         })
-    
-    content.append({"type": "text", "text": prompt})
-    
-    call_params = {
-        'model': model,
-        'max_tokens': api_params.get('max_tokens', 4096),
-        'messages': [{"role": "user", "content": content}]
-    }
+        
+        user_content.append({"type": "text", "text": "Process the content above according to the instructions."})
+        
+        call_params = {
+            'model': model,
+            'max_tokens': api_params.get('max_tokens', 4096),
+            'system': system_content,
+            'messages': [{"role": "user", "content": user_content}]
+        }
+    else:
+        content = []
+        
+        if image_data:
+            content.append({
+                "type": "image",
+                "source": {
+                    "type": "base64",
+                    "media_type": image_media_type,
+                    "data": image_data
+                }
+            })
+        
+        content.append({"type": "text", "text": prompt})
+        
+        call_params = {
+            'model': model,
+            'max_tokens': api_params.get('max_tokens', 4096),
+            'messages': [{"role": "user", "content": content}]
+        }
     
     if 'temperature' in api_params:
         call_params['temperature'] = api_params['temperature']
@@ -264,19 +301,25 @@ def call_anthropic(client, model: str, prompt: str, api_params: dict, method: st
     
     response = client.messages.create(**call_params)
     
-    # Handle thinking responses: find text block (skip ThinkingBlock)
     text_content = ""
     for block in response.content:
         if hasattr(block, 'text'):
             text_content = block.text
             break
     
+    usage = {
+        "input_tokens": response.usage.input_tokens,
+        "output_tokens": response.usage.output_tokens
+    }
+    
+    if hasattr(response.usage, 'cache_creation_input_tokens'):
+        usage["cache_write_tokens"] = response.usage.cache_creation_input_tokens
+    if hasattr(response.usage, 'cache_read_input_tokens'):
+        usage["cache_read_tokens"] = response.usage.cache_read_input_tokens
+    
     return {
         "text": text_content,
-        "usage": {
-            "input_tokens": response.usage.input_tokens,
-            "output_tokens": response.usage.output_tokens
-        },
+        "usage": usage,
         "model": response.model
     }
 
@@ -303,6 +346,7 @@ Examples:
     parser.add_argument('--output-length', choices=EFFORT_LEVELS, default='medium', help='Output length (default: medium)')
     parser.add_argument('--seed', type=int, default=None, help='Random seed (OpenAI only)')
     parser.add_argument('--response-format', choices=['text', 'json'], default='text', help='Response format (default: text)')
+    parser.add_argument('--use-prompt-caching', action='store_true', help='Enable prompt caching (Anthropic explicit, OpenAI automatic)')
     return parser.parse_args()
 
 
@@ -346,12 +390,18 @@ def main():
             text_content = args.input_file.read_text(encoding='utf-8')
             prompt = f"{prompt}\n\n---\n\n{text_content}"
     
+    use_caching = getattr(args, 'use_prompt_caching', False)
+    
     if provider == 'openai':
         client = create_openai_client(keys)
         call_fn = lambda: call_openai(client, args.model, prompt, api_params, image_data, image_media_type)
+        if use_caching:
+            print("[INFO] OpenAI prompt caching is automatic (no API changes needed)", file=sys.stderr)
     else:
         client = create_anthropic_client(keys)
-        call_fn = lambda: call_anthropic(client, args.model, prompt, api_params, method, image_data, image_media_type)
+        call_fn = lambda: call_anthropic(client, args.model, prompt, api_params, method, image_data, image_media_type, use_caching)
+        if use_caching:
+            print("[INFO] Anthropic prompt caching enabled via cache_control", file=sys.stderr)
     
     print(f"Calling {provider} API with model {args.model}...", file=sys.stderr)
     result = retry_with_backoff(call_fn)
@@ -382,7 +432,15 @@ def main():
         meta_file.write_text(json.dumps(metadata, indent=2), encoding='utf-8')
         print(f"Metadata written to: {meta_file}", file=sys.stderr)
     
-    print(f"Done. Tokens: {result['usage']['input_tokens']} in, {result['usage']['output_tokens']} out", file=sys.stderr)
+    cache_info = ""
+    if result['usage'].get('cached_tokens'):
+        cache_info = f", {result['usage']['cached_tokens']} cached"
+    if result['usage'].get('cache_read_tokens'):
+        cache_info = f", {result['usage']['cache_read_tokens']} cache read"
+    if result['usage'].get('cache_write_tokens'):
+        cache_info += f", {result['usage']['cache_write_tokens']} cache write"
+    
+    print(f"Done. Tokens: {result['usage']['input_tokens']} in, {result['usage']['output_tokens']} out{cache_info}", file=sys.stderr)
 
 
 if __name__ == '__main__':

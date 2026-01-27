@@ -256,6 +256,11 @@ def call_openai(client, model: str, prompt: str, api_params: dict,
         "model": response.model
     }
     
+    if hasattr(response.usage, 'prompt_tokens_details') and response.usage.prompt_tokens_details:
+        cached = getattr(response.usage.prompt_tokens_details, 'cached_tokens', 0)
+        if cached:
+            result["usage"]["cached_tokens"] = cached
+    
     if hasattr(response, 'system_fingerprint') and response.system_fingerprint:
         result['system_fingerprint'] = response.system_fingerprint
     
@@ -263,27 +268,59 @@ def call_openai(client, model: str, prompt: str, api_params: dict,
 
 
 def call_anthropic(client, model: str, prompt: str, api_params: dict, method: str,
-                   image_data: str = None, image_media_type: str = None):
-    """Call Anthropic API with configurable parameters."""
-    content = []
+                   image_data: str = None, image_media_type: str = None,
+                   use_prompt_caching: bool = False):
+    """Call Anthropic API with configurable parameters and optional prompt caching."""
     
-    if image_data:
-        content.append({
-            "type": "image",
-            "source": {
-                "type": "base64",
-                "media_type": image_media_type,
-                "data": image_data
-            }
+    if use_prompt_caching:
+        system_content = []
+        user_content = []
+        
+        if image_data:
+            user_content.append({
+                "type": "image",
+                "source": {
+                    "type": "base64",
+                    "media_type": image_media_type,
+                    "data": image_data
+                },
+                "cache_control": {"type": "ephemeral"}
+            })
+        
+        system_content.append({
+            "type": "text",
+            "text": prompt,
+            "cache_control": {"type": "ephemeral"}
         })
-    
-    content.append({"type": "text", "text": prompt})
-    
-    call_params = {
-        'model': model,
-        'max_tokens': api_params.get('max_tokens', 4096),
-        'messages': [{"role": "user", "content": content}]
-    }
+        
+        user_content.append({"type": "text", "text": "Process the content above according to the instructions."})
+        
+        call_params = {
+            'model': model,
+            'max_tokens': api_params.get('max_tokens', 4096),
+            'system': system_content,
+            'messages': [{"role": "user", "content": user_content}]
+        }
+    else:
+        content = []
+        
+        if image_data:
+            content.append({
+                "type": "image",
+                "source": {
+                    "type": "base64",
+                    "media_type": image_media_type,
+                    "data": image_data
+                }
+            })
+        
+        content.append({"type": "text", "text": prompt})
+        
+        call_params = {
+            'model': model,
+            'max_tokens': api_params.get('max_tokens', 4096),
+            'messages': [{"role": "user", "content": content}]
+        }
     
     if 'temperature' in api_params:
         call_params['temperature'] = api_params['temperature']
@@ -293,19 +330,25 @@ def call_anthropic(client, model: str, prompt: str, api_params: dict, method: st
     
     response = client.messages.create(**call_params)
     
-    # Handle thinking responses: find text block (skip ThinkingBlock)
     text_content = ""
     for block in response.content:
         if hasattr(block, 'text'):
             text_content = block.text
             break
     
+    usage = {
+        "input_tokens": response.usage.input_tokens,
+        "output_tokens": response.usage.output_tokens
+    }
+    
+    if hasattr(response.usage, 'cache_creation_input_tokens'):
+        usage["cache_write_tokens"] = response.usage.cache_creation_input_tokens
+    if hasattr(response.usage, 'cache_read_input_tokens'):
+        usage["cache_read_tokens"] = response.usage.cache_read_input_tokens
+    
     return {
         "text": text_content,
-        "usage": {
-            "input_tokens": response.usage.input_tokens,
-            "output_tokens": response.usage.output_tokens
-        },
+        "usage": usage,
         "model": response.model
     }
 
@@ -369,7 +412,7 @@ def update_token_usage(output_folder: Path, model: str, usage: dict, lock: Lock)
 
 def process_file(worker_id: int, file_idx: int, total_files: int, input_file: Path, 
                  args, client, provider: str, method: str, api_params: dict,
-                 prompt: str, results_lock: Lock, usage_lock: Lock):
+                 prompt: str, results_lock: Lock, usage_lock: Lock, use_caching: bool = False):
     """Process a single file."""
     file_type = detect_file_type(input_file)
     if not file_type:
@@ -403,7 +446,7 @@ def process_file(worker_id: int, file_idx: int, total_files: int, input_file: Pa
                 )
             else:
                 result = retry_with_backoff(
-                    lambda: call_anthropic(client, args.model, file_prompt, api_params, method, image_data, image_media_type)
+                    lambda: call_anthropic(client, args.model, file_prompt, api_params, method, image_data, image_media_type, use_caching)
                 )
             
             # Write content to .md file
@@ -422,7 +465,15 @@ def process_file(worker_id: int, file_idx: int, total_files: int, input_file: Pa
             update_batch_metadata(args.output_folder, args.model, meta_entry, results_lock)
             update_token_usage(args.output_folder, args.model, result["usage"], usage_lock)
             
-            log(worker_id, file_idx, total_files, f"Done: {content_path.name} ({result['usage']['input_tokens']}+{result['usage']['output_tokens']} tokens)")
+            cache_info = ""
+            if result['usage'].get('cached_tokens'):
+                cache_info = f" [{result['usage']['cached_tokens']} cached]"
+            if result['usage'].get('cache_read_tokens'):
+                cache_info = f" [{result['usage']['cache_read_tokens']} cache read]"
+            if result['usage'].get('cache_write_tokens'):
+                cache_info += f" [{result['usage']['cache_write_tokens']} cache write]"
+            
+            log(worker_id, file_idx, total_files, f"Done: {content_path.name} ({result['usage']['input_tokens']}+{result['usage']['output_tokens']} tokens){cache_info}")
             
         except Exception as e:
             log(worker_id, file_idx, total_files, f"ERROR: {input_file.name} run {run}: {e}")
@@ -448,6 +499,7 @@ def parse_args():
     parser.add_argument('--output-length', choices=EFFORT_LEVELS, default='medium', help='Output length (default: medium)')
     parser.add_argument('--seed', type=int, default=None, help='Random seed (OpenAI only)')
     parser.add_argument('--response-format', choices=['text', 'json'], default='text', help='Response format (default: text)')
+    parser.add_argument('--use-prompt-caching', action='store_true', help='Enable prompt caching (Anthropic explicit, OpenAI automatic)')
     return parser.parse_args()
 
 
@@ -509,21 +561,37 @@ def main():
     }
     save_used_settings(args.output_folder, args.model, cli_params, api_params, args.prompt_file)
     
+    use_caching = getattr(args, 'use_prompt_caching', False)
+    
     if provider == 'openai':
         client = create_openai_client(keys)
+        if use_caching:
+            print("[INFO] OpenAI prompt caching is automatic (no API changes needed)", file=sys.stderr)
     else:
         client = create_anthropic_client(keys)
+        if use_caching:
+            print("[INFO] Anthropic prompt caching enabled via cache_control", file=sys.stderr)
     
     results_lock = Lock()
     usage_lock = Lock()
     
+    # For Anthropic caching: process first file synchronously to warm up cache before parallel workers
+    remaining_files = input_files
+    if use_caching and provider == 'anthropic' and len(input_files) > 1:
+        print("[INFO] Cache warm-up: processing first file before parallel workers...", file=sys.stderr)
+        first_file = input_files[0]
+        process_file(0, 1, total_files, first_file, args, client, provider, method, 
+                     api_params, prompt, results_lock, usage_lock, use_caching)
+        remaining_files = input_files[1:]
+    
     with ThreadPoolExecutor(max_workers=args.workers) as executor:
         futures = {}
-        for idx, input_file in enumerate(input_files, 1):
+        start_idx = total_files - len(remaining_files) + 1
+        for idx, input_file in enumerate(remaining_files, start_idx):
             worker_id = (idx - 1) % args.workers
             future = executor.submit(
                 process_file, worker_id, idx, total_files, input_file,
-                args, client, provider, method, api_params, prompt, results_lock, usage_lock
+                args, client, provider, method, api_params, prompt, results_lock, usage_lock, use_caching
             )
             futures[future] = input_file
         
