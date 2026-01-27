@@ -102,7 +102,7 @@ Add entry to FAILS.md:
    **If SESSION-BASED** (working in `[SESSION_FOLDER]`):
    - Write to `[SESSION_FOLDER]/FAILS.md`
    - Create file if it doesn't exist
-   - Session entries sync to workspace on `/session-close`
+   - Session entries sync to workspace on `/session-finalize`
    
    **If PROJECT-WIDE** (no active session):
    - Write to `[WORKSPACE_FOLDER]/FAILS.md` or `[PROJECT_FOLDER]/FAILS.md`

@@ -11,7 +11,7 @@ Invoke these skills before proceeding:
 ## Step 1: Check for Existing Session
 
 Check if the user has given you a [SESSION_FOLDER] to work in.
-If path already contains NOTES.md, PROGRESS.md, PROBLEMS.md: Execute /session-resume instead.
+If path already contains NOTES.md, PROGRESS.md, PROBLEMS.md: Execute /session-load instead.
 
 ## Step 2: Create Session Folder
 

@@ -128,7 +128,7 @@ Add entry to LEARNINGS.md using LEARNINGS_TEMPLATE.md structure:
    **If SESSION-BASED** (working in `[SESSION_FOLDER]`):
    - Write to `[SESSION_FOLDER]/LEARNINGS.md`
    - Create file if it doesn't exist
-   - Session entries sync to workspace on `/session-close`
+   - Session entries sync to workspace on `/session-finalize`
    
    **If PROJECT-WIDE** (no active session):
    - Write to `[WORKSPACE_FOLDER]/LEARNINGS.md`

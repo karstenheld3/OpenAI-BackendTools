@@ -26,13 +26,13 @@ Last completed: [final deliverable]
 
 **If not complete:** Proceed to Pre-Flight Check.
 
-## Pre-Flight Check
+## Step 1: Pre-Flight Check
 
 1. Do we have enough context? If unclear, ask user.
 2. Do we have stop or acceptance criteria?
 3. Re-read conversation, make internal MUST-NOT-FORGET list.
 
-## Execution Loop
+## Step 2: Execution Loop
 
 ```
 WHILE goal not reached:
@@ -44,25 +44,25 @@ WHILE goal not reached:
         WAIT for response
 ```
 
-## Step 1: Recap
+## Step 3: Recap
 
 Run `/recap` to determine:
 - Last completed action
 - Current state
 - Any blockers
 
-## Step 2: Continue
+## Step 4: Continue
 
 Run `/continue` to:
 - Execute next task from plan
 - Update progress
 - Check for completion
 
-## Step 3: Loop or Stop
+## Step 5: Loop or Stop
 
 - **Goal reached?** Stop, output summary
 - **Blocker?** Log to PROBLEMS.md, ask user
-- **More work?** Return to Step 1
+- **More work?** Return to Step 3
 
 ## Stopping Conditions
 

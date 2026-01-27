@@ -25,7 +25,7 @@ Entry point for BUILD workflow - creating software, features, systems.
 2. Invoke @edird-phase-planning skill
 3. Follow phases: EXPLORE → DESIGN → IMPLEMENT → REFINE → DELIVER
 4. Check gates before each transition
-5. Run `/session-close` when done
+5. Run `/session-finalize` when done
 
 ## BUILD-Specific Rules
 

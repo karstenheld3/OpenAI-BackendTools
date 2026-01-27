@@ -36,9 +36,9 @@ Then build execution sequence:
 - Note any explicit user instructions about next steps
 
 **1.2 Check session lifecycle state** (SESSION-BASED mode):
-- Lifecycle: Init → Work → Save → Resume → Close → Archive
+- Lifecycle: Init → Work → Save → Resume → Finalize → Archive
 - If resuming → check NOTES.md "Workflows to Run on Resume"
-- Session lifecycle workflows (`/session-close`, `/session-archive`) may appear in sequence from conversation context (Step 1.1), but require `[CONFIRM]` before execution (see Step 2)
+- Session lifecycle workflows (`/session-finalize`, `/session-archive`) may appear in sequence from conversation context (Step 1.1), but require `[CONFIRM]` before execution (see Step 2)
 
 **1.3 Check progress and tasks:**
 - Read PROGRESS.md for unchecked items in To Do / In Progress
@@ -53,7 +53,7 @@ Then build execution sequence:
 ```markdown
 ## Execution Sequence
 
-1. `/session-resume` - Session resumed, ready to continue
+1. `/session-load` - Session resumed, ready to continue
 2. [Next task from PROGRESS.md]
 3. ...
 ```
@@ -64,7 +64,7 @@ Then build execution sequence:
 
 Take the first item from the execution sequence:
 
-**If session lifecycle workflow** (`/session-close`, `/session-archive`):
+**If session lifecycle workflow** (`/session-finalize`, `/session-archive`):
 - Output sequence with `[CONFIRM]` - do NOT execute automatically
 - Wait for user to confirm with `/continue` or `/go`
 - Only then execute the workflow
