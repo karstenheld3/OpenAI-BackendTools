@@ -46,6 +46,7 @@ Run before starting any implementation:
   - Guardrails: [must not change X]
   - Depends: none | TK-NNN
   - Parallel: [P] or blank
+  - Model: Sonnet | Opus | Haiku
   - Est: 0.5 HHW
 ```
 
@@ -60,6 +61,15 @@ Run before starting any implementation:
 - Guardrails (constraints)
 - Depends (dependencies)
 - Parallel marker
+- Model (for auto model switching)
+
+## Model Hints
+
+Tasks may include model hints for auto model switching.
+
+**Source:** Model definitions and activity mappings are in `!NOTES.md` under `## Cascade Model Switching`.
+
+Model hints are recommendations - agent decides based on actual task.
 
 ## Task N - Final Verification (MANDATORY)
 

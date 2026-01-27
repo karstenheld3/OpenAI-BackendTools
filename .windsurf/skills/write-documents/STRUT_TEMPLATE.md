@@ -31,6 +31,7 @@ STRUT plans can be inserted into:
 │   ├─ [ ] Goal 1 ← P1-D1, P1-D2
 │   └─ [ ] Goal 2 ← P1-D3
 ├─ Strategy: Approach description (may include AWT estimate)
+│   - Model: Claude Opus for analysis and implementation, Sonnet for fixes, Haiku for chores
 │   - Sub-item if needed
 ├─ [ ] P1-S1 [VERB](params)
 ├─ [ ] P1-S2 [VERB](params)
@@ -52,10 +53,23 @@ STRUT plans can be inserted into:
 ## Node Types
 
 1. **Objectives** - Success criteria linked to Deliverables (`← P1-Dx`), checkboxes, no IDs
-2. **Strategy** - Approach summary, may include AWT (Agentic Work Time) estimates
+2. **Strategy** - Approach summary, may include AWT estimates and model hints
 3. **Steps** - Actions using AGEN verbs (flat list with checkboxes and IDs)
 4. **Deliverables** - Expected outputs (checkboxes with IDs)
 5. **Transitions** - Flow control conditions at phase end
+
+## Model Hints
+
+Strategy sections may include model hints for auto model switching:
+
+```
+├─ Strategy: Analyze requirements, design solution
+│   - Opus for analysis, Sonnet for implementation
+```
+
+**Source:** Model definitions and activity mappings are in `!NOTES.md` under `## Cascade Model Switching`.
+
+Model hints are recommendations - agent decides based on actual task.
 
 ## Checkbox States
 
