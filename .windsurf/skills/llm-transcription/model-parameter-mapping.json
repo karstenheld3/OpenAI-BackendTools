@@ -1,0 +1,24 @@
+{
+  "_version": "2.1.0",
+  "_updated": "2026-01-24",
+  "_comment": "CLI params: --temperature, --reasoning-effort, --output-length. Each uses same keywords mapped to different values.",
+  
+  "effort_levels": ["none", "minimal", "low", "medium", "high", "xhigh"],
+  
+  "defaults": {
+    "temperature": "medium",
+    "reasoning_effort": "medium",
+    "output_length": "medium",
+    "seed": null,
+    "response_format": "text"
+  },
+  
+  "effort_mapping": {
+    "none":    { "temperature_factor": 0.0,  "openai_reasoning_effort": "none",    "anthropic_thinking_factor": 0.0,  "output_length_factor": 0.25 },
+    "minimal": { "temperature_factor": 0.1,  "openai_reasoning_effort": "minimal", "anthropic_thinking_factor": 0.01, "output_length_factor": 0.5 },
+    "low":     { "temperature_factor": 0.2,  "openai_reasoning_effort": "low",     "anthropic_thinking_factor": 0.04, "output_length_factor": 0.5 },
+    "medium":  { "temperature_factor": 0.35, "openai_reasoning_effort": "medium",  "anthropic_thinking_factor": 0.1,  "output_length_factor": 0.75 },
+    "high":    { "temperature_factor": 0.5,  "openai_reasoning_effort": "high",    "anthropic_thinking_factor": 0.32, "output_length_factor": 1.0 },
+    "xhigh":   { "temperature_factor": 0.5,  "openai_reasoning_effort": "xhigh",   "anthropic_thinking_factor": 1.0,  "output_length_factor": 1.0 }
+  }
+}
