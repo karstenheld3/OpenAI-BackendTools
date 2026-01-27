@@ -46,7 +46,7 @@ Tracking documents exist at workspace, project, or session level. Only one of ea
 
 - **[NOTES]**: Important information. Agent MUST read to avoid unintentional behavior
 - **[PROGRESS]**: Progress tracking. Agent MUST read to avoid unintentional behavior
-- **[PROBLEMS]**: Problem tracking. Each session tracks issues in its own `PROBLEMS.md`. On `/session-close`, sync to project [PROBLEMS]
+- **[PROBLEMS]**: Problem tracking. Each session tracks issues in its own `PROBLEMS.md`. On `/session-finalize`, sync to project [PROBLEMS]
 - **[FAILS]**: Failure log - lessons learned from past mistakes. Agent MUST read during `/prime` to avoid repeating errors (except when using the `_` prefix). Never delete entries unconfirmed, only append or mark as resolved.
 
 ### Placeholders
@@ -206,9 +206,9 @@ Files starting with `.tmp` are temporary helper scripts created during operation
 - `/rename` - Global/local refactoring with verification
 - `/research` - Structured research with verification
 - `/session-archive` - Move session folder to archive
-- `/session-close` - Close session, sync findings, archive
+- `/session-finalize` - Finalize session, sync findings, prepare for archive
 - `/session-new` - Initialize new session
-- `/session-resume` - Resume existing session
+- `/session-load` - Resume existing session
 - `/session-save` - Save session progress
 - `/solve` - SOLVE workflow entry point (knowledge output)
 - `/sync` - Document synchronization
