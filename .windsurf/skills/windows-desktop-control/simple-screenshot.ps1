@@ -40,7 +40,8 @@ if ($Height -eq 0) { $Height = $physHeight }
 
 # Default output path
 if (-not $OutputPath) {
-    $workspaceRoot = (Get-Item $PSScriptRoot).Parent.Parent.Parent.Parent.FullName
+    # Navigate up: script -> windows-desktop-control -> skills -> .windsurf -> workspace
+    $workspaceRoot = (Get-Item $PSScriptRoot).Parent.Parent.Parent.FullName
     $timestamp = "simple-screenshot_" + (Get-Date -Format "yyyy-MM-dd_HH-mm-ss-fff")
     $screenshotDir = Join-Path $workspaceRoot ".tools\_screenshots"
     

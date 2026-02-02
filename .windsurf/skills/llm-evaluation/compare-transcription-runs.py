@@ -10,7 +10,7 @@ Supports three comparison methods:
 Usage:
   python compare-transcription-runs.py --input-folder runs/ --output-file report.json
   python compare-transcription-runs.py --input-folder runs/ --output-file report.json \
-      --method hybrid --judge-model gpt-4o --keys-file .tools/.api-keys.txt
+      --method hybrid --judge-model gpt-4o --keys-file ..\..\..\..\.api-keys.txt
 """
 
 import sys, json, argparse, re

@@ -11,6 +11,33 @@ Convert Portable Document Format (PDF) files and web pages to complete markdown 
 
 - @pdf-tools for PDF to image conversion
 - @ms-playwright-mcp for web page screenshots
+- @llm-transcription (optional) for advanced LLM-based transcription
+
+## Step 1: Detect Transcription Mode
+
+Check if advanced LLM transcription is available:
+
+```powershell
+# Check for llm-transcription skill
+$skillPath = ".windsurf/skills/llm-transcription/transcribe-image-to-markdown.py"
+$keysFile = "[WORKSPACE_FOLDER]\..\.api-keys.txt"
+$hasSkill = Test-Path $skillPath
+$hasKeys = Test-Path $keysFile
+
+if ($hasSkill -and $hasKeys) {
+    Write-Host "MODE: Advanced LLM Transcription (llm-transcription skill)"
+} else {
+    Write-Host "MODE: Built-in Transcription (workflow prompt)"
+    if (-not $hasSkill) { Write-Host "  - Missing: $skillPath" }
+    if (-not $hasKeys) { Write-Host "  - Missing: $keysFile" }
+}
+```
+
+**Mode A: Advanced LLM Transcription** (if skill + keys available)
+- Use `transcribe-image-to-markdown.py` with ensemble + judge + refinement
+
+**Mode B: Built-in Transcription** (fallback)
+- Use the built-in prompt in Step 5b below
 
 ## Core Principle
 
@@ -24,7 +51,7 @@ Convert Portable Document Format (PDF) files and web pages to complete markdown 
 | URL to PDF | URL ends in `.pdf` | Download first, then process |
 | Web page | URL to HTML | Screenshot, transcribe |
 
-## Step 1: Prepare Source
+## Step 2: Prepare Source
 
 ### For Local PDF
 ```powershell
@@ -50,7 +77,7 @@ mcp0_browser_evaluate(function: "window.scrollTo(0, 0)")
 mcp0_browser_take_screenshot(fullPage: true, filename: ".tools/_web_screenshots/[domain]/page-001.png")
 ```
 
-## Step 2: Count and Plan
+## Step 3: Count and Plan
 
 ```powershell
 $images = Get-ChildItem ".tools/_pdf_to_jpg_converted/[NAME]/" -Filter "*.jpg"
@@ -59,7 +86,7 @@ $chunks = [math]::Ceiling($totalPages / 2)
 Write-Host "Total pages: $totalPages, Chunks needed: $chunks"
 ```
 
-## Step 3: Determine Output Strategy
+## Step 4: Determine Output Strategy
 
 | Total Pages | Output Strategy |
 |-------------|-----------------|
@@ -68,7 +95,7 @@ Write-Host "Total pages: $totalPages, Chunks needed: $chunks"
 | 51-100 | Multiple section files + index, merge optional |
 | 100+ | Multiple chapter files + index |
 
-## Step 4: Create Output File with Header
+## Step 5: Create Output File with Header
 
 ```markdown
 # [Document Title]
@@ -82,11 +109,39 @@ Pages completed: 0 of [total]
 [Generate after first pass or from PDF Table of Contents (TOC)]
 ```
 
-## Step 5: Transcribe in 4-Page Chunks
+## Step 6: Transcribe in 4-Page Chunks
 
 For each chunk (pages 1-4, 5-8, 9-12, etc.):
 
-### 5a. Read exactly 4 page images (or fewer for final chunk)
+### 6a. Choose Transcription Method
+
+**Mode A: Advanced LLM Transcription** (if skill + keys detected in Step 1)
+
+```powershell
+$venv = ".tools/llm-venv/Scripts/python.exe"
+$skill = ".windsurf/skills/llm-transcription"
+
+# Single file transcription
+& $venv "$skill/transcribe-image-to-markdown.py" `
+    --input-file ".tools/_pdf_to_jpg_converted/[NAME]/page_001.jpg" `
+    --output-file "[SESSION_FOLDER]/[DocName]_page001.md" `
+    --keys-file "[WORKSPACE_FOLDER]\..\.api-keys.txt" `
+    --model gpt-5-mini `
+    --workers 4
+
+# Batch mode (entire folder)
+& $venv "$skill/transcribe-image-to-markdown.py" `
+    --input-folder ".tools/_pdf_to_jpg_converted/[NAME]/" `
+    --output-folder "[SESSION_FOLDER]/transcribed/" `
+    --keys-file "[WORKSPACE_FOLDER]\..\.api-keys.txt" `
+    --model gpt-5-mini `
+    --workers 12
+```
+
+**Mode B: Built-in Transcription** (fallback - no skill or keys)
+
+Read images and use the built-in prompt below:
+
 ```
 read_file(file_path: "[path]_page001.jpg")
 read_file(file_path: "[path]_page002.jpg")
@@ -94,7 +149,7 @@ read_file(file_path: "[path]_page003.jpg")
 read_file(file_path: "[path]_page004.jpg")
 ```
 
-### 5b. Extract ALL content from these pages
+### 6b. Extract ALL content from these pages (Mode B)
 - Every heading, paragraph, list, footnote
 - Every figure → See **Figure Transcription Protocol** below
 - Every table → Markdown table
@@ -293,10 +348,10 @@ Legend: === main flow  --- log output  [gear] = processing icon
 
 **Why wrapper tag?** Enables hybrid comparison: Levenshtein for text, LLM-as-a-judge for graphics.
 
-### 5c. Append to output file IMMEDIATELY
+### 6c. Append to output file IMMEDIATELY
 Do not wait until end. Write after each chunk.
 
-### 5d. Update progress marker
+### 6d. Update progress marker
 ```markdown
 <!-- TRANSCRIPTION PROGRESS
 Chunk: 2 of 5
@@ -304,10 +359,10 @@ Pages completed: 4 of 20
 -->
 ```
 
-### 5e. Continue with next chunk
+### 6e. Continue with next chunk
 Repeat until all pages processed.
 
-## Step 6: Finalize
+## Step 7: Finalize
 
 1. Remove progress markers
 2. Generate/verify Table of Contents
@@ -367,3 +422,99 @@ After transcription, run `/verify` to:
 6. **No omissions** - Every piece of content must be transcribed
 7. **ASCII + XML for figures** - Every figure requires both ASCII art and `<transcription_notes>` XML block
 8. **Page boundaries** - Preserve headers/footers with `<transcription_page_header>` and `<transcription_page_footer>` tags
+
+## Appendix: Built-in Transcription Prompt (Mode B)
+
+Use this prompt when llm-transcription skill is not available:
+
+---
+
+**Transcription Prompt v1B**
+
+Transcribe this document page image to Markdown. **Accuracy over speed.**
+
+**Key Areas:**
+1. Graphics - Essential graphics with labeled ASCII art and data extraction
+2. Structure - Semantic hierarchy matching visual document outline
+3. Text - Character-level accuracy
+
+**CRITICAL RULES:**
+
+DO:
+- Label every node in diagrams: `[DATABASE]`, `[PROCESS]`, `(pending)`
+- Extract ALL data values from charts (numbers > visual fidelity)
+- Match header levels to visual hierarchy (H1=title, H2=sections, H3=subsections)
+- Use `[unclear]` for text you cannot read with confidence
+
+DON'T:
+- Don't transcribe UI chrome (toolbars, ribbons, browser elements)
+- Don't count decorative logos/separators as missed graphics
+- Don't use headers for formatting convenience - only for real sections
+- Don't guess numbers - mark as `[unclear: ~value?]` if uncertain
+
+**Graphics:**
+
+TRANSCRIBE (essential): Charts, diagrams, flowcharts, infographics, data visualizations, maps, technical illustrations
+
+SKIP (decorative): UI chrome, toolbars, logos, watermarks, separators, backgrounds - add only: `<!-- Decorative: [list] -->`
+
+Every essential graphic MUST have:
+
+```markdown
+<transcription_image>
+**Figure N: [Caption]**
+
+```ascii
+[TITLE - WHAT THIS SHOWS]
+[Visual with INLINE labels - every node named]
+Legend: [A]=Item1 [B]=Item2
+```
+
+<transcription_notes>
+- Data: [all numbers, percentages, values]
+- Colors: [color] = [meaning]
+- ASCII misses: [what couldn't be shown]
+</transcription_notes>
+</transcription_image>
+```
+
+**Structure:**
+
+Headers must match the VISUAL document structure:
+- H1 = Document title (one per page max)
+- H2 = Major sections visible in document
+- H3 = Subsections within sections
+
+Multi-column: Read top-to-bottom within each column, mark with `<!-- Column N -->`.
+
+**Text Accuracy:**
+
+- Every word exactly as shown
+- Numbers must match exactly
+- Mark unclear text: `[unclear]` or `[unclear: best guess?]`
+
+Special Characters:
+- Superscripts: use actual Unicode (not ^1 ^2 ^3)
+- Greek: use actual Unicode characters
+- Math: use LaTeX syntax
+- Symbols: use proper Unicode
+
+**Output Structure:**
+
+```markdown
+# [Document Title]
+
+<transcription_page_header> [if present] </transcription_page_header>
+
+## [Section]
+
+[Content...]
+
+<transcription_image>
+**Figure 1: [Caption]**
+[ASCII with inline labels]
+<transcription_notes>[Data, colors, misses]</transcription_notes>
+</transcription_image>
+
+<transcription_page_footer> [if present] </transcription_page_footer>
+```

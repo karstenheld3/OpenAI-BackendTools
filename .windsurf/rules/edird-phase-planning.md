@@ -51,16 +51,18 @@ All workflows start in EXPLORE with [ASSESS] to determine workflow type and comp
 
 Use appropriate notation based on scope:
 
-- **STRUT** - Orchestrate complex multi-phase processes with goals, transitions, and verification
-  - When: Multi-phase work, autonomous runs (/go), session-spanning tasks
-  - Contains: Phases, Objectives (← linked to Deliverables), Strategy, Steps, Deliverables, Transitions
-  - Invoke: @write-documents skill for STRUT_TEMPLATE.md
+- **STRUT** - High-level orchestration for complex multi-phase processes
+  - When: Multi-phase work, autonomous runs (/go), session-spanning tasks, deep research
+  - Contains: Phases, Objectives, Strategy, Steps, Deliverables, Transitions, **Time Log**
+  - Tracks: Phase state, active intervals, net working time
+  - Invoke: @write-documents skill for STRUT_TEMPLATE.md or `/write-strut`
   - Verify: /verify workflow (STRUT Planning + STRUT Transition contexts)
 
-- **TASKS** - Flat sequential to-do lists with testable buckets
-  - When: Single-phase execution, partitioned IMPL steps
-  - Contains: Task items with files, done-when criteria, verification commands
-  - Created via: [PARTITION] verb from IMPL plan
+- **TASKS** - Low-level execution for granular task coordination
+  - When: Single-phase execution, partitioned IMPL steps, research file-by-file work
+  - Contains: Task items with files, done-when criteria, verification commands, **task durations**
+  - Tracks: Individual task progress, timing `[HH:MM-HH:MM]`, parallel execution
+  - Created via: [PARTITION] verb from IMPL plan or Phase 4 of research strategies
 
 ## Workflow Types
 

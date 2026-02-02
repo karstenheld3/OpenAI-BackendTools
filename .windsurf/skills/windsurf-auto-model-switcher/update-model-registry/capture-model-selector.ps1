@@ -14,7 +14,8 @@ param(
 
 # Default output folder if not specified
 if (-not $OutputFolder) {
-    $workspaceRoot = (Get-Item $PSScriptRoot).Parent.Parent.Parent.Parent.FullName
+    # Navigate up: script -> update-model-registry -> windsurf-auto-model-switcher -> skills -> .windsurf -> workspace
+    $workspaceRoot = (Get-Item $PSScriptRoot).Parent.Parent.Parent.Parent.Parent.FullName
     $OutputFolder = Join-Path $workspaceRoot ".tools\_screenshots"
 }
 

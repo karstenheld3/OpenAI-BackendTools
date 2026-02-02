@@ -16,16 +16,19 @@ pip install openai anthropic httpx
 
 ### 2. Configure API Keys
 
-Create `~/.llm-keys` file:
+**Standard location**: `[WORKSPACE_FOLDER]\..\.api-keys.txt` (workspace-external, shared across projects)
+
+**Alternative**: `[WORKSPACE_FOLDER]\.tools\.api-keys.txt` (project-local)
+
+**Format** (one key per line):
 ```
 OPENAI_API_KEY=sk-...
 ANTHROPIC_API_KEY=sk-ant-...
 ```
 
-Or set environment variables:
-```bash
-export OPENAI_API_KEY=sk-...
-export ANTHROPIC_API_KEY=sk-ant-...
+**Usage**: Pass `--keys-file` to scripts:
+```powershell
+python transcribe-image-to-markdown.py --keys-file ..\..\.api-keys.txt --input-file image.png
 ```
 
 ### 3. Verify Installation
@@ -60,8 +63,8 @@ sudo apt install ffmpeg
 ## Troubleshooting
 
 **"API key not found"**
-- Ensure `~/.llm-keys` exists with correct format
-- Or set `OPENAI_API_KEY` environment variable
+- Ensure keys file exists at standard location (see Configure API Keys above)
+- Pass correct path via `--keys-file` argument
 
 **"Unsupported file format"**
 - Check supported formats in SKILL.md
