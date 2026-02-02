@@ -16,10 +16,10 @@ A collection of tools and demo code to test, operate and maintain Open AI and Az
 - **List and manage stored files** with `test_file_listings.py`: Functions for listing stored files with total storage and status (`processed`, `cancelled`, `frozen`, `in_progress`, `completed`) , vector stores (used and expired), assistants, and files NOT used in vector stores and assistants.
 - **Cleanup** with `test_cleanup_operations.py`: Tools for deleting expired and unused files to save cost, delete expired vector stores and unneeded assistants.
 - **RAG demos** with `test_rag_operations.py`: Code that demonstrates uploading files to vector stores with metadata extraction.
+- **RAG Text Retrieval** with `test_rag_text_retrieval.py`: Retrieve embedded file chunks from vector stores and reconstruct original text content with overlap detection.
 - **Vector Store Search**: Code that demonstrates vector store search, filtering and query rewrite.
 - **Vector Store Replication** with `replicate_vector_store_content.py`: Tools for replicating files between vector stores.
 - **Evaluation Operations** with `test_eval_operations.py`: Tools for evaluating RAG responses using judge models with scoring and grading.
-- **File Crawling** with `test_file_crawling.py`: Data classes and utilities for file crawling operations.
 
 #### 👉 How to set up your Azure Open AI Service to use this toolkit: [AZURE_OPENAI_SETUP.md](AZURE_OPENAI_SETUP.md)
 - Creating your .env file and where to get the information from
@@ -68,9 +68,9 @@ A collection of tools and demo code to test, operate and maintain Open AI and Az
 │   ├── test_cleanup_operations.py             # Cleanup of files and vector stores
 │   ├── test_file_listings.py                  # Listing of assistants, vector stores, files, unused files, etc. 
 │   ├── test_rag_operations.py                 # RAG (Retrieval Augmented Generation) tests
+│   ├── test_rag_text_retrieval.py             # RAG text retrieval and reconstruction from chunks
 │   ├── test_search_operations.py              # Search API tests
 │   ├── test_eval_operations.py                # Evaluations of predefined and RAG responses with scoring
-│   ├── test_file_crawling.py                  # File crawling utilities and data classes
 │   └── replicate_vector_store_content.py      # Vector store content replication tool
 ├── RAGFiles/                                  # Directory for RAG-related test files
 ├── .env                                       # Environment configuration for Azure and OpenAI
@@ -584,6 +584,62 @@ Tests RAG operations by querying a vector store using the assistants API.
   Test query with 'assistant' tool: Who is Arilena Drovik?
     Response: Arilena Drovik is a highly accomplished molecular biologist and geneticist with ...
 [2025-11-16 21:00:14] END: RAG operations using assistants API (12 secs).
+```
+
+### RAG Text Retrieval
+
+Retrieve embedded file chunks from vector stores and reconstruct original text content. This is useful for extracting the text that was embedded into a vector store, with automatic overlap detection and removal.
+
+**Location:** `test_rag_text_retrieval.py`
+
+#### Class: `RAGTextRetrievalParams`
+
+Configuration for text retrieval and reconstruction.
+
+**Fields:**
+- `vector_store_id`: ID of the vector store to retrieve from
+- `only_these_filenames`: Optional list of filenames to filter (empty = all files)
+- `output_folder`: Destination folder for reconstructed files (default: `./output`)
+- `output_suffix`: Suffix for output files (default: `.reconstructed.md`)
+- `log_headers`: Enable function header/footer logging (default: `True`)
+
+#### Function: `retrieve_and_reconstruct_files`
+
+Main function that retrieves chunks from a vector store and reconstructs the original text files.
+
+**Parameters:**
+- `client`: The OpenAI client instance
+- `params`: RAGTextRetrievalParams configuration
+
+**Returns:** List of `ReconstructionResult` objects with filename, file_id, chunk_count, bytes, and output_path.
+
+**Example usage:**
+```python
+params = RAGTextRetrievalParams(
+  vector_store_id="vs_abc123"
+  ,only_these_filenames=["document.pdf"]  # Empty = all files
+  ,output_folder="./downloaded_rag_texts"
+)
+results = retrieve_and_reconstruct_files(client, params)
+```
+
+**Example output:**
+```
+[2026-02-02 11:05:00] START: Retrieve and reconstruct files from vector store...
+  Vector store: 'vs_abc123'
+  Retrieving file list from vector store...
+    3 files found in vector store.
+    Filtered to 1 file matching filter: ['document.pdf']
+  Retrieving chunks for 1 file...
+    [ 1 / 1 ] Retrieving chunks for 'document.pdf'...
+      12 chunks, 45,230 chars total
+    1 file retrieved with chunks.
+  Detecting overlap from first multi-chunk file...
+    Overlap detected from 'document.pdf': 8192 chars (confidence: exact)
+  Processing 1 file...
+    [ 1 / 1 ] 'document.pdf': 12 chunks -> 37,038 bytes -> './downloaded_rag_texts/document.pdf.reconstructed.md'
+  Summary: 1 file, 12 chunks, 37,038 bytes reconstructed
+[2026-02-02 11:05:15] END: Retrieve and reconstruct files from vector store (15 secs).
 ```
 
 
