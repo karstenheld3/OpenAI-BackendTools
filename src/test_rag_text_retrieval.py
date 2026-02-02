@@ -187,90 +187,88 @@ def retrieve_and_reconstruct_files(client, params: RAGTextRetrievalParams):
     if params.log_headers: log_function_footer(function_name, start_time)
     return []
   
-  # Step 3: Retrieve chunks for each file with progress
-  print(f"  Retrieving chunks for {len(files_to_process)} file{'s' if len(files_to_process) != 1 else ''}...")
-  file_contents = []
-  for file_idx, file in enumerate(files_to_process, 1):
-    file_name = get_filename_from_file(file)
-    print(f"    [ {file_idx} / {len(files_to_process)} ] Retrieving chunks for '{file_name}'...")
-    chunks = get_vector_store_file_content(client, params.vector_store_id, file.id)
-    chunk_count = len(chunks)
-    total_chars = sum(len(c.text) if hasattr(c, 'text') else len(c.get('text', '')) for c in chunks)
-    print(f"      {chunk_count} chunk{'s' if chunk_count != 1 else ''}, {total_chars:,} chars total")
-    file_contents.append({"file": file, "chunks": chunks})
-  
-  file_count = len(file_contents)
-  print(f"    {file_count} file{'s' if file_count != 1 else ''} retrieved with chunks.")
-  
-  # Step 3: Detect overlap from first file with 2+ chunks
-  print(f"  Detecting overlap from first multi-chunk file...")
-  overlap_info = ChunkOverlapInfo(overlap_chars=0, confidence="none")
-  
-  for item in file_contents:
-    chunks = item.get('chunks', [])
-    if len(chunks) >= 2:
-      chunk_0_text = chunks[0].text if hasattr(chunks[0], 'text') else chunks[0].get('text', '')
-      chunk_1_text = chunks[1].text if hasattr(chunks[1], 'text') else chunks[1].get('text', '')
-      overlap_info = detect_chunk_overlap(chunk_0_text, chunk_1_text)
-      filename = get_filename_from_file(item.get('file'))
-      print(f"    Overlap detected from '{filename}': {overlap_info.overlap_chars} chars (confidence: {overlap_info.confidence})")
-      if overlap_info.confidence == "normalized":
-        print(f"    WARNING: Overlap detected via whitespace normalization. Results may have minor duplicates.")
-      break
-  
-  if overlap_info.overlap_chars == 0:
-    print(f"    No multi-chunk files found or no overlap detected. Proceeding without overlap removal.")
-    print(f"    NOTE: If files have different chunking strategies, some may have duplicated content.")
-  
-  # Step 4: Create output folder if needed
+  # Step 3: Create output folder early
   if not os.path.exists(params.output_folder):
     os.makedirs(params.output_folder)
     print(f"  Created output folder: '{params.output_folder}'")
   
-  # Step 5: Process each file
+  # Step 4: Process each file immediately (write-early pattern)
+  # - Skip files that already exist on disk
+  # - Detect overlap from first multi-chunk file
+  # - Stitch and write immediately after retrieving each file's chunks
   results = []
+  skipped_count = 0
   total_chunks = 0
   total_bytes = 0
+  overlap_info = ChunkOverlapInfo(overlap_chars=0, confidence="none")
+  overlap_detected = False
   
-  print(f"  Processing {len(file_contents)} file{'s' if len(file_contents) != 1 else ''}...")
+  print(f"  Processing {len(files_to_process)} file{'s' if len(files_to_process) != 1 else ''} (write-early)...")
   
-  for idx, item in enumerate(file_contents, 1):
-    file_obj = item.get('file')
-    chunks = item.get('chunks', [])
-    filename = get_filename_from_file(file_obj)
-    file_id = getattr(file_obj, 'id', UNKNOWN) if file_obj else UNKNOWN
+  for file_idx, file in enumerate(files_to_process, 1):
+    filename = get_filename_from_file(file)
+    file_id = getattr(file, 'id', UNKNOWN) if file else UNKNOWN
+    
+    # Check if output already exists -> skip
+    output_filename = filename + params.output_suffix
+    output_path = os.path.join(params.output_folder, output_filename)
+    if os.path.exists(output_path):
+      print(f"    [ {file_idx} / {len(files_to_process)} ] '{filename}': SKIPPED (output exists)")
+      skipped_count += 1
+      continue
+    
+    # Retrieve chunks for this file
+    try:
+      chunks = get_vector_store_file_content(client, params.vector_store_id, file.id)
+    except Exception as e:
+      print(f"    [ {file_idx} / {len(files_to_process)} ] '{filename}': ERROR retrieving chunks: {e}")
+      continue
+    
+    chunk_count = len(chunks)
+    total_chars = sum(len(c.text) if hasattr(c, 'text') else len(c.get('text', '')) for c in chunks)
+    
+    # Detect overlap from first multi-chunk file (only once)
+    if not overlap_detected and chunk_count >= 2:
+      chunk_0_text = chunks[0].text if hasattr(chunks[0], 'text') else chunks[0].get('text', '')
+      chunk_1_text = chunks[1].text if hasattr(chunks[1], 'text') else chunks[1].get('text', '')
+      overlap_info = detect_chunk_overlap(chunk_0_text, chunk_1_text)
+      overlap_detected = True
+      print(f"    Overlap detected from '{filename}': {overlap_info.overlap_chars} chars (confidence: {overlap_info.confidence})")
+      if overlap_info.confidence == "normalized":
+        print(f"    WARNING: Overlap detected via whitespace normalization. Results may have minor duplicates.")
     
     # Stitch chunks together
     reconstructed_text = stitch_chunks(chunks, overlap_info.overlap_chars)
     reconstructed_bytes = len(reconstructed_text.encode('utf-8'))
     
-    # Determine output filename
-    output_filename = filename + params.output_suffix
-    output_path = os.path.join(params.output_folder, output_filename)
-    
-    # Write reconstructed content
-    with open(output_path, 'w', encoding='utf-8') as f:
-      f.write(reconstructed_text)
+    # Write immediately
+    try:
+      with open(output_path, 'w', encoding='utf-8') as f:
+        f.write(reconstructed_text)
+    except Exception as e:
+      print(f"    [ {file_idx} / {len(files_to_process)} ] '{filename}': ERROR writing: {e}")
+      continue
     
     # Track results
     result = ReconstructionResult(
       filename=filename,
       original_file_id=file_id,
-      chunk_count=len(chunks),
+      chunk_count=chunk_count,
       reconstructed_bytes=reconstructed_bytes,
       output_path=output_path
     )
     results.append(result)
-    total_chunks += len(chunks)
+    total_chunks += chunk_count
     total_bytes += reconstructed_bytes
     
     # NOTE: PDF/DOCX quality depends on OpenAI's text extraction [RAGTR-RV-006]
     file_ext = os.path.splitext(filename)[1].lower() if filename != UNKNOWN else ''
     quality_warning = ' (text extraction quality may vary)' if file_ext in ['.pdf', '.docx', '.pptx', '.doc'] else ''
-    print(f"    [ {idx} / {len(file_contents)} ] '{filename}': {len(chunks)} chunk{'s' if len(chunks) != 1 else ''} -> {reconstructed_bytes:,} bytes -> '{output_path}'{quality_warning}")
+    print(f"    [ {file_idx} / {len(files_to_process)} ] '{filename}': {chunk_count} chunks, {total_chars:,} chars -> {reconstructed_bytes:,} bytes -> '{output_path}'{quality_warning}")
   
   # Summary
-  print(f"  Summary: {len(results)} file{'s' if len(results) != 1 else ''}, {total_chunks} chunk{'s' if total_chunks != 1 else ''}, {total_bytes:,} bytes reconstructed")
+  skipped_msg = f", {skipped_count} skipped" if skipped_count > 0 else ""
+  print(f"  Summary: {len(results)} file{'s' if len(results) != 1 else ''} written, {total_chunks} chunk{'s' if total_chunks != 1 else ''}, {total_bytes:,} bytes{skipped_msg}")
   
   if params.log_headers: log_function_footer(function_name, start_time)
   return results
@@ -289,7 +287,7 @@ if __name__ == '__main__':
     client = create_azure_openai_client(azure_openai_use_key_authentication)
 
   params = RAGTextRetrievalParams(
-    vector_store_id="<vs_id>"
+    vector_store_id="vs_6978c7b89068819183b675443ae00259"
     ,only_these_filenames=[]  # Empty = all files, or specify: ["file1.pdf", "file2.md"]
     ,output_folder="./downloaded_rag_texts"
     ,output_suffix=".reconstructed.md"
