@@ -811,6 +811,9 @@ def get_all_vector_stores(client, include_broken_ones: bool = False):
           all_vector_stores = [vs for vs in all_vector_stores if vs.id != "[UNKNOWN]"]
         for idx, vector_store in enumerate(all_vector_stores): setattr(vector_store, 'index', idx)
         return all_vector_stores
+  except openai.InternalServerError:
+    # Azure backends may return 500 when vector stores aren't supported
+    return []
 
 def get_vector_store_by_name(client, vector_store_name):
   vector_stores = get_all_vector_stores(client)
