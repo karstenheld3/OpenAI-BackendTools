@@ -40,7 +40,7 @@ Use when docs are outdated or don't match UI.
 
 ### Step 2: Cascade Reads Screenshots
 
-Cascade reads each fullscreen screenshot from `.tools/_screenshots/`.
+Cascade reads each fullscreen screenshot from `../.tools/_screenshots/`.
 Extracts model names and costs from the popup visible in each image.
 
 ### Step 3: Stop When List Wraps
@@ -56,7 +56,7 @@ Update `windsurf-model-registry.json` with discovered models and costs.
 **IMPORTANT:** Only delete screenshots after successfully updating `windsurf-model-registry.json`.
 
 ```powershell
-Remove-Item -Path "[WORKSPACE]/.tools/_screenshots/*.jpg" -Force
+Remove-Item -Path "[WORKSPACE]/../.tools/_screenshots/*.jpg" -Force
 ```
 
 If extraction failed, keep screenshots for debugging.

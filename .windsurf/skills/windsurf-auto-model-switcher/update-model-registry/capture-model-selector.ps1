@@ -16,7 +16,7 @@ param(
 if (-not $OutputFolder) {
     # Navigate up: script -> update-model-registry -> windsurf-auto-model-switcher -> skills -> .windsurf -> workspace
     $workspaceRoot = (Get-Item $PSScriptRoot).Parent.Parent.Parent.Parent.Parent.FullName
-    $OutputFolder = Join-Path $workspaceRoot ".tools\_screenshots"
+    $OutputFolder = Join-Path $workspaceRoot "..\.tools\_screenshots"
 }
 
 # Timestamp prefix for filenames (with milliseconds and script name)

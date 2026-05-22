@@ -1,76 +1,103 @@
-# Workflow Coding Conventions
+# Workflow Rules
 
-Rules for writing and structuring workflow documents (`.windsurf/workflows/*.md`).
+## Target Audience
 
-## Principle
+Skill files are consumed by LLMs, not humans. Optimize for:
+- Medium-reasoning models
+- Low context windows - every saved token = more space for the actual task
+- Instruction following over prose comprehension
+- APAPALAN principle: As precise as possible, as little as necessary.
 
-**ASANAPAP**: As Short As Necessary, As Precise As Possible.
+Design principles:
+1. Maximum clarity - one interpretation per instruction, no ambiguity
+2. Numbered steps - LLMs follow numbered sequences better than prose
+3. MUST-NOT-FORGET technique - for complex skills with verification (SETUP.md, UNINSTALL.md)
+4. No visual formatting in LLM-consumed files - `**bold**` adds tokens without improving comprehension
+5. Headers as structure - `#` and `##` are parsing boundaries LLMs rely on
+6. Compact format for lookups - one line per resource, no multi-line entries
+7. Verbose format only when justified - multi-step reasoning, troubleshooting, code with explanation
+8. JSON intermediate output - for multi-step workflows, require LLM to emit structured JSON between steps to enforce explicit reasoning and prevent drift
 
-Workflows should be concise but unambiguous. Remove redundancy, keep precision.
+JSON intermediate output example:
+
+```
+## Step 3: Determine context
+Emit before proceeding:
+{"context": "INFO|SPEC|IMPL|Code|TEST|Session|Workflow|Skill", "reason": "..."}
+```
+
+This forces the LLM to commit to a decision before acting, reducing errors in medium-reasoning models.
 
 ## Formatting
 
-- Format workflow references as inline code: `/verify`, `/research`, `/recap`
-- Workflows implement AGEN verbs but should NOT contain `[VERB]` references in their content
-  - BAD: `## Verb: [COMMIT]` or `Implements [COMMIT] verb`
-  - GOOD: Use plain English in workflow body. Or reference specific `/workflow` like this.
-- Frontmatter should only contain `description` field
-  - BAD: `phase: DESIGN` or other extra fields
-  - GOOD: Only `description: ...` in frontmatter
-- No redundant `## Usage` sections that just show the workflow command
-  - BAD: `## Usage` with just `/continue` in a code block
-  - GOOD: Usage section with examples showing parameters: `/build "Add auth API"`
-  - Workflow name already indicates basic usage; only add if showing parameters
-- No replication of higher-order rules defined elsewhere
-  - BAD: Listing all document types in a workflow (duplicates `devsystem-core.md`)
-  - GOOD: Reference the source: "See `devsystem-core.md` section X for details"
-  - Keep workflows focused on steps, not definitions
+1. Frontmatter: only `description` field. No `phase:` or other extras.
+2. References:
+   - Workflow refs as inline code: `/verify`, `/research`
+   - Skill refs with @skills: prefix: `@skills:skill-name`
+3. Steps: numbered, actionable verbs
+4. No hardcoded paths. Use placeholders: `[WORKSPACE_FOLDER]`, `[SESSION_FOLDER]`
+5. No `## Usage` sections that just show the workflow command. Only add if showing parameters.
+6. No replication of rules defined elsewhere. Reference the source instead.
 
-## Structure (Recommended)
+## Structure
 
-Prefer separating GLOBAL-RULES and CONTEXT-SPECIFIC sections:
+Complex workflows: separate GLOBAL-RULES and CONTEXT-SPECIFIC sections.
 
-```markdown
-# [Workflow Name] Workflow
-
-## Usage
-...
+```
+# [Name] Workflow
 
 ## GLOBAL-RULES
-
-Apply to ALL contexts:
 - Rule 1
-- Rule 2
 
 # CONTEXT-SPECIFIC
 
 ## Context A
-- Context-specific rule 1
-
-## Context B
-- Context-specific rule 2
+- Rule for A
 ```
 
-**Reference**: See `/verify` workflow as canonical example.
+See `/verify` as canonical example.
+
+## Token Optimization
+
+Workflows and skills are consumed by LLMs, not humans.
+
+Remove:
+- `**Bold**` markup in LLM-consumed files (LLMs parse plain text equally well)
+- Filler prose: "This section covers", "The following resources"
+- Prose that restates the heading
+- Blank lines between every list item when grouping is clear from headers
+
+Keep:
+- `#` and `## ` headers (LLMs use these as parsing boundaries)
+- Parenthetical notes with critical context
+- All technical detail, URLs, parameters
+- Concrete examples (BAD/GOOD pairs)
+
+Test: "Remove this token. Does the LLM lose information?" No? Remove it.
+
+For complex workflows that require end-verification, use MUST-NOT-FORGET technique:
+
+```
+### MUST-NOT-FORGET (check after completion)
+- [ ] Item 1
+- [ ] Item 2
+
+### Steps
+1. Do thing
+2. Do other thing
+3. Walk MUST-NOT-FORGET list. All checked?
+```
 
 ## Quality Checks
 
-When verifying workflows, look for:
+When verifying workflows:
+- Ambiguities: unclear instructions with multiple interpretations?
+- Term conflicts: same concept named differently?
+- Underspecified behavior: missing edge cases?
+- Outdated references: broken links to renamed/removed items?
 
-- **Ambiguities** - Unclear instructions that could be interpreted multiple ways
-- **Term conflicts** - Same concept named differently, or different concepts with same name
-- **Underspecified behavior** - Missing edge cases, undefined outcomes, gaps in logic
-- **Outdated references** - Broken links to workflows, skills, rules, concepts, or states that no longer exist or have been renamed
-
-**Cross-reference checklist:**
-- [ ] All `/workflow` references exist in `.windsurf/workflows/`
-- [ ] All `@skill` references exist in `.windsurf/skills/`
-- [ ] All `[VERB]` references are valid AGEN verbs
-- [ ] All `[STATE]` references are defined in ID-REGISTRY.md
-- [ ] All document references (`_SPEC_*.md`, etc.) use correct naming conventions
-
-## Benefits
-
-- **Clarity**: Global rules read once, context rules read as needed
-- **Maintainability**: Easy to add new contexts without duplicating global rules
-- **Consistency**: Same pattern across all complex workflows
+Cross-reference checklist:
+- [ ] All `/workflow` refs exist in workflows folder
+- [ ] All `@skills:` refs exist in skills folder
+- [ ] All `[STATE]` refs defined in ID-REGISTRY.md
+- [ ] All document refs use correct naming conventions

@@ -5,34 +5,39 @@ auto_execution_mode: 1
 
 # Partition Workflow
 
-Split implementation plans into discrete, testable tasks.
+Split IMPL plans into discrete, testable tasks and output to PROGRESS.md.
 
 ## Required Skills
 
 - @write-documents for document structure
 
-## Rules
+## MUST-NOT-FORGET
 
-- **Output to PROGRESS.md only** - Never create a separate TASKS document
-- To create a TASKS_[TOPIC].md document, use /write-tasks-plan instead
+1. Apply changes immediately without asking for permission
+2. Output to PROGRESS.md only - never create separate TASKS document
+3. Each task max 0.5 HHW, atomic, testable
+4. To create TASKS_[TOPIC].md document, use `/write-tasks-plan` instead
 
-## Step 1: Determine Strategy
+## Workflow
 
-If STRATEGY parameter provided, use it. Otherwise:
-1. Check NOTES.md for partitioning hints
-2. If BUILD + technical work → PARTITION-DEPENDENCY
-3. If BUILD + user-facing → PARTITION-SLICE
-4. If high uncertainty noted → PARTITION-RISK
-5. Default: PARTITION-DEFAULT (0.5 HHW chunks)
+1. **Determine Strategy**
+   - If STRATEGY parameter provided, use it
+   - Check NOTES.md for partitioning hints
+   - BUILD + technical work → PARTITION-DEPENDENCY
+   - BUILD + user-facing → PARTITION-SLICE
+   - High uncertainty → PARTITION-RISK
+   - Default: PARTITION-DEFAULT (0.5 HHW chunks)
 
-## Step 2: Gather Input Documents
+2. **Gather Input Documents**
+   - SPEC (requirements, FR, DD)
+   - IMPL (steps, edge cases)
+   - TEST (test cases)
 
-Read all relevant documents in order:
-1. SPEC (requirements, FR, DD)
-2. IMPL (steps, edge cases)
-3. TEST (test cases)
+3. **Apply Strategy** (see Strategies section)
 
-## Step 3: Apply Strategy
+4. **Output to PROGRESS.md**
+
+## Strategies
 
 ### PARTITION-DEFAULT
 
@@ -58,9 +63,9 @@ Read all relevant documents in order:
 - Order unknowns before knowns
 - Front-load integration points
 
-## Step 4: Output to PROGRESS.md
+## Output Format
 
-Update PROGRESS.md "To Do" section with partitioned tasks:
+Update PROGRESS.md "To Do" section:
 
 ```markdown
 ## To Do
@@ -69,13 +74,12 @@ Update PROGRESS.md "To Do" section with partitioned tasks:
 
 - [ ] **[TOPIC]-TK-001** - Task description (0.5 HHW)
 - [ ] **[TOPIC]-TK-002** - Task description (0.25 HHW)
-...
 ```
 
 ## Task Properties
 
 Each task must be:
 - **Atomic** - Implementable in one edit session between commits
-- **Testable** - Has defined test cases or can be verified with temp script
+- **Testable** - Has defined test cases or verifiable with temp script
 - **Scoped** - Does one thing only
-- **Estimated** - Has HHW estimate (target: max 0.5 HHW)
+- **Estimated** - Max 0.5 HHW

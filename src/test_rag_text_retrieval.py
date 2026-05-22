@@ -287,7 +287,7 @@ if __name__ == '__main__':
     client = create_azure_openai_client(azure_openai_use_key_authentication)
 
   params = RAGTextRetrievalParams(
-    vector_store_id="vs_6978c7b89068819183b675443ae00259"
+    vector_store_id="vs_5D3MpMY8jr92IeXzzVysibaH"
     ,only_these_filenames=[]  # Empty = all files, or specify: ["file1.pdf", "file2.md"]
     ,output_folder="./downloaded_rag_texts"
     ,output_suffix=".reconstructed.md"

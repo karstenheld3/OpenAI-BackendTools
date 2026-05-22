@@ -1,0 +1,12 @@
+{
+  "total_images": 10,
+  "successful": 10,
+  "failed": 0,
+  "skipped": 0,
+  "average_score": 4.91,
+  "refinements_applied": 0,
+  "total_input_tokens": 86895,
+  "total_output_tokens": 40416,
+  "total_cost_usd": 0.1026,
+  "total_elapsed_seconds": 772.8
+}

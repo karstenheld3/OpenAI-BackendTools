@@ -68,9 +68,9 @@ Populated by `/fail` workflow. Records mistakes and lessons learned to prevent r
 
 ## Location Rules
 
-- **SESSION-BASED**: `[SESSION_FOLDER]/FAILS.md`
-- **PROJECT-WIDE + SINGLE-PROJECT**: `[WORKSPACE_FOLDER]/FAILS.md`
-- **PROJECT-WIDE + MONOREPO**: `[PROJECT_FOLDER]/FAILS.md`
+- **SESSION-MODE**: `[SESSION_FOLDER]/FAILS.md`
+- **PROJECT-MODE + SINGLE-PROJECT**: `[WORKSPACE_FOLDER]/FAILS.md`
+- **PROJECT-MODE + MONOREPO**: `[PROJECT_FOLDER]/FAILS.md`
 
 ## Management Rules
 

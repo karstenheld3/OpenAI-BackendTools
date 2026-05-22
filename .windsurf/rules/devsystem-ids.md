@@ -6,6 +6,22 @@ trigger: always_on
 
 All documents and items must have unique IDs for traceability.
 
+## Number Formats (2-digit vs 4-digit)
+
+**2-digit `[NN]` or `[NUMBER]`** - For document-scoped items (bounded, rarely exceed 99):
+- Document IDs: `AUTH-SP01`, `CRWL-IP01`
+- Review IDs: `AUTH-SP01-RV01`
+- Spec items (FR, DD, IG, AC): `CRWL-FR-01`
+- Plan items (EC, IS, VC, TC, TK): `CRWL-IP01-EC-01`, `AUTH-TK01-TK-05`
+- Review findings (RF): `AUTH-SP01-RV01-RF-01`
+
+**4-digit `[NNNN]`** - For tracking IDs (unbounded, accumulate over time):
+- Bugs: `SAP-BG-0001`, `GLOB-BG-0001`
+- Problems: `AUTH-PR-0001`
+- Features: `UI-FT-0001`
+- Fixes: `CRWL-FX-0002`
+- Failures: `GLOB-FL-0019`
+
 ## Topic Registry
 
 **Topic:** 2-6 uppercase letters describing component (e.g., `CRWL` for Crawler, `AUTH` for Authentication, `EDIRD` for EDIRD Phase Model)
@@ -20,20 +36,23 @@ All documents and items must have unique IDs for traceability.
 
 **GLOB Usage:**
 
-Use `GLOB` for **tracking IDs only** (workspace-level failures, problems, tasks):
+Use `GLOB` for **tracking IDs only** (workspace-level failures, problems, tasks, bugs):
+- `GLOB-BG-*` - Bugs in `_BugFixes` session (PROJECT-MODE, cross-cutting)
 - `GLOB-FL-*` - DevSystem failures (sync errors, gate bypasses, tool issues)
 - `GLOB-PR-*` - Cross-cutting problems affecting multiple components
 - `GLOB-TK-*` - Workspace-wide tasks (deployments, refactoring)
+
+**_BugFixes Session:** Uses `GLOB` prefix for all tracking IDs because bugs there span multiple components. See `/bugfix` workflow for details.
 
 Do NOT use `GLOB` for **document IDs** (IN, SP, IP, TP, TK):
 - Named concepts get their own TOPIC: `MEPI-IN01`, `EDIRD-SP01`, `STRUT-SP01`
 - Features get their own TOPIC: `AUTH-SP01`, `CRWL-IP01`
 - If a document has a name, it has a TOPIC
 
-**Example: SINGLE-PROJECT**
+**Example: SINGLE-PROJECT-MODE**
 ```
 ## Topic Registry
-- `GLOB` - Project-wide (main spec, architecture)
+- `GLOB` - Project-mode (main spec, architecture)
 - `V1CR` - Version 1 Crawler
 - `V2CR` - Version 2 Crawler
 - `CUIF` - Common UI Functions
@@ -110,9 +129,9 @@ Defined in SPECs, referenced across IMPL and TEST plans.
 - `CRWL-DD-03` - Crawler Design Decision 3
 - `AUTH-IG-02` - Authentication Implementation Guarantee 2
 
-## Plan-Level Item IDs (EC, IS, VC, TC)
+## Plan-Level Item IDs (EC, IS, VC, TC, TK)
 
-Local to IMPL and TEST plans. Do NOT use in SPECs.
+Local to IMPL, TEST, and TASKS plans. Do NOT use in SPECs.
 
 **Format:** `[TOPIC]-[DOC][NN]-[TYPE]-[NUMBER]`
 
@@ -121,11 +140,13 @@ Local to IMPL and TEST plans. Do NOT use in SPECs.
 - `IS` - Implementation Step
 - `VC` - Verification Checklist item
 - `TC` - Test Case
+- `TK` - Task (work item in TASKS document)
 
 **Examples:**
 - `CRWL-IP01-EC-01` - Crawler Plan 01, Edge Case 1
 - `CRWL-IP01-IS-05` - Crawler Plan 01, Implementation Step 5
 - `AUTH-TP01-TC-03` - Authentication Test Plan 01, Test Case 3
+- `AUTH-TK01-TK-05` - Authentication Tasks 01, Task 5
 
 ## INFO Document Source IDs
 
@@ -158,28 +179,25 @@ Session tracking documents use date-based IDs instead of TOPIC-based IDs.
 - `2026-01-15_FixAuthenticationBug-PROBLEMS`
 - `2026-01-15_FixAuthenticationBug-PROGRESS`
 
-## Tracking IDs (BG, FT, PR, FX, TK, RV, FL)
+## Tracking IDs (BG, FT, PR, FX, FL)
 
 For session and project tracking in PROBLEMS.md, FAILS.md, _REVIEW.md, and backlog documents.
 
-**Format:** `[TOPIC]-[TYPE]-[NNN]` (3-digit number)
+**Format:** `[TOPIC]-[TYPE]-[NNNN]` (4-digit number)
 
 **Types:**
 - `BG` - Bug (defect in existing code)
 - `FT` - Feature (new functionality request)
 - `PR` - Problem (issue discovered during session)
 - `FX` - Fix (documented fix for a problem)
-- `TK` - Task (general work item)
-- `RV` - Review finding (potential issue in _REVIEW.md)
 - `FL` - Failure log entry (actual failure in FAILS.md)
 
 **Examples:**
-- `SAP-BG-001` - SAP-related bug 1
-- `AUTH-FT-001` - Authentication feature request 1
-- `GLOB-PR-003` - Project-wide problem 3
-- `CRWL-FX-002` - Crawler fix 2
-- `UI-TK-015` - UI task 15
-- `AUTH-RV-001` - Authentication review finding 1
-- `CRWL-FL-001` - Crawler failure log entry 1
+- `SAP-BG-0001` - SAP-related bug 1 (SESSION-MODE)
+- `AUTH-FT-0001` - Authentication feature request 1
+- `GLOB-PR-0003` - Project-wide problem 3 (PROJECT-MODE)
+- `GLOB-BG-0002` - Project-wide bug 2 (PROJECT-MODE)
+- `CRWL-FX-0002` - Crawler fix 2
+- `CRWL-FL-0001` - Crawler failure log entry 1
 
 **Note:** The `[TOPIC]` links together related SPEC, IMPL, TEST, INFO, FAILS, and REVIEW documents.

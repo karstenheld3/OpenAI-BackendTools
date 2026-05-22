@@ -12,8 +12,8 @@ Run this script and answer with a single character:
 # Define what can be removed
 $workspaceRoot = (Get-Location).Path
 $skillDir = Join-Path $workspaceRoot ".windsurf\skills\llm-transcription"
-$sharedVenv = Join-Path $workspaceRoot ".tools\llm-venv"
-$tempOutputDir = Join-Path $workspaceRoot ".tools\_transcription_output"
+$sharedVenv = Join-Path $workspaceRoot "..\.tools\llm-venv"
+$tempOutputDir = Join-Path $workspaceRoot "..\.tools\_transcription_output"
 
 # Check current state
 $hasSkill = Test-Path $skillDir
@@ -139,8 +139,8 @@ Write-Host "=== Done ===" -ForegroundColor Cyan
 
 **Components:**
 - **Skill folder**: `.windsurf/skills/llm-transcription/` (~50KB)
-- **Temp output**: `.tools/_transcription_output/` (variable size)
-- **Shared venv**: `.tools/llm-venv/` (~200MB, shared with llm-evaluation, llm-computer-use)
+- **Temp output**: `../.tools/_transcription_output/` (variable size)
+- **Shared venv**: `../.tools/llm-venv/` (~200MB, shared with llm-evaluation, llm-computer-use)
 
 ## Manual Removal
 
@@ -155,16 +155,16 @@ Remove-Item ".windsurf\skills\llm-transcription" -Recurse -Force
 ### 2. Temp Output
 
 ```powershell
-Remove-Item ".tools\_transcription_output" -Recurse -Force
+Remove-Item "..\.tools\_transcription_output" -Recurse -Force
 ```
 
 ### 3. Shared Venv (breaks other LLM skills)
 
 ```powershell
-Remove-Item ".tools\llm-venv" -Recurse -Force
+Remove-Item "..\.tools\llm-venv" -Recurse -Force
 ```
 
 ## Notes
 
-- **API keys file is NOT removed** - Located at `[WORKSPACE_FOLDER]\..\.api-keys.txt`, shared across all projects
-- **Shared venv warning** - The `.tools/llm-venv/` folder is shared between llm-transcription, llm-evaluation, and llm-computer-use skills. Removing it will break all three.
+- **API keys file is NOT removed** - Located at `[WORKSPACE_FOLDER]\..\.tools\.api-keys.txt`, shared across all projects
+- **Shared venv warning** - The `../.tools/llm-venv/` folder is shared between llm-transcription, llm-evaluation, and llm-computer-use skills. Removing it will break all three.

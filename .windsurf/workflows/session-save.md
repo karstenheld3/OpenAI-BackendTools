@@ -1,11 +1,13 @@
 ---
+description: Save session progress
 auto_execution_mode: 1
 ---
 
+# Save Session Workflow
+
 ## Required Skills
 
-Invoke these skills before proceeding:
-- @session-management for session file structure
+- @skills:session-management for session file structure
 - @git-conventions for commit format
 
 Re-read the entire conversation and find:
@@ -20,4 +22,11 @@ Compare all changes since the last commit and summarize.
  -> to be documented in session PROGRESS.md
 
 Update all session files.
-Then run commit.md workflow.
+
+## Topic Folder Sync
+
+Run @skills:session-management **Topic Folder Save Sync** procedure. If working in `T##_*` folder, sync progress summary to parent PROGRESS.md.
+
+## Commit
+
+Run `/commit` workflow.

@@ -148,7 +148,7 @@ obj/
 .DS_Store
 
 # Tools (reinstallable)
-.tools/poppler/
+../.tools/poppler/
 
 # Temporary
 *.tmp

@@ -31,7 +31,7 @@ python -m llm_computer_use "Click the Start button"
 python -m llm_computer_use -x "Open Notepad and type Hello World"
 
 # With API key file
-python -m llm_computer_use -x -k path/to/api-keys.txt "Open Calculator"
+python -m llm_computer_use -x -k ../.tools/.api-keys.txt "Open Calculator"
 ```
 
 ## Options

@@ -1,0 +1,100 @@
+{
+  "_comment": "Copy-paste config examples for Playwright MCP server (@playwright/mcp v0.0.70)",
+
+  "basic_stdio": {
+    "mcpServers": {
+      "playwright": {
+        "command": "npx",
+        "args": ["@playwright/mcp@latest"]
+      }
+    }
+  },
+
+  "persistent_with_all_caps": {
+    "mcpServers": {
+      "playwright": {
+        "command": "npx",
+        "args": [
+          "@playwright/mcp@latest",
+          "--caps", "vision,pdf,devtools,network,storage,testing,config"
+        ]
+      }
+    }
+  },
+
+  "extension_mode": {
+    "mcpServers": {
+      "playwright-extension": {
+        "command": "npx",
+        "args": ["@playwright/mcp@latest", "--extension"],
+        "env": {
+          "PLAYWRIGHT_MCP_EXTENSION_TOKEN": "your-token-here"
+        }
+      }
+    }
+  },
+
+  "headless_with_custom_profile": {
+    "mcpServers": {
+      "playwright": {
+        "command": "npx",
+        "args": [
+          "@playwright/mcp@latest",
+          "--headless",
+          "--user-data-dir", "./my-profile",
+          "--caps", "storage,network"
+        ]
+      }
+    }
+  },
+
+  "http_server_mode": {
+    "_usage": "Run server: npx @playwright/mcp@latest --port 8931",
+    "mcpServers": {
+      "playwright": {
+        "url": "http://localhost:8931/mcp"
+      }
+    }
+  },
+
+  "docker_client_spawned": {
+    "mcpServers": {
+      "playwright": {
+        "command": "docker",
+        "args": [
+          "run", "-i", "--rm", "--init", "--pull=always",
+          "mcr.microsoft.com/playwright/mcp"
+        ]
+      }
+    }
+  },
+
+  "isolated_with_storage_state": {
+    "mcpServers": {
+      "playwright": {
+        "command": "npx",
+        "args": [
+          "@playwright/mcp@latest",
+          "--isolated",
+          "--storage-state", "./auth-state.json",
+          "--caps", "storage"
+        ]
+      }
+    }
+  },
+
+  "custom_timeouts_and_proxy": {
+    "mcpServers": {
+      "playwright": {
+        "command": "npx",
+        "args": [
+          "@playwright/mcp@latest",
+          "--timeout-action", "10000",
+          "--timeout-navigation", "120000",
+          "--proxy-server", "http://myproxy:3128",
+          "--ignore-https-errors"
+        ]
+      }
+    }
+  }
+}

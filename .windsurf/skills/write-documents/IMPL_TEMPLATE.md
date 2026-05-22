@@ -23,9 +23,10 @@
 1. [File Structure](#1-file-structure)
 2. [Edge Cases](#2-edge-cases)
 3. [Implementation Steps](#3-implementation-steps)
-4. [Test Cases](#4-test-cases)
-5. [Verification Checklist](#5-verification-checklist)
-6. [Document History](#6-document-history)
+4. [Logging Preview](#4-logging-preview)
+5. [Test Cases](#5-test-cases)
+6. [Verification Checklist](#6-verification-checklist)
+7. [Document History](#7-document-history)
 
 ## 1. File Structure
 
@@ -96,7 +97,24 @@ def renderJobRow(job):
 def renderJobRow(job): ...
 ```
 
-## 4. Test Cases
+## 4. Logging Preview
+
+*(If implementation produces no logged output, state: "N/A: [reason, e.g., pure data transform with no console output]")*
+
+Show the exact log output the implementation will produce for key operations. This is the contract between SPEC logging requirements and implementation. Follow @skills:coding-conventions logging rules.
+
+**[Operation name]:**
+```
+[Exact log output following Announce > Track > Report pattern]
+[Include success path, error path, and skip path]
+```
+
+**Error case - [error scenario]:**
+```
+[Exact log output showing error handling]
+```
+
+## 5. Test Cases
 
 ### Category 1: [Name] (N tests)
 
@@ -107,7 +125,7 @@ def renderJobRow(job): ...
 
 - **[PREFIX]-IP01-TC-03**: [Description] -> ok=true, [expected result]
 
-## 5. Verification Checklist
+## 6. Verification Checklist
 
 ### Prerequisites
 - [ ] **[PREFIX]-IP01-VC-01**: Related specs read and understood
@@ -121,7 +139,7 @@ def renderJobRow(job): ...
 - [ ] **[PREFIX]-IP01-VC-10**: All test cases pass
 - [ ] **[PREFIX]-IP01-VC-11**: Manual verification in UI
 
-## 6. Document History
+## 7. Document History
 
 **[YYYY-MM-DD HH:MM]**
 - Initial implementation plan created

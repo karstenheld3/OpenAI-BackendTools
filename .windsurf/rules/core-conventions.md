@@ -14,9 +14,32 @@ Universal formatting and writing conventions for all documents.
 - Use Unicode box-drawing characters for structures:
   - Trees and flows: `├─>` `└─>` `│` (2-space indentation compatible)
   - Boxes and diagrams (non-UI): `┌─` `├─` `└─` `│` `─` `┐` `┤` `┘`
-  - UI diagrams and designs: Keep ASCII `+` `-` `|` for compatibility and easy manual editing
+  - UI mockups: Same Unicode characters (SPEC-DG-06), not ASCII `+` `-` `|`
+- Arrow symbol `→` must have spaces around it: `A → B` not `A→B`
+- Never use `▼` (U+25BC); use `v` instead
 - Try to fit single statements/decisions/objects on a single line
 - Format workflow references as inline code: `/verify`, `/go`, `/recap`
+- Inline enumerations use `N)` format, not `(N)`: `1) first, 2) second, 3) third`
+
+## Encoding
+
+- Always assume UTF-8 encoding.
+- When writing in non-English languages, use native special characters (e.g., German Umlaute: ae → ä, oe → ö, ue → ü, ss → ß). Never substitute with ASCII approximations.
+- When non-UTF-8 encoding is detected, document in workspace or session NOTES.md:
+  1. File path
+  2. Detected encoding (e.g., ISO-8859-1, Windows-1252)
+  3. How to preserve encoding (e.g., which PowerShell `[System.IO.File]::` encoding parameters)
+- Test and verify PowerShell snippets to correctly read and write file (use copy of file for testing) before recording 3. in NOTES.md.
+
+## Date and Time Format
+
+- **In documents**: `YYYY-MM-DD HH:MM` - Example: `2026-03-19 14:30`
+- **In logging**: `YYYY-MM-DD HH:MM:SS` - Example: `2026-03-19 14:30:23`
+- **In filenames**: `YYYY-MM-DD` prefix - Example: `2026-03-19_ServerMigration.md`, `2026-03-19_14-30_MeetingNotes.md`
+- **In session folders**: `YYYY-MM-DD` prefix - Example: `_2026-03-19_FixAuthBug/`
+- **In Document History**: `[YYYY-MM-DD HH:MM]` - Example: `**[2026-03-19 14:30]**`
+
+Never use locale-dependent formats (`03/19/2026`, `19.03.2026`, `March 19, 2026`).
 
 ## Document Structure
 
@@ -71,12 +94,24 @@ Documents may opt-in to use Markdown tables or emojis by adding a DevSystem tag 
 
 **Syntax:**
 ```html
-<DevSystem MarkdownTablesAllowed=true EmojisAllowed=true />
+<DevSystem MarkdownTablesAllowed=true EmojisAllowed=true APAPALAN=true MECT=true />
 ```
 
 **Attributes:**
 - `MarkdownTablesAllowed=true` - Allow Markdown tables in this document
 - `EmojisAllowed=true` - Allow emojis in this document
+- `APAPALAN=true` - APAPALAN rules apply ("As Precise As Possible, As Little As Necessary"). Defined in `@skills:write-documents` and `@skills:coding-conventions`
+- `MECT=true` - MECT rules apply ("Minimal Explicit Consistent Terminology"). Defined in `@skills:write-documents` and `@skills:coding-conventions`
+
+**Table formatting rule:** When tables are allowed, format with aligned columns using spaces for human readability. No bold, italic, or other formatting inside table cells.
+```markdown
+| Model           | Workers | TPM   |
+|-----------------|---------|-------|
+| gpt-5-nano      | 120+    | ~402K |
+| claude-4-5-opus | 60+     | ~473K |
+```
+- BAD: `|Model|Workers|TPM|` (no spacing)
+- BAD: `| **Model** | Workers |` (bold in cells)
 
 **Allowed emojis (when enabled):**
 - ✅ - Yes, supported, pass, enabled
@@ -100,9 +135,32 @@ Documents may opt-in to use Markdown tables or emojis by adding a DevSystem tag 
 - Feature matrices and compatibility charts
 - Status dashboards
 
-## Temporary Files (.tmp prefix)
+## Skill References
 
-Files starting with `.tmp` are temporary helper scripts created during operations. They should be deleted after use. Example: `.tmp_fix_quotes.ps1`
+Reference skills using `@skills:skill-name` format. The skill name must match a folder in `[AGENT_FOLDER]/skills/`.
+
+- `@skills:write-documents` - Document writing skill
+- `@skills:coding-conventions` - Coding conventions skill
+- `@skills:deep-research` - Deep research skill
+
+**BAD:** `(write-documents skill)`, `write-documents skill`, `the writing skill`
+**GOOD:** `@skills:write-documents`
+
+## APAPALAN Writing Principle
+
+**APAPALAN** = As Precise As Possible (Priority 1), As Little As Necessary (Priority 2)
+
+All written output - documents, code comments, log messages, commit messages, communications - follows this principle. Full rules in `APAPALAN_RULES.md` (@skills:write-documents skill).
+
+**Why:** Imprecise writing causes wrong assumptions. Verbose writing wastes attention. Precision prevents misunderstanding; brevity respects the reader's time. Precision always wins when the two conflict.
+
+**Minimal subset (always apply):**
+- **AP-PR-07**: Be specific - no "handles errors appropriately", say "retry 3 times with exponential backoff"
+- **AP-PR-09**: Consistent patterns - same concept = same format everywhere
+- **AP-BR-02**: Sacrifice grammar for brevity - drop articles, filler, verbose constructions
+- **AP-NM-01**: One name per concept - no synonyms, no polysemy
+- **AP-NM-05**: Use standard terms - don't invent new names for known concepts
+- **AP-ST-01**: Goal first - reader knows WHY before HOW
 
 ## Transcription Output
 

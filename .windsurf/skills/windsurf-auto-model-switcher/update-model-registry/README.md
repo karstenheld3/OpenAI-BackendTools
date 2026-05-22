@@ -4,7 +4,7 @@
 
 Use `windows-desktop-control` skill:
 ```powershell
-# From DevSystemV3.2/skills/windows-desktop-control/
+# From .windsurf/skills/windows-desktop-control/
 .\simple-screenshot.ps1
 ```
 

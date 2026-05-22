@@ -26,7 +26,7 @@ Takes a passive screenshot without any UI interaction. Handles DPI scaling corre
 ```
 
 **Parameters:**
-- `-OutputPath` - Output file path (default: `.tools/_screenshots/YYYY-MM-DD_HH-mm-ss_screenshot.jpg`)
+- `-OutputPath` - Output file path (default: `../.tools/_screenshots/YYYY-MM-DD_HH-mm-ss_screenshot.jpg`)
 - `-Width` - Capture width in pixels (default: full screen physical width)
 - `-Height` - Capture height in pixels (default: full screen physical height)
 - `-X` - Capture X offset (default: 0)

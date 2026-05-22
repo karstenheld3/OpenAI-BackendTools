@@ -7,20 +7,28 @@ auto_execution_mode: 1
 
 Forward-looking execution of next steps in a plan.
 
+## MUST-NOT-FORGET
+
+- Execute queued workflows in sequence
+- Session lifecycle workflows (`/session-finalize`, `/session-archive`) require user confirmation
+- Remove workflows from sequence after completion
+
 ## Step 1: Build Execution Sequence
+
+**Topic Folder Detection:** Run @skills:session-management **Topic Folder Detection** procedure first. If in `T##_*` folder, read both parent and topic folder tracking docs below.
 
 Construct an ordered list of next actions by analyzing multiple sources:
 
 **Mandatory re-read before continuing:**
 
-**SESSION-BASED mode** - Re-read session folder documents:
+**SESSION-MODE** - Re-read session folder documents:
 - NOTES.md
 - PROBLEMS.md
 - PROGRESS.md
 - FAILS.md
 - LEARNINGS.md (if exists)
 
-**PROJECT-WIDE mode** - Re-read workspace-level documents:
+**PROJECT-MODE** - Re-read workspace-level documents:
 - README.md
 - !NOTES.md or NOTES.md
 - !PROBLEMS.md or PROBLEMS.md (if exists)
@@ -35,7 +43,7 @@ Then build execution sequence:
 - Check previous workflow outputs for successor workflows
 - Note any explicit user instructions about next steps
 
-**1.2 Check session lifecycle state** (SESSION-BASED mode):
+**1.2 Check session lifecycle state** (SESSION-MODE):
 - Lifecycle: Init → Work → Save → Resume → Finalize → Archive
 - If resuming → check NOTES.md "Workflows to Run on Resume"
 - Session lifecycle workflows (`/session-finalize`, `/session-archive`) may appear in sequence from conversation context (Step 1.1), but require `[CONFIRM]` before execution (see Step 2)

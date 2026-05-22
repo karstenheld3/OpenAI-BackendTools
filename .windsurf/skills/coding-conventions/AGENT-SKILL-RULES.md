@@ -1,57 +1,78 @@
 # Agent Skill Development Rules
 
-Rules for building proper agent skills that integrate external tools, MCP servers, or system capabilities.
+Rules for building agent skills that integrate external tools, MCP servers, or system capabilities.
+
+## Target Audience
+
+Skill files are consumed by LLMs, not humans. Optimize for:
+- Medium-reasoning models
+- Low context windows - every saved token = more space for the actual task
+- Instruction following over prose comprehension
+- APAPALAN principle: As precise as possible, as little as necessary.
+
+Design principles:
+1. Maximum clarity - one interpretation per instruction, no ambiguity
+2. Numbered steps - LLMs follow numbered sequences better than prose
+3. MUST-NOT-FORGET technique - for complex skills with verification (SETUP.md, UNINSTALL.md)
+4. No visual formatting in LLM-consumed files - `**bold**` adds tokens without improving comprehension
+5. Headers as structure - `#` and `##` are parsing boundaries LLMs rely on
+6. Compact format for lookups - one line per resource, no multi-line entries
+7. Verbose format only when justified - multi-step reasoning, troubleshooting, code with explanation
+8. JSON intermediate output - for multi-step workflows, require LLM to emit structured JSON between steps to enforce explicit reasoning and prevent drift
+
+JSON intermediate output example:
+
+```
+## Step 2: Classify skill type
+Emit before proceeding:
+{"skill_type": "resource_lookup|instructional|setup", "format": "compact|rich|verbose", "reason": "..."}
+```
+
+This forces the LLM to commit to a decision before acting, reducing errors in medium-reasoning models.
+
+Exception: SETUP.md and UNINSTALL.md may use richer formatting because they guide human users through system changes.
 
 ## 1. Research First
 
 Before writing any skill documentation:
 
-1. **Understand the technology** - How does it actually work?
-2. **Verify compatibility** - Does it work with the target agent (Windsurf/Cascade)?
-3. **Identify dependencies** - What must be installed? What versions?
-4. **Find known issues** - Check GitHub issues, forums, community reports
-5. **Test manually first** - Run commands yourself before documenting them
+1. Understand the technology - how does it actually work?
+2. Verify compatibility - does it work with the target agent (Windsurf/Cascade)?
+3. Identify dependencies - what must be installed? What versions?
+4. Find known issues - check GitHub issues, forums, community reports
+5. Test manually first - run commands yourself before documenting them
 
-**Document your research** in an INFO document or the skill's SKILL.md.
+Document research in an INFO document or the skill's SKILL.md.
 
 ## 2. Skill File Structure
 
-### Required Files
-
-- **`SKILL.md`** - Main skill documentation (see Section 2.1 for required content)
-
-### Conditional Files
-
-- **`SETUP.md`** - Required if software must be installed or configured
-- **`UNINSTALL.md`** - Required if SETUP.md exists
-
-### Optional Files
-
-- Supporting documentation, templates, examples
+Required: `SKILL.md` (see Section 2.1 for required content)
+Conditional: `SETUP.md` (if install needed) + `UNINSTALL.md` (required if SETUP.md exists)
+Optional: supporting docs, templates, examples
 
 ### 2.1 SKILL.md Required Content
 
 SKILL.md MUST contain sufficient technical detail for the agent to understand and use the skill correctly:
 
-**Required sections:**
+Required sections:
 
-1. **Frontmatter** - `name` and `description` fields
-2. **When to Use / When NOT to Use** - Clear guidance on applicability
-3. **Architecture** - How components connect (diagram preferred)
-4. **Technical Details** - How the underlying technology works
-5. **Capabilities** - What the skill enables
-6. **Limitations** - What it cannot do, known issues
-7. **Sources** - Links to official documentation, repositories, research
+1. Frontmatter - `name` and `description` fields
+2. When to Use / When NOT to Use - clear applicability guidance
+3. Architecture - how components connect (diagram preferred)
+4. Technical Details - how the underlying technology works
+5. Capabilities - what the skill enables
+6. Limitations - what it cannot do, known issues
+7. Sources - links to official docs, repos, research
 
-**Technical depth requirements:**
+Technical depth requirements:
 
-- **Tool actions/API** - List all available actions with parameters
-- **Dependencies** - What libraries/tools are used under the hood
-- **Platform specifics** - OS-specific behavior (Windows, macOS, Linux)
-- **Model requirements** - Which AI models work best (if applicable)
-- **Execution flow** - How the tool operates step-by-step
+- Tool actions/API - list all available actions with parameters
+- Dependencies - what libraries/tools are used under the hood
+- Platform specifics - OS-specific behavior (Windows, macOS, Linux)
+- Model requirements - which AI models work best (if applicable)
+- Execution flow - how the tool operates step-by-step
 
-**Example: Insufficient vs Sufficient**
+Example: Insufficient vs Sufficient
 
 ```markdown
 # BAD: Too vague
@@ -74,11 +95,7 @@ SKILL.md MUST contain sufficient technical detail for the agent to understand an
 └─────────────────────────────────────────┘
 ```
 
-**Why this matters:** Without sufficient technical detail, the agent cannot:
-- Know which tool actions are available
-- Understand parameter formats
-- Anticipate limitations
-- Troubleshoot failures
+Without sufficient technical detail, the agent cannot know which actions are available, understand parameter formats, anticipate limitations, or troubleshoot failures.
 
 ## 3. SETUP.md Requirements
 
@@ -86,7 +103,7 @@ SETUP.md files MUST follow this structure:
 
 ### 3.1 Pre-Installation Verification
 
-**Before modifying the system:**
+Before modifying the system:
 
 1. Verify all prerequisites exist (Node.js, Python, etc.)
 2. Test that core functionality works in isolation
@@ -173,11 +190,11 @@ $config.mcpServers["server-name"] = $targetServer
 $config | ConvertTo-Json -Depth 10 | Set-Content $configPath -Encoding UTF8
 ```
 
-**Key requirements:**
-- **Idempotent** - Running twice produces same result
-- **Backup first** - Always backup before modifying
-- **Handle PSCustomObject** - JSON parsing returns PSCustomObject, convert to Hashtable
-- **Compare before write** - Don't modify if already correct
+Key requirements:
+- Idempotent - running twice produces same result
+- Backup first - always backup before modifying
+- Handle PSCustomObject - JSON parsing returns PSCustomObject, convert to Hashtable
+- Compare before write - don't modify if already correct
 
 ### 3.3 Post-Installation Verification
 
@@ -192,7 +209,7 @@ UNINSTALL.md files MUST follow this structure:
 
 ### 4.1 Pre-Uninstall Verification
 
-**Before removing anything:**
+Before removing anything:
 
 1. Verify what is currently installed
 2. Check for dependencies that might break
@@ -232,13 +249,13 @@ If dependencies found: [what to do]
 
 ## 5. Test Before Writing
 
-**Critical Rule**: Test all code snippets WITHOUT modifying the system before including them in SETUP/UNINSTALL.
+CRITICAL: Test all code snippets WITHOUT modifying the system before including them in SETUP/UNINSTALL.
 
 ### Testing Approach
 
-1. **Read-only tests first** - Verify state without changing it
-2. **Isolated tests** - Test functionality in temporary location
-3. **Destructive tests last** - Only after read-only tests pass
+1. Read-only tests first - verify state without changing it
+2. Isolated tests - test functionality in temporary location
+3. Destructive tests last - only after read-only tests pass
 
 ### Example Pattern
 
@@ -256,15 +273,13 @@ Set-Content $configPath $newConfig  # Don't do this before verification
 
 ## 6. Documentation Quality
 
-### Include in Every Skill
+Every skill must include:
+- Compatibility notes - what's verified vs expected to work
+- Expected output - what user should see at each step
+- Troubleshooting - common errors and fixes
+- References - links to official docs, repos, issues
 
-- **Compatibility notes** - What's verified vs expected to work
-- **Expected output** - What user should see at each step
-- **Troubleshooting** - Common errors and fixes
-- **References** - Links to official docs, repos, issues
-
-### Avoid
-
+Avoid:
 - Untested commands
 - Vague success criteria ("it should work")
 - Missing error handling
@@ -276,10 +291,10 @@ Example of applying these rules when building the `computer-use-mcp` skill:
 
 ### 7.1 Research Phase
 
-1. **Web search** - Found domdomegg/computer-use-mcp repository
-2. **Read documentation** - GitHub README, nut.js docs, Anthropic Computer Use docs
-3. **Identify compatibility gap** - Repo lists Claude Desktop, Cursor, Cline but NOT Windsurf
-4. **Document finding** - Added compatibility note: "expected to work but not officially verified"
+1. Web search - found domdomegg/computer-use-mcp repository
+2. Read documentation - GitHub README, nut.js docs, Anthropic Computer Use docs
+3. Identify compatibility gap - repo lists Claude Desktop, Cursor, Cline but NOT Windsurf
+4. Document finding - added compatibility note: "expected to work but not officially verified"
 
 ### 7.2 Initial SETUP.md (What We Did Wrong)
 
@@ -298,11 +313,11 @@ Devil's Advocate review identified:
 - Vague test instructions
 
 Fixed by adding:
-- **Section 1-6**: Pre-installation verification (Node.js, npx, package test, nut.js test, screenshot test, config check)
-- **Pre-Installation Checklist**: All checks must pass before proceeding
-- **Separator**: Clear `---` line between verification and installation
-- **Section 7+**: Installation only after verification passes
-- **Expected output**: Specific prompts and what success looks like
+- Section 1-6: pre-installation verification (Node.js, npx, package test, nut.js test, screenshot test, config check)
+- Pre-Installation Checklist: all checks must pass before proceeding
+- Separator: clear `---` line between verification and installation
+- Section 7+: installation only after verification passes
+- Expected output: specific prompts and what success looks like
 
 ### 7.4 SKILL.md Enhancement
 
@@ -316,13 +331,71 @@ Initial version was minimal. Enhanced with:
 
 ### 7.5 Lessons Learned
 
-1. **Research before writing** - Found compatibility gap early
-2. **Test commands first** - `npx -y computer-use-mcp --help` before documenting
-3. **Verify then modify** - Pre-installation checks prevent broken installs
-4. **Expected output is crucial** - User knows if something went wrong
-5. **Sources matter** - Link to primary documentation
+1. Research before writing - found compatibility gap early
+2. Test commands first - `npx -y computer-use-mcp --help` before documenting
+3. Verify then modify - pre-installation checks prevent broken installs
+4. Expected output is crucial - user knows if something went wrong
+5. Sources matter - link to primary documentation
 
-## 8. Skill Review Checklist
+## 8. Token Optimization for Skill Files
+
+Skills are consumed by LLMs, not humans. Every token costs money and context window space. Reduce tokens without sacrificing clarity or instruction detail.
+
+### 8.1 Core Principle
+
+Never sacrifice clarity for brevity. But never add formatting that only helps human eyes.
+
+### 8.2 What to Remove
+
+Visual-only formatting (LLMs don't benefit):
+- `**Bold**` markup - LLMs parse plain text equally well
+- `- ` bullet prefixes when plain lines under a heading are unambiguous
+- `### ` sub-sub-headers when a simple label on the line suffices
+- Blank lines between every item in a list
+- Verbose prefixes like `- **URL:** `, `- **Best for:** ` when a compact format works
+
+Redundant prose:
+- "When to Use This File" sections that repeat the Keywords line
+- Descriptions that restate the heading ("Flight tracking" under `## Flights`)
+- Filler phrases: "This section covers", "The following resources"
+
+### 8.3 What to Keep
+
+Always keep (improves LLM comprehension):
+- `# ` and `## ` headers (structural parsing boundaries)
+- Keywords/trigger lines (how the LLM finds the right file)
+- Parenthetical notes with critical context: `(blocks bots, use browser)`
+- Concrete examples: `Frankfurt flight delays -> DE.md -> Flightradar24`
+- All URLs, parameters, and technical detail
+
+### 8.4 Compact Format for Resource/Lookup Skills
+
+For skills that are primarily URL/resource lookups:
+
+```
+# Title
+Keywords: term1, term2, term3
+
+## Category
+Name: https://url.com (notes if needed)
+Name2: https://url2.com
+```
+
+One line per resource. No bullets, no bold, no multi-line entries.
+
+### 8.5 When Verbose Format is Justified
+
+Use richer formatting when:
+- Instructions require multi-step reasoning (SETUP.md, UNINSTALL.md)
+- Parameters have complex interactions
+- Failure modes need detailed troubleshooting
+- Code snippets need surrounding explanation
+
+### 8.6 Review Metric
+
+After writing a skill file, ask: "If I remove this token, does the LLM lose information or context?" If no, remove it.
+
+## 9. Skill Review Checklist
 
 Before publishing a skill:
 
@@ -336,3 +409,4 @@ Before publishing a skill:
 - [ ] Expected output documented for each step
 - [ ] Troubleshooting section covers common errors
 - [ ] References link to primary sources
+- [ ] Token optimization applied (Section 8): no visual-only formatting in LLM-consumed files

@@ -1,176 +1,179 @@
 ---
 name: ms-playwright-mcp
-description: Apply when automating browser interactions, web scraping, or UI testing with AI agents
+description: Automates browser interactions via Microsoft Playwright MCP server (@playwright/mcp). Use when navigating websites, filling forms, taking screenshots, scraping web data, testing web UI, or automating any browser-based task. Covers persistent sessions, extension mode for existing browser tabs, and 40+ browser automation tools.
+compatibility: Requires Node.js 18+ and @playwright/mcp package via npx
 ---
 
-# Playwright MCP Guide
+# Playwright MCP Skill
 
-Rules and usage for Microsoft Playwright MCP server.
+Workflow guidance for Microsoft Playwright MCP server. Tool parameters are delivered by MCP `tools/list` handshake - this skill provides procedures, gotchas, and decision logic.
 
-## Table of Contents
+**References** (loaded on demand):
+- [PLAYWRIGHT_TOOLS.md](PLAYWRIGHT_TOOLS.md) - Complete tool catalog (21 core + 40 opt-in)
+- [PLAYWRIGHT_CONFIG.md](PLAYWRIGHT_CONFIG.md) - All CLI flags, env vars, JSON config
+- [PLAYWRIGHT_AUTHENTICATION.md](PLAYWRIGHT_AUTHENTICATION.md) - Extension mode, persistent profiles
+- [PLAYWRIGHT_TROUBLESHOOTING.md](PLAYWRIGHT_TROUBLESHOOTING.md) - Common issues with fixes
+- [SETUP.md](SETUP.md) - Installation
+- [UNINSTALL.md](UNINSTALL.md) - Uninstallation
 
-**Core**
-- [MUST-NOT-FORGET](#must-not-forget)
-- [Configuration](#configuration)
-- [Available Tools](#available-tools)
+## MUST-NOT-FORGET
 
-**Workflows**
-- [Common Workflows](#common-workflows)
-- [Advanced Workflows](PLAYWRIGHT_ADVANCED_WORKFLOWS.md) - Cookie popups, scrolling, expanding items, full page screenshots
-
-**Reference**
-- [Element Selection](#element-selection)
-- [Authentication](PLAYWRIGHT_AUTHENTICATION.md) - Persistent profiles, storage state, extension mode
-- [Troubleshooting](PLAYWRIGHT_TROUBLESHOOTING.md) - Common issues, flaky tests
-- [Setup](SETUP.md) - Installation
+1. Use `browser_snapshot` (accessibility tree) for element discovery, not screenshots
+2. Element refs are ephemeral - ALWAYS re-snapshot before clicking after any navigation or page change
+3. Reference elements via `ref` from snapshot (e.g., `ref: "e5"`) or `selector` (e.g., `[data-testid="submit"]`)
+4. Use `type: "jpeg"` for all screenshots (default PNG produces unnecessarily large files)
+5. NEVER auto-close browser - only user may close. Sessions preserve authentication state
+6. `browser_fill_form` takes `fields` array (NOT `browser_fill`). `browser_take_screenshot` (NOT `browser_screenshot`)
+7. Opt-in tools need `--caps` flag. Cookie read needs `--caps=storage`. Route mocking needs `--caps=network`
+8. `browser_evaluate` runs in browser (no Node.js APIs). `browser_run_code` runs server-side with Playwright `page` object
+9. Downloads go to `--output-dir` path. Default: `.playwright-mcp/` under the IDE user data folder (NOT the system Downloads folder). Use `find_by_name` in the IDE data dir to locate downloaded files if path unknown
+10. Extension mode: Chrome/Edge only, uses Chrome Web Store extension, NOT `--remote-debugging-port`
 
 ## Intent Lookup
 
 **User wants to...**
-- **Research a topic / read articles** → Navigate, dismiss cookie popup, scroll for lazy content, screenshot
-- **Find a product / compare prices** → Navigate, search, extract data with `browser_evaluate`
-- **Fill out a form / submit application** → Use `browser_fill` for fields, `browser_click` for submit
-- **Download file / attachment** → First find links with [Section 5](PLAYWRIGHT_ADVANCED_WORKFLOWS.md#5-find-and-extract-links), then click to download
-- **Log into a site** → Fill credentials, submit; use [PLAYWRIGHT_AUTHENTICATION.md](PLAYWRIGHT_AUTHENTICATION.md) to stay logged in
-- **Do a bank transfer / pay bills** → Requires persistent profile for auth; use `browser_snapshot` before each action
-- **Check email / download attachments** → Navigate to webmail, expand messages, click attachment links
-- **Archive a webpage** → See [PLAYWRIGHT_ADVANCED_WORKFLOWS.md](PLAYWRIGHT_ADVANCED_WORKFLOWS.md) for full page screenshot workflow
-- **Interact with dynamic content** → Scroll to load lazy content, expand collapsed sections, then proceed
+- **Read a webpage / research a topic** → Navigate, snapshot, dismiss cookie popup, scroll for lazy content
+- **Fill out a form** → Snapshot to get refs, `browser_fill_form` with fields array, click submit
+- **Take a screenshot** → `browser_take_screenshot(type: "jpeg")`, or `fullPage: true` for complete page
+- **Log into a site** → Fill credentials + submit, or use persistent profile. See [PLAYWRIGHT_AUTHENTICATION.md](PLAYWRIGHT_AUTHENTICATION.md)
+- **Use an already logged-in browser** → Extension mode (`--extension`). See [PLAYWRIGHT_AUTHENTICATION.md](PLAYWRIGHT_AUTHENTICATION.md)
+- **Scrape data** → `browser_evaluate` with JS to extract DOM content, or `browser_snapshot` for structured text
+- **Test a web UI** → Navigate, snapshot, assert elements present, use `--caps=testing` for verification tools
+- **Download a file** → Find link with snapshot, click to download, check output dir
+- **Interact with a map / canvas / custom widget** → Need `--caps=vision` for coordinate-based click/drag
+- **Mock API responses** → Need `--caps=network`, use `browser_route` with URL pattern
+- **Handle cookie/General Data Protection Regulation (GDPR) popups** → Snapshot, find accept/reject button, click it. See [Dismiss Cookie Popup](#5-dismiss-cookiegdpr-popup)
+- **Debug browser issues** → See [PLAYWRIGHT_TROUBLESHOOTING.md](PLAYWRIGHT_TROUBLESHOOTING.md)
 
-**UI testing...**
-- **Verify page loads correctly** → Navigate, `browser_snapshot`, check expected elements present
-- **Test form validation** → Submit empty/invalid data, check error messages appear
-- **Test navigation flow** → Click through menus, verify correct pages load
-- **Test responsive layout** → Resize browser, screenshot at different widths
-- **Test button states** → Hover, click, verify visual/functional changes
-- **Test modal dialogs** → Trigger modal, interact, close, verify dismissed
-- **Test error states** → Force errors (bad URL, timeout), verify error handling
-- **Test accessibility** → Use `browser_snapshot` (accessibility tree), check refs have labels
-- **Compare before/after** → Screenshot before change, screenshot after, compare
-- **Test login/logout** → Full auth flow, verify session state
+## Core Procedures
 
-**Technical tasks...**
-- **Handle cookie popup** → [PLAYWRIGHT_ADVANCED_WORKFLOWS.md#1-close-cookie-popups](PLAYWRIGHT_ADVANCED_WORKFLOWS.md#1-close-cookie-popups)
-- **Run custom JavaScript** → `browser_evaluate(expression: "...")`
-- **Debug failures** → [PLAYWRIGHT_TROUBLESHOOTING.md](PLAYWRIGHT_TROUBLESHOOTING.md)
+### 1. Navigate and Interact
 
-## MUST-NOT-FORGET
-
-- Use accessibility tree (not screenshots) for element selection
-- Reference elements via `ref=e5` format from `browser_snapshot`
-- Always call `browser_snapshot` before clicking to get current refs
-- Use `browser_close` when done to free resources
-- For logged-in sessions: Use persistent user profile or storage state
-
-## Configuration
-
-**Repository**: https://github.com/microsoft/playwright-mcp
-**Package**: `@playwright/mcp`
-
-**Basic (isolated session):**
-```json
-{
-  "mcpServers": {
-    "playwright": {
-      "command": "npx",
-      "args": ["@playwright/mcp@latest"]
-    }
-  }
-}
-```
-
-**Persistent profile (remembers logins):**
-```json
-{
-  "args": ["@playwright/mcp@latest", "--user-data-dir", "[USER_PROFILE_PATH]/.ms-playwright-mcp-profile"]
-}
-```
-
-**Headless:** Add `"--headless"` to args.
-
-**Timeouts:** Add `"--timeout-action", "10000", "--timeout-navigation", "120000"` for slow pages.
-
-## Available Tools
-
-### Navigation
-- **browser_navigate** - `browser_navigate(url: "https://example.com")`
-
-### Element Interaction
-- **browser_snapshot** - Get accessibility tree with element refs
-- **browser_click** - `browser_click(element: "Button", ref: "e12")`
-- **browser_type** - `browser_type(element: "Input", ref: "e8", text: "query")`
-- **browser_fill** - `browser_fill(element: "Email", ref: "e3", value: "user@example.com")`
-- **browser_select** - `browser_select(element: "Country", ref: "e15", values: ["USA"])`
-- **browser_hover** - `browser_hover(element: "Menu", ref: "e5")`
-- **browser_drag** - Drag and drop between elements
-- **browser_press_key** - `browser_press_key(key: "Enter")` or `browser_press_key(key: "Control+A")`
-
-### Inspection
-- **browser_screenshot** - `browser_screenshot()` or `browser_screenshot(fullPage: true)`
-- **browser_console_messages** - Get console logs
-- **browser_evaluate** - `browser_evaluate(expression: "document.title")`
-
-### Timing
-- **browser_wait_for** - `browser_wait_for(time: 2)` wait seconds, or `browser_wait_for(text: "Loading")` wait for text
-
-### Session
-- **browser_close** - Close browser and free resources
-
-## Common Workflows
-
-### Navigate and Click
 ```
 1. browser_navigate(url: "https://example.com")
-2. browser_snapshot()
-3. browser_click(element: "Login button", ref: "e12")
+2. browser_snapshot()                              # Get element refs
+3. # If cookie popup visible: find accept button, click it, re-snapshot
+4. browser_click(ref: "e12", element: "Target button")
+5. browser_snapshot()                              # Verify result, get new refs
 ```
 
-### Fill Form
+After EVERY navigation or click that changes the page: re-snapshot. Refs from previous snapshot are invalid.
+
+### 2. Fill a Form
+
+```
+1. browser_snapshot()                              # Find form fields
+2. browser_fill_form(fields: [
+     {ref: "e3", name: "Email", type: "textbox", value: "user@example.com"},
+     {ref: "e5", name: "Password", type: "textbox", value: "password123"}
+   ])
+3. browser_click(ref: "e8", element: "Submit button")
+4. browser_snapshot()                              # Verify submission result
+```
+
+Field types: `textbox`, `checkbox` (value: "true"/"false"), `radio`, `combobox` (value: option text), `slider`.
+
+### 3. Full Page Screenshot
+
+```
+1. browser_navigate(url: "https://example.com")
+2. browser_snapshot()                              # Check for cookie popups
+3. # Dismiss cookie popup if present
+4. # Scroll down to trigger lazy-loaded content:
+   browser_press_key(key: "End")
+   browser_wait_for(time: 2)
+   browser_press_key(key: "Home")
+5. browser_take_screenshot(fullPage: true, type: "jpeg")
+```
+
+### 4. Extract Data with JavaScript
+
+```
+1. browser_navigate(url: "https://example.com")
+2. browser_evaluate(function: "document.querySelectorAll('h2').length")
+3. browser_evaluate(function: "JSON.stringify([...document.querySelectorAll('tr')].map(r => r.textContent))")
+```
+
+`browser_evaluate` runs in browser context. No Node.js APIs. Return values must be serializable.
+For Playwright API access (e.g., `page.locator()`), use `browser_run_code` instead.
+
+### 5. Dismiss Cookie/GDPR Popup
+
 ```
 1. browser_snapshot()
-2. browser_fill(element: "Username", ref: "e3", value: "user@example.com")
-3. browser_fill(element: "Password", ref: "e5", value: "password123")
-4. browser_click(element: "Submit", ref: "e8")
+2. # Look for buttons with text: Accept, Agree, OK, Got it, Allow, Consent
+3. browser_click(ref: "<popup-button-ref>", element: "Accept cookies")
+4. browser_snapshot()                              # Verify popup dismissed
 ```
 
-### Wait for Content
-After navigation or click, call `browser_snapshot()` to verify page loaded and get updated refs.
+If popup uses iframe: snapshot may show it nested. Try clicking by text selector: `selector: "text=Accept"`.
 
-### Full Page Screenshot
+### 6. Scroll and Load Lazy Content
+
 ```
-browser_screenshot(fullPage: true)
-```
-
-For cookie popups, lazy-load scrolling, and expanding collapsed items, see [PLAYWRIGHT_ADVANCED_WORKFLOWS.md](PLAYWRIGHT_ADVANCED_WORKFLOWS.md).
-
-## Element Selection
-
-### Using Refs from Snapshot
-
-1. Call `browser_snapshot()` to get current page structure
-2. Find element in returned accessibility tree
-3. Use the `ref` value in subsequent commands
-
-**Example snapshot output:**
-```
-- banner [ref=e3]:
-    - link "Home" [ref=e5] [cursor=pointer]
-    - navigation [ref=e12]:
-        - link "Docs" [ref=e13]
+1. browser_press_key(key: "End")                   # Scroll to bottom
+2. browser_wait_for(time: 2)                        # Wait for lazy load
+3. browser_snapshot()                              # Check if new content appeared
+4. # Repeat if more content expected
 ```
 
-### Selector Priority
+For infinite scroll: repeat scroll+wait+snapshot in a loop until content stops changing.
 
-When refs unavailable, use stable selectors:
-1. `[data-testid="submit"]` - Best
-2. `getByRole('button', { name: 'Save' })` - Semantic
-3. `getByText('Sign in')` - User-facing
-4. `input[name="email"]` - HTML attributes
-5. Avoid: `.btn-primary`, `#submit` - Classes/IDs change
+## Element Targeting
 
-## Requirements
+Two methods (v0.0.69+):
 
-- Node.js 18+ with npx in PATH
-- Chrome/Chromium for headed mode
+1. **`ref` from snapshot** (preferred) - `ref: "e5"` from latest `browser_snapshot`
+2. **`selector`** (when refs unavailable) - priority order:
+   - `[data-testid="submit"]` - Test IDs (most stable)
+   - `role=button[name="Save"]` - Semantic roles
+   - `text=Sign in` - Visible text
+   - `input[name="email"]` - HTML attributes
 
-See [SETUP.md](SETUP.md) for installation details.
+All interaction tools (`browser_click`, `browser_type`, `browser_hover`, etc.) accept both `ref` and `selector`.
+
+## Capabilities Quick Reference
+
+Core 21 tools always available. Opt-in categories enabled via `--caps`:
+
+- **network** - Route mocking, offline toggle
+- **storage** - Cookie/localStorage/sessionStorage Create/Read/Update/Delete (CRUD)
+- **devtools** - Tracing, video recording, debugger
+- **vision** - Coordinate-based mouse (for canvas/maps)
+- **pdf** - Save page as PDF
+- **testing** - Element/text/value verification, locator generation
+- **config** - Read resolved server configuration
+
+Enable all: `--caps vision,pdf,devtools,network,storage,testing,config`. Tool details: [PLAYWRIGHT_TOOLS.md](PLAYWRIGHT_TOOLS.md)
+
+## Gotchas
+
+- **Refs invalidated by any page change** - navigation, DOM mutation, dynamic content. Always re-snapshot before interacting
+- **`browser_fill_form` not `browser_fill`** - Old name deprecated. New API takes `fields` array, not single field
+- **`browser_take_screenshot` not `browser_screenshot`** - Old name deprecated
+- **`browser_evaluate` runs in BROWSER** - No Node.js. Use `browser_run_code` for server-side Playwright API
+- **Cookie read needs `--caps=storage`** - Even basic `browser_cookie_list` is gated
+- **`browser_network_requests` is core** - Read-only request listing. Route mocking needs `--caps=network`
+- **Extension mode is Chrome/Edge only** - Firefox/WebKit not supported
+- **`--no-sandbox` warning is cosmetic** - Browser works correctly. Required in Docker/WSL2
+- **Default screenshot format is PNG** - Always specify `type: "jpeg"` for smaller files
+- **Profile lock error** - Previous Chrome didn't shut down cleanly. Close Chrome instances or delete lock file
+
+## Quick Config
+
+**Basic (persistent profile, default):**
+```json
+{"mcpServers": {"playwright": {"command": "npx", "args": ["@playwright/mcp@latest"]}}}
+```
+
+**Persistent profile with all capabilities:**
+```json
+{"mcpServers": {"playwright": {"command": "npx", "args": ["@playwright/mcp@latest", "--caps", "vision,pdf,devtools,network,storage,testing,config"]}}}
+```
+
+**Extension mode (existing browser):**
+```json
+{"mcpServers": {"playwright": {"command": "npx", "args": ["@playwright/mcp@latest", "--extension"]}}}
+```
+
+Full config reference: [PLAYWRIGHT_CONFIG.md](PLAYWRIGHT_CONFIG.md)

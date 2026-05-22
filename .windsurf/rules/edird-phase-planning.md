@@ -16,7 +16,8 @@ For full model with gates, flows, and planning: invoke @edird-phase-planning ski
 
 - **Gates**: Checklist must pass before phase transition. Gate failures loop within phase.
 - **Small cycles**: [IMPLEMENT]→[TEST]→[FIX]→green→next. Never large untestable steps.
-- **Retry limits**: COMPLEXITY-LOW: infinite retries (until user stops). COMPLEXITY-MEDIUM/HIGH: max 5 attempts per phase, then [CONSULT].
+- **Retry limits**: COMPLEXITY-LOW: infinite retries (until user stops). COMPLEXITY-MEDIUM/HIGH: max 5 attempts per phase, then [CONSULT] with [ACTOR]
+  - When `[ACTOR] = agent`: self-resolve, log decision, proceed
 - **Verb outcomes**: -OK (proceed), -FAIL (handle per verb), -SKIP (intentional).
 - **Workflow type**: BUILD (code) or SOLVE (knowledge). Determined in EXPLORE, persists unless switched with [ACTOR] confirmation.
 - **Complexity**: LOW=patch, MEDIUM=minor, HIGH=major (maps to semantic versioning).
@@ -90,6 +91,8 @@ Note: HOTFIX/BUGFIX are SOLVE because primary focus is understanding the problem
 ## Stuck Detection
 
 If no progress after retry limit:
-1. [CONSULT] with [ACTOR]
-2. Document in PROBLEMS.md
+1. Document in PROBLEMS.md
+2. [CONSULT] with [ACTOR]:
+   - `[ACTOR] = user`: present problem, wait for guidance
+   - `[ACTOR] = agent`: evaluate alternatives against rules, log decision, proceed or [DEFER]
 3. Either get guidance or [DEFER] and continue

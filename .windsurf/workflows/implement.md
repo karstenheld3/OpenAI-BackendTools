@@ -1,5 +1,5 @@
 ---
-description: Execute implementation from IMPL plan
+description: Execute implementation from context, INFO, SPEC or IMPL documents
 auto_execution_mode: 1
 ---
 
@@ -10,43 +10,73 @@ auto_execution_mode: 1
 - @coding-conventions for coding style
 - @write-documents for tracking
 
-## Context Branching
+## MUST-NOT-FORGET
 
-Check what documents exist and proceed accordingly:
+1. Apply changes immediately without asking for permission - this workflow has authority to implement
+2. Phase flow: Prerequisites → GLOBAL-RULES → Impact Assessment → Execution
 
-### No SPEC, IMPL, TEST documents
+- Prerequisites ensure required documents (SPEC, IMPL, TEST) exist
+- GLOBAL-RULES apply BEFORE any code change
+- Impact Assessment is MANDATORY before implementation
+- Run `/verify` after implementation complete
+
+Quick reference (prerequisites):
+- INFO only → Run `/write-spec`
+- SPEC only → Run `/write-impl-plan`
+- IMPL only → Run `/write-test-plan`
+
+## GLOBAL-RULES
+
+Apply to ALL implementation contexts. Goal: Understand full impact before making changes.
+
+1. Trace scope - Identify all artifacts affected by the change (direct and indirect)
+2. Assess impact - Determine what functionality depends on affected artifacts
+3. Define verification - Create checkpoints to catch regressions early
+
+Document rules:
+- IMPL exists → Add "Impact Analysis" section to IMPL
+- No IMPL + multi-file change → Create IMPL with analysis
+- TEST exists → Add new test cases to TEST
+- No TEST + multi-file change → Create TEST
+
+# CONTEXT-SPECIFIC
+
+## No Documents
 
 Implement whatever was proposed or specified in conversation.
 
-### Existing INFO only
+## Prerequisites Missing
 
-Run `/write-spec` first
+Ensure required documents exist before implementation:
 
-### Existing SPEC only
+- INFO only → Run `/write-spec` first
+- SPEC only → Run `/write-impl-plan` first
+- IMPL only → Run `/write-test-plan` first
 
-Run `/write-impl-plan` first
+## Ready to Implement
 
-### Existing IMPL only
-
-Run `/write-test-plan` first
-
-### Existing TEST (no test code)
-
-Implement function skeletons from IMPL, then full failing tests from TEST.
-
-### Existing TEST + test code
-
-Implement full implementations from IMPL in small verifiable steps.
-
-## Phase: IMPLEMENT
-
-**Entry gate:** DESIGN→IMPLEMENT passed (IMPL plan exists)
+Entry conditions:
+- IMPL plan exists
+- TEST exists (no test code) → Implement function skeletons, then failing tests
+- TEST + test code exists → Proceed to implementation
 
 ### Operation Mode Check
 
-Before implementing, verify operation mode from NOTES.md:
-- **IMPL-CODEBASE** → output to project source folders
-- **IMPL-ISOLATED** → output to `[SESSION_FOLDER]/` only, NEVER workspace root
+Verify operation mode from NOTES.md before any code changes:
+- IMPL-CODEBASE → output to project source folders
+- IMPL-ISOLATED → output to `[SESSION_FOLDER]/` only, NEVER workspace root
+
+### Impact Assessment
+
+MANDATORY before implementing. Apply GLOBAL-RULES with code-specific focus:
+
+1. List all code paths that interact with target locations
+2. Identify functionality that depends on modified code:
+   - Callers and consumers
+   - UI components
+   - Other endpoints
+   - Test files
+3. Create test cases for each impacted area BEFORE implementing
 
 ### Execution Sequence
 
@@ -64,7 +94,7 @@ Before implementing, verify operation mode from NOTES.md:
 - [ ] No TODO/FIXME left unaddressed
 - [ ] Progress committed
 
-**Pass**: Run `/refine` | **Fail**: Continue implementing
+Pass: Run `/refine` | Fail: Continue implementing
 
 ## Stuck Detection
 
@@ -77,7 +107,7 @@ If 3 consecutive fix attempts fail:
 
 - Senior engineer, anticipating complexity, reducing risks
 - Completer / Finisher, never leaves clutter undocumented
-- Small cycles: implement→test→fix→green→next
+- Small cycles: implement → test → fix → green → next
 
 ## Rules
 

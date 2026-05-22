@@ -1,0 +1,40 @@
+{
+  "extracted": "2026-05-22",
+  "url": "https://platform.claude.com/docs/en/about-claude/pricing",
+  "standard_pricing": {
+    "headers": ["Model", "Base Input Tokens", "5m Cache Writes", "1h Cache Writes", "Cache Hits & Refreshes", "Output Tokens"],
+    "rows": [
+      ["Claude Opus 4.7", "$5 / MTok", "$6.25 / MTok", "$10 / MTok", "$0.50 / MTok", "$25 / MTok"],
+      ["Claude Opus 4.6", "$5 / MTok", "$6.25 / MTok", "$10 / MTok", "$0.50 / MTok", "$25 / MTok"],
+      ["Claude Opus 4.5", "$5 / MTok", "$6.25 / MTok", "$10 / MTok", "$0.50 / MTok", "$25 / MTok"],
+      ["Claude Opus 4.1", "$15 / MTok", "$18.75 / MTok", "$30 / MTok", "$1.50 / MTok", "$75 / MTok"],
+      ["Claude Opus 4 (deprecated)", "$15 / MTok", "$18.75 / MTok", "$30 / MTok", "$1.50 / MTok", "$75 / MTok"],
+      ["Claude Sonnet 4.6", "$3 / MTok", "$3.75 / MTok", "$6 / MTok", "$0.30 / MTok", "$15 / MTok"],
+      ["Claude Sonnet 4.5", "$3 / MTok", "$3.75 / MTok", "$6 / MTok", "$0.30 / MTok", "$15 / MTok"],
+      ["Claude Sonnet 4 (deprecated)", "$3 / MTok", "$3.75 / MTok", "$6 / MTok", "$0.30 / MTok", "$15 / MTok"],
+      ["Claude Haiku 4.5", "$1 / MTok", "$1.25 / MTok", "$2 / MTok", "$0.10 / MTok", "$5 / MTok"],
+      ["Claude Haiku 3.5 (retired, except on Bedrock and Vertex AI)", "$0.80 / MTok", "$1 / MTok", "$1.60 / MTok", "$0.08 / MTok", "$4 / MTok"]
+    ]
+  },
+  "batch_pricing": {
+    "headers": ["Model", "Batch input", "Batch output"],
+    "rows": [
+      ["Claude Opus 4.7", "$2.50 / MTok", "$12.50 / MTok"],
+      ["Claude Opus 4.6", "$2.50 / MTok", "$12.50 / MTok"],
+      ["Claude Opus 4.5", "$2.50 / MTok", "$12.50 / MTok"],
+      ["Claude Opus 4.1", "$7.50 / MTok", "$37.50 / MTok"],
+      ["Claude Opus 4 (deprecated)", "$7.50 / MTok", "$37.50 / MTok"],
+      ["Claude Sonnet 4.6", "$1.50 / MTok", "$7.50 / MTok"],
+      ["Claude Sonnet 4.5", "$1.50 / MTok", "$7.50 / MTok"],
+      ["Claude Sonnet 4 (deprecated)", "$1.50 / MTok", "$7.50 / MTok"],
+      ["Claude Haiku 4.5", "$0.50 / MTok", "$2.50 / MTok"],
+      ["Claude Haiku 3.5 (retired, except on Bedrock and Vertex AI)", "$0.40 / MTok", "$2 / MTok"]
+    ]
+  },
+  "extended_thinking": {
+    "headers": ["Input", "Output"],
+    "rows": [
+      ["$30 / MTok", "$150 / MTok"]
+    ]
+  }
+}

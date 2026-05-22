@@ -3,15 +3,19 @@ description: Initialize a new development session
 auto_execution_mode: 1
 ---
 
+# New Session Workflow
+
 ## Required Skills
 
-Invoke these skills before proceeding:
-- @session-management for session folder structure and tracking files
+- @skills:session-management for session folder structure and tracking files
 
 ## Step 1: Check for Existing Session
 
 Check if the user has given you a [SESSION_FOLDER] to work in.
-If path already contains NOTES.md, PROGRESS.md, PROBLEMS.md: Execute /session-load instead.
+
+**Topic Folder:** If user mentions "topic folder", "topic subfolder", "nested session", "tracked subfolder", or "session subfolder", or requests a new work stream inside an existing session: run @skills:session-management **Topic Folder Creation** procedure instead of creating a new session.
+
+If path already contains NOTES.md, PROGRESS.md, PROBLEMS.md and no new work stream requested: Execute `/session-load` instead.
 
 ## Step 2: Create Session Folder
 
@@ -21,7 +25,7 @@ If no [SESSION_FOLDER] provided, create one in the default sessions folder with 
 
 ## Step 3: Create Session Documents
 
-In the [SESSION_FOLDER], create tracking files from @session-management templates:
+In the [SESSION_FOLDER], create tracking files from @skills:session-management templates:
 
 - `NOTES.md` - Include "Current Phase" section for phase tracking. If user provides large prompts (>120 tokens), record them verbatim in "User Prompts" section
 - `PROGRESS.md` - Include "Phase Plan" section with 5 phases

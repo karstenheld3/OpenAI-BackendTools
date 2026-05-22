@@ -7,18 +7,19 @@ auto_execution_mode: 1
 
 ## Required Skills
 
-Invoke these skills based on context:
-- @write-documents for document formatting rules
-- @coding-conventions for code-related sync
+Invoke based on context:
+- @skills:write-documents for document formatting rules
+- @skills:coding-conventions for code-related sync
 
 ## Workflow
 
-1. First find out what the sync context is (Conversation→Docs, Code→Docs, Session→Project, etc.)
-2. Read GLOBAL-RULES
-3. Read the relevant Context-Specific section
-4. Create a sync task list
-5. Work through sync task list
-6. Run Final Steps
+1. **Determine scope** - If user specifies "sync A with B", sync ONLY between A and B. Do NOT cascade to other documents.
+2. If no explicit targets given, detect sync context (Code→Docs, Session→Project, etc.) and use full context-specific section
+3. Read GLOBAL-RULES
+4. Read the relevant Context-Specific section
+5. Create a sync task list (scoped to determined targets only)
+6. Work through sync task list
+7. Run Final Steps
 
 ## GLOBAL-RULES
 
@@ -50,10 +51,25 @@ IMPL Changes
 ├─> SPEC (update if implementation reveals spec gaps)
 └─> TEST (update test cases for edge cases)
 
-Session Documents
+Topic Folder → Session
+├─> Session PROGRESS.md (topic status summary)
+├─> Session PROBLEMS.md (cross-cutting problems)
+└─> Session NOTES.md (key findings)
+
+Step Folder → Session
+├─> Session PROGRESS.md (step completion)
+└─> STEPLOG.md at session root (step summary)
+
+Session → Project
 ├─> Project NOTES.md (reusable decisions, patterns)
 ├─> Project PROBLEMS.md (resolved issues with project impact)
 └─> Project PROGRESS.md (completed milestones)
+
+File → Dependent Files (upstream and downstream)
+├─> IMPL (update implementation details from code)
+├─> SPEC (update if behavior changed)
+├─> TEST (update expected results)
+└─> Downstream consumers (update references, imports)
 
 Major Project Changes
 ├─> README.md (new features, changed structure, updated usage)
@@ -115,6 +131,35 @@ When IMPL plan changes:
 - Add TC-XX for new EC-XX edge cases
 - Update test phases if implementation order changed
 - Add setup/teardown for new dependencies
+
+## Topic Folder to Session (Topic→Session)
+
+When syncing topic folder findings to parent session:
+
+**Sync PROGRESS.md:**
+- Topic completion status → Parent PROGRESS.md `## Topic Folders` section
+- Format: `- [ ] T##_Description: [one-line status summary]`
+
+**Sync PROBLEMS.md:**
+- Cross-cutting problems (affect other topics or session scope) → Parent PROBLEMS.md
+- Topic-local problems stay in topic folder
+
+**Sync NOTES.md:**
+- Key findings relevant to overall session → Parent NOTES.md
+
+**Sync FAILS.md and LEARNINGS.md:**
+- On topic finalize: sync to parent if present
+
+## Step Folder to Session (Step→Session)
+
+When syncing step folder output to session root:
+
+**Sync PROGRESS.md:**
+- Step completion → Session PROGRESS.md
+
+**Create STEPLOG:**
+- Summary document at session root: `S##_Description_STEPLOG.md`
+- See @skills:session-management STEPLOG template
 
 ## Session to Project (Session→Project)
 

@@ -1,6 +1,24 @@
-# Agentic English
+# Agentic English (AGEN)
 
-Controlled vocabulary for agent-human communication. Provides consistency, composability, and traceability.
+High-level vocabulary for problem-solving strategy and planning.
+
+## Scope
+
+AGEN is planning vocabulary. It defines how agents reason about and decompose problems.
+
+Used in:
+- STRUT plans - formal step notation: `[ ] P1-S1 [VERB](params)`
+- EDIRD phase planning - phase transitions, gate evaluations
+- Skill verb mappings - routing actions to the right skill
+- Document planning - identifying what to produce
+
+NOT used in:
+- Workflow step instructions (use plain English or `/workflow` refs)
+- Agent skills (except when explicitly referncing AGEN)
+- Code comments or implementation details
+- User-facing documentation
+
+The verbs, states, and labels below form a shared vocabulary. The formal `[VERB](params)` notation is reserved for STRUT plans and planning documents.
 
 ## Syntax
 
@@ -31,7 +49,9 @@ No brackets for tokens in **conditions** - things the agent checks for branching
 
 ### Decision Context
 
-- **[ACTOR]** - Decision-making entity (default: user, in /go-autonomous: agent)
+- **[ACTOR]** - Decision-making entity. Default: user. `/go` workflow sets `[ACTOR] = agent` for fully autonomous execution
+  - When `[ACTOR] = agent`: all Communication verbs (`[CONSULT]`, `[CONFIRMS]`, `[QUESTION]`, `[PROPOSE]`) target the agent itself
+  - Agent self-resolves, logs decision, proceeds without user interaction
 
 ### Folder Paths
 
@@ -148,8 +168,8 @@ No brackets for tokens in **conditions** - things the agent checks for branching
 
 - **SINGLE-PROJECT** - Workspace contains one project
 - **MONOREPO** - Workspace contains multiple independent projects
-- **SESSION-BASED** - Time-limited session with specific goals
-- **PROJECT-WIDE** - Work spans entire project without session boundaries
+- **SESSION-MODE** - Time-limited session with specific goals
+- **PROJECT-MODE** - Work spans entire project without session boundaries
 
 ### Complexity Assessment
 

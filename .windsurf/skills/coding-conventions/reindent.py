@@ -14,7 +14,6 @@ Usage:
 import argparse, sys, os
 from pathlib import Path
 
-
 def detect_indentation(content: str) -> int:
   """Detect indentation size (2 or 4 spaces) from file content."""
   for line in content.split('\n'):
@@ -26,7 +25,6 @@ def detect_indentation(content: str) -> int:
         if leading <= 2: return 2
         return 4
   return 4  # Default
-
 
 def reindent_content(content: str, from_spaces: int, to_spaces: int) -> str:
   """Convert indentation in Python source code."""
@@ -56,7 +54,6 @@ def reindent_content(content: str, from_spaces: int, to_spaces: int) -> str:
   
   return '\n'.join(result)
 
-
 def process_file(file_path: Path, to_spaces: int, dry_run: bool = False) -> tuple:
   """Process a single file. Returns (changed, message)."""
   try:
@@ -79,7 +76,6 @@ def process_file(file_path: Path, to_spaces: int, dry_run: bool = False) -> tupl
   except Exception as e:
     return False, f"ERROR writing -> {e}"
 
-
 def main():
   parser = argparse.ArgumentParser(description='Convert Python indentation to target spaces. Auto-detects source indentation and skips files already at target.')
   parser.add_argument('path', type=Path, help='File or folder to process')
@@ -89,7 +85,7 @@ def main():
   args = parser.parse_args()
   
   if not args.path.exists():
-    print(f"ERROR: Path not found: {args.path}", file=sys.stderr)
+    print(f"ERROR: Path not found: '{args.path}'", file=sys.stderr)
     sys.exit(1)
   
   files = []
@@ -119,7 +115,6 @@ def main():
   file_word = "file" if changed_count == 1 else "files"
   action = "would be changed" if args.dry_run else "changed"
   print(f"\nTotal: {changed_count}/{len(files)} {file_word} {action}", file=sys.stderr)
-
 
 if __name__ == '__main__':
   main()

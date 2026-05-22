@@ -10,6 +10,10 @@ Create or insert a STRUT plan (Structured Thinking notation) into any document.
 
 - @write-documents for STRUT template and formatting rules
 
+## MUST-NOT-FORGET
+
+- Run `/verify` to validate STRUT structure
+
 ## Step 1: Read Template
 
 Read `STRUT_TEMPLATE.md` from the @write-documents skill folder.

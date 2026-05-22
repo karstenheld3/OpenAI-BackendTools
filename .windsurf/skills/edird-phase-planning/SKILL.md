@@ -17,6 +17,12 @@ description: Apply when doing planning for long-running tasks in sessions on top
 - `/write-test-plan` for TEST documents
 - `/write-tasks-plan` for TASKS documents
 
+## MUST-NOT-FORGET
+
+- `/build` and `/solve` are the entry workflows
+- Use `/write-spec`, `/write-impl-plan`, `/write-test-plan`, `/write-tasks-plan` for documents
+- Check gates before phase transitions
+
 ## Quick Reference
 
 **Phases:** EXPLORE → DESIGN → IMPLEMENT → REFINE → DELIVER

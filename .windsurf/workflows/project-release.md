@@ -1,3 +1,8 @@
+---
+description: Create a dated release with comprehensive release notes
+auto_execution_mode: 1
+---
+
 # Project Release Workflow
 
 Create a dated release with comprehensive release notes.
@@ -32,7 +37,7 @@ For each session, collect:
 - Session name and date
 - Goal (from NOTES.md header)
 - Status (from PROGRESS.md - complete/in-progress)
-- Artifacts: `_INFO_*.md`, `_SPEC_*.md`, `_IMPL_*.md`, `_STRUT_*.md`
+- Artifacts: `_INFO_*.md`, `_SPEC_*.md`, `_IMPL_*.md`, `__STRUT_*.md`
 - Key findings (from NOTES.md "Important Findings" section)
 
 ### 3. Generate Release Notes

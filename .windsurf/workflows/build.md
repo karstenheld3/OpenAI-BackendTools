@@ -10,8 +10,14 @@ Entry point for BUILD workflow - creating software, features, systems.
 ## Required Skills
 
 - @edird-phase-planning for phase gates and planning
-- @session-management for session setup
+- @skills:session-management for session setup
 - @write-documents for document templates
+
+## MUST-NOT-FORGET
+
+- Run `/session-new` at workflow start
+- Run `/session-finalize` when done
+- Follow @edird-phase-planning gates between phases
 
 ## Usage
 

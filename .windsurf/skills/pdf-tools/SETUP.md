@@ -1,12 +1,12 @@
 # PDF Tools Setup
 
-Run once to install tools locally in `[WORKSPACE_FOLDER]/.tools/`.
+Run once to install tools locally in `[WORKSPACE_FOLDER]/../.tools/`.
 
 ## 1. Set Workspace Folder
 
 ```powershell
 $workspaceFolder = (Get-Location).Path  # or set explicitly: $workspaceFolder = "C:\Dev\MyProject"
-$toolsDir = "$workspaceFolder\.tools"
+$toolsDir = "$workspaceFolder\..\.tools"
 $installerDir = "$toolsDir\_installer"
 
 # Create folders if needed
@@ -202,11 +202,11 @@ Remove-Item "$installerDir\*" -Force -ErrorAction SilentlyContinue
 ## Completion
 
 All tools ready:
-- **7-Zip**: Archive extraction (`[WORKSPACE_FOLDER]/.tools/7z/`)
+- **7-Zip**: Archive extraction (`[WORKSPACE_FOLDER]/../.tools/7z/`)
 - **Python**: Script execution
-- **Poppler**: PDF to image conversion (`[WORKSPACE_FOLDER]/.tools/poppler/`)
-- **QPDF**: PDF transformations (`[WORKSPACE_FOLDER]/.tools/qpdf/`)
-- **Ghostscript**: PDF image compression (`[WORKSPACE_FOLDER]/.tools/gs/`)
+- **Poppler**: PDF to image conversion (`[WORKSPACE_FOLDER]/../.tools/poppler/`)
+- **QPDF**: PDF transformations (`[WORKSPACE_FOLDER]/../.tools/qpdf/`)
+- **Ghostscript**: PDF image compression (`[WORKSPACE_FOLDER]/../.tools/gs/`)
 - **uv/uvx**: Python package runner for MCP servers
-- **Installers**: Downloaded to `[WORKSPACE_FOLDER]/.tools/_installer/`
-- **Output folder**: `[WORKSPACE_FOLDER]/.tools/_pdf_to_jpg_converted/`
+- **Installers**: Downloaded to `[WORKSPACE_FOLDER]/../.tools/_installer/`
+- **Output folder**: `[WORKSPACE_FOLDER]/../.tools/_pdf_to_jpg_converted/`

@@ -5,42 +5,31 @@ description: Provides coding style rules for Python and PowerShell. Apply when w
 
 # Coding Conventions
 
-This skill contains language-specific coding convention files.
+**Code quality standard:** All code MUST follow:
+- `MECT_CODING_RULES.md` - Precision, brevity, consistency, naming design, documentation (MECT + APAPALAN for code)
 
-## Verb Mapping
+Read before writing or reviewing any code.
 
-This skill implements:
-- [IMPLEMENT] - Apply coding style during implementation
-- [REFACTOR] - Apply coding style during refactoring
+## Files
 
-**Phases**: IMPLEMENT, REFINE
+MECT_CODING_RULES.md - Code quality (precision, brevity, consistency, naming, documentation)
+PYTHON-RULES.md - Python (formatting, imports, naming, comments)
+JSON-RULES.md - JSON (field naming, 2-space indent)
+WORKFLOW-RULES.md - Workflow documents (structure, token optimization)
 
-## Available Convention Files
+## Logging Files (read when writing or reviewing logging/output code)
 
-- `PYTHON-RULES.md` - Python coding conventions (formatting, imports, logging, etc.)
-- `JSON-RULES.md` - JSON coding conventions (field naming, 2-space indent, 2D table formatting)
-- `WORKFLOW-RULES.md` - Workflow document conventions (structure, formatting)
-- `AGENT-SKILL-RULES.md` - Agent skill folder structure and SKILL.md conventions
+LOGGING-RULES.md - General logging rules, philosophy, type overview (read first)
+LOGGING-RULES-APP-LEVEL.md - System/debug logging for technical staff (LOG-AP rules)
+LOGGING-RULES-SCRIPT-LEVEL.md - Script output for QA and automation verification (LOG-SC rules)
+LOGGING-RULES-USER-FACING.md - End-user visible output via console or SSE (LOG-UF rules)
 
 ## Tools
 
-- `reindent.py` - Convert Python file indentation to target spaces
-
-## Usage
-
-Read the appropriate convention file for the language you are working with.
-
-### reindent.py
-
-Convert Python indentation to target spaces. Auto-detects source indentation and skips files already at target. Excludes itself from processing.
+reindent.py - Convert Python indentation to target spaces
 
 ```powershell
-# Convert folder to 2-space indentation
 python reindent.py folder/ --to 2 --recursive
-
-# Dry-run (preview only)
 python reindent.py folder/ --to 2 --recursive --dry-run
-
-# Single file
 python reindent.py script.py --to 2
 ```

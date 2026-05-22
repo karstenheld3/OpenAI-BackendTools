@@ -7,10 +7,19 @@ auto_execution_mode: 1
 
 ## Required Skills
 
-- @session-management for session lifecycle
+- @skills:session-management for session lifecycle
 - @git-conventions for final commit
 
+## MUST-NOT-FORGET
+
+- Sync session PROBLEMS.md to project
+- Suggest `/session-archive` when ready (do NOT auto-run)
+
 Use this workflow when a session is complete. Prepares for archiving but does NOT archive.
+
+## Topic Folder Scope
+
+Run @skills:session-management **Topic Folder Finalize** procedure. If finalizing from a `T##_*` folder, sync to parent only and stop. If at session root with `T##_*` subfolders, aggregate findings first, then continue below.
 
 ## Steps
 

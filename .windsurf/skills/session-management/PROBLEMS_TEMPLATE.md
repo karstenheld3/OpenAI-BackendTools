@@ -20,11 +20,11 @@ Populated by `/session-new` workflow. Tracks ALL problems to be addressed in thi
 - General context or decisions (use NOTES.md)
 - Task execution status (use PROGRESS.md)
 
-Track problems using ID format: `[TOPIC]-PR-[NNN]`
+Track problems using ID format: `[TOPIC]-PR-[NNNN]`
 
 ## Open
 
-**AUTH-PR-001: Race condition on simultaneous token refresh**
+**AUTH-PR-0001: Race condition on simultaneous token refresh**
 - **History**: Added 2026-01-15 14:20
 - **Description**: Multiple API requests trigger token refresh at the same time, causing duplicate refresh calls
 - **Impact**: Server rate-limits refresh endpoint, causing 429 errors and failed requests
@@ -63,6 +63,6 @@ Track problems using ID format: `[TOPIC]-PR-[NNN]`
 - Added: API-PR-004 to Deferred (retry logic postponed)
 
 **[2026-01-15 14:20]**
-- Added: AUTH-PR-001 (race condition on token refresh)
+- Added: AUTH-PR-0001 (race condition on token refresh)
 - Added: API-PR-002 (clock skew issue)
 - Added: AUTH-PR-003 to Open (localStorage security issue)

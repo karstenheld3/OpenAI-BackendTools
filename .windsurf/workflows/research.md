@@ -1,15 +1,22 @@
 ---
+description: Structured research with verification labels and source retention
 auto_execution_mode: 1
 ---
 
-## Required Rules and Skills
+# Research Workflow
+
+Structured research about a topic with step-by-step findings and source documentation.
+
+## Required Skills
 
 Read these before proceeding:
 - `[AGENT_FOLDER]/rules/research-and-report-writing-rules.md` for MEPI/MCPI research depth
 - @write-documents for INFO document structure
+- @write-documents `APAPALAN_RULES.md` for writing quality (precision, brevity, structure, naming)
 
 ## MUST-NOT-FORGET
 
+- **Evaluate sources with SOCAS** - Apply @write-documents `SOCAS_RULES.md` Source Evaluation subset to rank source reliability
 - **Summary section is mandatory** - Copy/paste ready list at document top
 - **Label ALL findings** with verification status:
   - `[ASSUMED]` - Unverified, needs validation

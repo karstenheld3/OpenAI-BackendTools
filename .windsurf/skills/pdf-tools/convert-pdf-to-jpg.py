@@ -3,7 +3,7 @@
 Convert PDF pages to JPG images for Windsurf Agent vision analysis.
 Uses Poppler's pdftoppm via pdf2image library.
 
-Output: .tools/_pdf_to_jpg_converted/[PDF_FILENAME]/[PDF_FILENAME]_page001.jpg
+Output: ../.tools/_pdf_to_jpg_converted/[PDF_FILENAME]/[PDF_FILENAME]_page001.jpg
 Each PDF gets its own subfolder to track previous conversions.
 
 Usage:
@@ -11,17 +11,23 @@ Usage:
 
 Examples:
   python convert-pdf-to-jpg.py invoice.pdf
-  python convert-pdf-to-jpg.py invoice.pdf --dpi 200 --pages 1-2
+  python convert-pdf-to-jpg.py invoice.pdf --dpi 120 --pages 1-2
   python convert-pdf-to-jpg.py invoice.pdf --pages 1
 """
 
 import argparse, os, sys
 from pathlib import Path
+try:
+  from pdf2image import convert_from_path, pdfinfo_from_path
+  from pdf2image.exceptions import PDFInfoNotInstalledError, PDFPageCountError
+except ImportError:
+  print("ERROR: pdf2image not installed. Run: pip install pdf2image Pillow")
+  sys.exit(1)
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 WORKSPACE_ROOT = os.path.dirname(os.path.dirname(os.path.dirname(SCRIPT_DIR)))
-POPPLER_PATH = os.path.join(WORKSPACE_ROOT, ".tools", "poppler", "Library", "bin")
-DEFAULT_OUTPUT_DIR = os.path.join(WORKSPACE_ROOT, ".tools", "_pdf_to_jpg_converted")
-DEFAULT_DPI = 150
+POPPLER_PATH = os.path.join(WORKSPACE_ROOT, "..", ".tools", "poppler", "Library", "bin")
+DEFAULT_OUTPUT_DIR = os.path.join(WORKSPACE_ROOT, "..", ".tools", "_pdf_to_jpg_converted")
+DEFAULT_DPI = 120
 
 def parse_page_range(page_str: str, total_pages: int) -> tuple[int, int]:
   """Parse page range string like '1', '1-3', or 'all'."""
@@ -35,16 +41,9 @@ def parse_page_range(page_str: str, total_pages: int) -> tuple[int, int]:
 
 def convert_pdf_to_jpg(input_pdf: str, output_dir: str, dpi: int, pages: str = None) -> list[str]:
   """Convert PDF pages to JPG images. Returns list of output file paths."""
-  try:
-    from pdf2image import convert_from_path
-    from pdf2image.exceptions import PDFInfoNotInstalledError, PDFPageCountError
-  except ImportError:
-    print("ERROR: pdf2image not installed. Run: pip install pdf2image Pillow")
-    sys.exit(1)
-
   input_path = Path(input_pdf)
   if not input_path.exists():
-    print(f"ERROR: File not found: {input_pdf}")
+    print(f"ERROR: File not found: '{input_pdf}'")
     sys.exit(1)
 
   base_name = input_path.stem
@@ -55,7 +54,6 @@ def convert_pdf_to_jpg(input_pdf: str, output_dir: str, dpi: int, pages: str = N
 
   try:
     # First get page count
-    from pdf2image import pdfinfo_from_path
     info = pdfinfo_from_path(str(input_path), poppler_path=POPPLER_PATH)
     total_pages = info['Pages']
     
@@ -83,7 +81,7 @@ def convert_pdf_to_jpg(input_pdf: str, output_dir: str, dpi: int, pages: str = N
     return output_files
 
   except PDFInfoNotInstalledError:
-    print(f"ERROR: Poppler not found at {POPPLER_PATH}")
+    print(f"ERROR: Poppler not found at '{POPPLER_PATH}'")
     print("Run /setup-everything workflow to install Poppler.")
     sys.exit(1)
   except PDFPageCountError:

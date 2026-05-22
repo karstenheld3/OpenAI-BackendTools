@@ -8,7 +8,7 @@ Track implementation progress and decisions.
 
 ## To Do
 
-- [ ] AUTH-PR-001: Implement token refresh mutex to prevent race conditions
+- [ ] AUTH-PR-0001: Implement token refresh mutex to prevent race conditions
 - [ ] API-PR-002: Add server time synchronization for expiration checks
 - [ ] Update API client error handling to distinguish 401 types
 - [ ] Write unit tests for token refresh logic
@@ -21,7 +21,7 @@ Track implementation progress and decisions.
 ## Done
 
 - [x] Analyzed current token refresh implementation
-- [x] Identified race condition in concurrent refresh scenario (AUTH-PR-001)
+- [x] Identified race condition in concurrent refresh scenario (AUTH-PR-0001)
 - [x] Researched secure token storage options
 - [x] Created AUTH-SP01 specification for token refresh improvements
 
@@ -31,6 +31,16 @@ Track implementation progress and decisions.
   - Reason: Too complex, mutex pattern is simpler and more reliable
 - JWT expiration extension via sliding window
   - Reason: Server doesn't support sliding sessions, requires backend changes
+
+## Topic Folders
+
+- [ ] T01_TopicDescription: Pending
+- [ ] T02_TopicDescription: Pending
+
+## Step Folders
+
+- [x] S01_Description: Done
+- [ ] S02_Description: In progress
 
 ## Test Coverage
 
@@ -46,6 +56,6 @@ Track implementation progress and decisions.
 - Added: API-PR-004 to To Do (deferred retry logic)
 
 **[2026-01-15 14:20]**
-- Added: AUTH-PR-001 and API-PR-002 to To Do
+- Added: AUTH-PR-0001 and API-PR-0002 to To Do
 - Added: "Tried But Not Used" section with Promise deduplication approach
 - Initial progress tracking created

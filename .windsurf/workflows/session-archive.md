@@ -7,8 +7,7 @@ auto_execution_mode: 1
 
 ## Required Skills
 
-Invoke these skills before proceeding:
-- @session-management for archive conventions
+- @skills:session-management for archive conventions
 
 Use this workflow to move a completed session folder to the archive.
 

@@ -4,6 +4,14 @@
 **Goal**: [Single sentence describing purpose]
 **Timeline**: Created YYYY-MM-DD, Updated N times (YYYY-MM-DD - YYYY-MM-DD)
 
+## MUST-NOT-FORGET
+
+<!-- Remove this section after writing the document -->
+- Every claim needs a source ID: `[TOPIC]-[DOC]-SC-[SOURCE_ID]-[SOURCE_REF]`
+- Summary items need verification labels: [VERIFIED], [ASSUMED], [TESTED], [PROVEN]
+- Check ID-REGISTRY.md before creating new TOPICs
+- Document History at end, reverse chronological
+
 ## Summary
 
 - [Key finding 1] 

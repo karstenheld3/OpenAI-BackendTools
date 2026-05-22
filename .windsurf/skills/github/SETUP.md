@@ -1,12 +1,12 @@
 # GitHub CLI Setup
 
-Run once to install GitHub CLI locally in `[WORKSPACE_FOLDER]/.tools/`.
+Run once to install GitHub CLI locally in `[WORKSPACE_FOLDER]/../.tools/`.
 
 ## 1. Set Workspace Folder
 
 ```powershell
 $workspaceFolder = (Get-Location).Path  # or set explicitly: $workspaceFolder = "C:\Dev\MyProject"
-$toolsDir = "$workspaceFolder\.tools"
+$toolsDir = "$workspaceFolder\..\.tools"
 $installerDir = "$toolsDir\_installer"
 
 # Create folders if needed
@@ -65,5 +65,5 @@ Set gh as credential helper for seamless git operations:
 ## Completion
 
 GitHub CLI ready:
-- **gh**: GitHub CLI (`[WORKSPACE_FOLDER]/.tools/gh/bin/`)
+- **gh**: GitHub CLI (`[WORKSPACE_FOLDER]/../.tools/gh/bin/`)
 - Run `gh auth login` to authenticate with your GitHub account

@@ -1,51 +1,61 @@
-# Troubleshooting
+# Playwright MCP Troubleshooting
 
-Common issues and solutions for Playwright MCP.
+Common issues ordered by frequency.
+
+## "Unsupported command-line flag: --no-sandbox" warning
+
+**Cause:** `--no-sandbox` in config or `PLAYWRIGHT_MCP_NO_SANDBOX` env var set.
+**Fix (if not needed):** Remove flag from config, unset env var.
+**Fix (if needed - Docker/WSL2):** Keep it. Warning is cosmetic, browser works correctly.
+
+## Element not found / stale reference
+
+**Cause:** Page changed since last snapshot - refs are ephemeral.
+**Fix:** Take fresh `browser_snapshot()` before interacting. This is the most common error.
+
+## Chrome crashes with SIGTRAP in WSL2
+
+**Cause:** Chromium sandbox requires kernel features unavailable in some WSL2 configurations.
+**Fix:** Add `--no-sandbox` to MCP config args.
 
 ## npx not found
 
-Use full path to npx:
-```json
-{
-  "command": "[NPX_FULL_PATH]"
-}
-```
+**Fix:** Install Node.js 18+, verify `npx --version`. On Windows, may need full path: `C:\Program Files\nodejs\npx.cmd`.
 
-## Profile lock errors
+## Profile lock error
 
-Reset profile lock:
-```powershell
-Remove-Item "[USER_PROFILE_PATH]\.ms-playwright-mcp-profile\SingletonLock" -Force -ErrorAction SilentlyContinue
-```
+**Cause:** Previous Chrome instance didn't shut down cleanly.
+**Fix:** Close running Chrome instances using same profile. Delete lock file in profile directory: `%LOCALAPPDATA%\ms-playwright\mcp-{channel}-{workspace-hash}`.
 
-## Extension mode not connecting
+## Extension not connecting
 
-Known issue (GitHub #921): `--extension` flag may launch new Chrome.
-Workaround: Ensure Chrome is running with `--remote-debugging-port=9222` before starting MCP.
+**Checklist:**
+1. "Playwright MCP Bridge" installed and enabled in Chrome/Edge
+2. Chrome or Edge running (Firefox/WebKit not supported in extension mode)
+3. Auth token matches (copy from extension icon popup)
+4. No other debugger attached to the target tab
+5. Try: re-install extension, restart Chrome
 
-## Element not found
+## Headed browser not visible (IDE worker process)
 
-1. Call `browser_snapshot()` to refresh refs
-2. Wait for page to fully load
-3. Check if element is in iframe (use `browser_evaluate` to access)
+**Cause:** IDE runs MCP server in a background process without display access.
+**Fix:** Use HTTP server mode:
+1. Run `npx @playwright/mcp@latest --port 8931` from a terminal with display
+2. Configure client with `"url": "http://localhost:8931/mcp"`
 
-## Automation detection
+## Cookie popup keeps reappearing
 
-If site blocks automation:
-1. Use `--user-data-dir` with existing browser profile
-2. Use headed mode instead of headless
-3. Try `--extension` mode with real browser
+**Cause:** Isolated mode (`--isolated`) clears all state between sessions.
+**Fix:** Use persistent profile (default, remove `--isolated`) so cookie consent is remembered.
 
-## Flaky Test Prevention
+## Tools missing (e.g., cookie operations, route mocking)
 
-**Common causes:**
-- Race conditions: Tests proceed before app ready
-- Unstable selectors: IDs change between renders
-- Network unpredictability: API response time varies
-- State contamination: Tests share state
+**Cause:** Opt-in tools need `--caps` flag.
+**Fix:** Add required capability: `--caps storage` for cookie tools, `--caps network` for route mocking, `--caps vision` for coordinate-based interactions.
 
-**Solutions:**
-- Always call `browser_snapshot()` before interacting
-- Use stable selectors (data-testid, roles, labels)
-- Wait for specific elements, not arbitrary timeouts
-- Isolate tests with fresh browser contexts
+## Automation detected by website
+
+**Mitigations:**
+- `--user-agent <standard-ua>` to set normal user agent
+- Extension mode (real browser, no automation flags)
+- `--init-script` to override `navigator.webdriver`

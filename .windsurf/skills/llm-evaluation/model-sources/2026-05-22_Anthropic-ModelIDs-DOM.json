@@ -1,0 +1,25 @@
+{
+  "extracted": "2026-05-22",
+  "url": "https://platform.claude.com/docs/en/about-claude/models/overview",
+  "api_id_patterns_found": ["claude-haiku-4-5-20251001"],
+  "model_table": {
+    "headers": ["Feature", "Claude Opus 4.7", "Claude Sonnet 4.6", "Claude Haiku 4.5"],
+    "api_ids": {
+      "claude-opus-4-7": {"alias": "claude-opus-4-7", "context_window": "1M tokens", "max_output": "128k tokens"},
+      "claude-sonnet-4-6": {"alias": "claude-sonnet-4-6", "context_window": "1M tokens", "max_output": "64k tokens"},
+      "claude-haiku-4-5-20251001": {"alias": "claude-haiku-4-5", "context_window": "200k tokens", "max_output": "64k tokens"}
+    }
+  },
+  "id_resolution": {
+    "Claude Opus 4.7": "claude-opus-4-7",
+    "Claude Opus 4.6": "_note_claude-opus-4-6: date suffix pending - not on current overview page",
+    "Claude Opus 4.5": "_note_claude-opus-4-5: date suffix pending - not on current overview page",
+    "Claude Opus 4.1": "_note_claude-opus-4-1: date suffix pending - not on current overview page",
+    "Claude Opus 4 (deprecated)": "_note_claude-opus-4: date suffix pending",
+    "Claude Sonnet 4.6": "claude-sonnet-4-6",
+    "Claude Sonnet 4.5": "_note_claude-sonnet-4-5: date suffix pending - not on current overview page",
+    "Claude Sonnet 4 (deprecated)": "_note_claude-sonnet-4: date suffix pending",
+    "Claude Haiku 4.5": "claude-haiku-4-5-20251001",
+    "Claude Haiku 3.5 (retired)": "_note_claude-3-5-haiku: retired"
+  }
+}

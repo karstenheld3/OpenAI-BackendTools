@@ -86,6 +86,7 @@ Invoke based on context:
 - **Question assumptions** - What are we taking for granted that could be wrong?
 - **Be specific** - Vague concerns are useless. Cite line numbers, exact scenarios
 - **Prioritize by impact** - Critical logic flaws first
+- **Apply SOCAS** - Use @write-documents `SOCAS_RULES.md` for systematic quality evaluation. Report findings with SOCAS IDs and severity.
 
 **Categories and Labels**: See FAILS_TEMPLATE.md and REVIEW_TEMPLATE.md in @write-documents skill.
 

@@ -5,13 +5,13 @@ description: Apply when converting, processing, or analyzing PDF files
 
 # PDF Tools Guide
 
-Rules and usage for PDF tools in `[WORKSPACE_FOLDER]/.tools/`.
+Rules and usage for PDF tools in `[WORKSPACE_FOLDER]/../.tools/`.
 
 ## MUST-NOT-FORGET
 
 - Check existing conversions before converting
-- Default output: `.tools/_pdf_to_jpg_converted/[PDF_FILENAME]/`
-- Use 150 DPI for screen, 300 DPI for OCR
+- Default output: `../.tools/_pdf_to_jpg_converted/[PDF_FILENAME]/`
+- Use 120 DPI for screen/transcription, 300 DPI for OCR
 - Two-pass downsizing: Ghostscript (images) then QPDF (structure)
 
 ## PDF to JPG Conversion
@@ -33,93 +33,93 @@ python DevSystemV2/skills/pdf-tools/convert-pdf-to-jpg.py invoice.pdf --pages 1
 ```
 
 **Output Convention:**
-- Default output: `.tools/_pdf_to_jpg_converted/[PDF_FILENAME]/`
+- Default output: `../.tools/_pdf_to_jpg_converted/[PDF_FILENAME]/`
 - Each PDF gets its own subfolder named after the PDF file (without extension)
 - Files named: `[PDF_FILENAME]_page001.jpg`, `[PDF_FILENAME]_page002.jpg`, etc.
 - Check for existing subfolder to skip re-conversion
 
 **Parameters:**
-- `--output`: Output directory (default: `.tools/_pdf_to_jpg_converted/`)
-- `--dpi`: Resolution (default: 150)
+- `--output`: Output directory (default: `../.tools/_pdf_to_jpg_converted/`)
+- `--dpi`: Resolution (default: 120)
 - `--pages`: Page range - "1", "1-3", or "all" (default: all)
 
 ## 7-Zip CLI Tools
 
-Location: `.tools/7z/`
+Location: `../.tools/7z/`
 
 7-Zip is required to extract Ghostscript from its NSIS installer. The standalone `7za.exe` cannot extract NSIS archives.
 
 ### Extract archive
 ```powershell
-& ".tools/7z/7z.exe" x -y -o"output_folder" "archive.zip"
+& "../.tools/7z/7z.exe" x -y -o"output_folder" "archive.zip"
 ```
 
 ### Extract NSIS installer (like Ghostscript)
 ```powershell
-& ".tools/7z/7z.exe" x -y -o"output_folder" "installer.exe"
+& "../.tools/7z/7z.exe" x -y -o"output_folder" "installer.exe"
 ```
 
 ### List archive contents
 ```powershell
-& ".tools/7z/7z.exe" l "archive.zip"
+& "../.tools/7z/7z.exe" l "archive.zip"
 ```
 
 ## Poppler CLI Tools
 
-Location: `.tools/poppler/Library/bin/`
+Location: `../.tools/poppler/Library/bin/`
 
 ### pdftoppm - PDF to Image
 ```powershell
-& ".tools/poppler/Library/bin/pdftoppm.exe" -jpeg -r 150 "input.pdf" "output_prefix"
+& "../.tools/poppler/Library/bin/pdftoppm.exe" -jpeg -r 150 "input.pdf" "output_prefix"
 ```
 
 ### pdftotext - Extract Text
 ```powershell
-& ".tools/poppler/Library/bin/pdftotext.exe" "input.pdf" "output.txt"
+& "../.tools/poppler/Library/bin/pdftotext.exe" "input.pdf" "output.txt"
 ```
 
 ### pdfinfo - Get PDF Metadata
 ```powershell
-& ".tools/poppler/Library/bin/pdfinfo.exe" "input.pdf"
+& "../.tools/poppler/Library/bin/pdfinfo.exe" "input.pdf"
 ```
 
 ### pdfseparate - Split PDF Pages
 ```powershell
-& ".tools/poppler/Library/bin/pdfseparate.exe" "input.pdf" "output_%d.pdf"
+& "../.tools/poppler/Library/bin/pdfseparate.exe" "input.pdf" "output_%d.pdf"
 ```
 
 ### pdfunite - Merge PDFs
 ```powershell
-& ".tools/poppler/Library/bin/pdfunite.exe" "page1.pdf" "page2.pdf" "merged.pdf"
+& "../.tools/poppler/Library/bin/pdfunite.exe" "page1.pdf" "page2.pdf" "merged.pdf"
 ```
 
 ## QPDF CLI Tools
 
-Location: `.tools/qpdf/bin/`
+Location: `../.tools/qpdf/bin/`
 
 ### Merge PDFs
 ```powershell
-& ".tools/qpdf/bin/qpdf.exe" --empty --pages file1.pdf file2.pdf -- merged.pdf
+& "../.tools/qpdf/bin/qpdf.exe" --empty --pages file1.pdf file2.pdf -- merged.pdf
 ```
 
 ### Split PDF (extract pages)
 ```powershell
-& ".tools/qpdf/bin/qpdf.exe" input.pdf --pages . 1-5 -- output.pdf
+& "../.tools/qpdf/bin/qpdf.exe" input.pdf --pages . 1-5 -- output.pdf
 ```
 
 ### Decrypt PDF
 ```powershell
-& ".tools/qpdf/bin/qpdf.exe" --decrypt --password=secret encrypted.pdf decrypted.pdf
+& "../.tools/qpdf/bin/qpdf.exe" --decrypt --password=secret encrypted.pdf decrypted.pdf
 ```
 
 ### Repair PDF
 ```powershell
-& ".tools/qpdf/bin/qpdf.exe" --replace-input damaged.pdf
+& "../.tools/qpdf/bin/qpdf.exe" --replace-input damaged.pdf
 ```
 
 ### Linearize (optimize for web)
 ```powershell
-& ".tools/qpdf/bin/qpdf.exe" --linearize input.pdf output.pdf
+& "../.tools/qpdf/bin/qpdf.exe" --linearize input.pdf output.pdf
 ```
 
 ## Smart PDF Compression Script
@@ -151,7 +151,7 @@ python DevSystemV2/skills/pdf-tools/compress-pdf.py report.pdf --compression low
 - Escalates to more aggressive strategies if target not reached
 - Reverts to previous result if aggressive approach shows insufficient improvement
 
-**Output:** `.tools/_pdf_output/[PDF_FILENAME]_compressed.pdf`
+**Output:** `../.tools/_pdf_output/[PDF_FILENAME]_compressed.pdf`
 
 ## Simple PDF Downsizing Script
 
@@ -165,19 +165,19 @@ python DevSystemV2/skills/pdf-tools/downsize-pdf-images.py <input.pdf> [--output
 ```
 
 **Parameters:**
-- `--output`: Output directory (default: `.tools/_pdf_output/`)
+- `--output`: Output directory (default: `../.tools/_pdf_output/`)
 - `--dpi`: Resolution (default: 150)
 - `--preset`: Quality preset - screen (72), ebook (150), printer (300), prepress (300)
 
-**Output:** `.tools/_pdf_output/[PDF_FILENAME]_[DPI]dpi.pdf`
+**Output:** `../.tools/_pdf_output/[PDF_FILENAME]_[DPI]dpi.pdf`
 
 ## Ghostscript CLI Tools
 
-Location: `.tools/gs/bin/`
+Location: `../.tools/gs/bin/`
 
 ### Compress images (downsize PDF)
 ```powershell
-& ".tools/gs/bin/gswin64c.exe" -sDEVICE=pdfwrite -dCompatibilityLevel=1.4 -dPDFSETTINGS=/screen -dDownsampleColorImages=true -dColorImageResolution=72 -dDownsampleGrayImages=true -dGrayImageResolution=72 -dDownsampleMonoImages=true -dMonoImageResolution=72 -dNOPAUSE -dQUIET -dBATCH -sOutputFile=output.pdf input.pdf
+& "../.tools/gs/bin/gswin64c.exe" -sDEVICE=pdfwrite -dCompatibilityLevel=1.4 -dPDFSETTINGS=/screen -dDownsampleColorImages=true -dColorImageResolution=72 -dDownsampleGrayImages=true -dGrayImageResolution=72 -dDownsampleMonoImages=true -dMonoImageResolution=72 -dNOPAUSE -dQUIET -dBATCH -sOutputFile=output.pdf input.pdf
 ```
 
 ### Quality presets (`-dPDFSETTINGS`)
@@ -188,7 +188,7 @@ Location: `.tools/gs/bin/`
 
 ### Remove all images (text only)
 ```powershell
-& ".tools/gs/bin/gswin64c.exe" -sDEVICE=pdfwrite -dCompatibilityLevel=1.4 -dFILTERIMAGE=true -dNOPAUSE -dQUIET -dBATCH -sOutputFile=output.pdf input.pdf
+& "../.tools/gs/bin/gswin64c.exe" -sDEVICE=pdfwrite -dCompatibilityLevel=1.4 -dFILTERIMAGE=true -dNOPAUSE -dQUIET -dBATCH -sOutputFile=output.pdf input.pdf
 ```
 
 ## PDF Downsizing Workflow
@@ -197,12 +197,12 @@ Two-pass workflow for maximum compression:
 
 ### Pass 1: Ghostscript (image compression)
 ```powershell
-& ".tools/gs/bin/gswin64c.exe" -sDEVICE=pdfwrite -dCompatibilityLevel=1.4 -dPDFSETTINGS=/screen -dDownsampleColorImages=true -dColorImageResolution=72 -dDownsampleGrayImages=true -dGrayImageResolution=72 -dNOPAUSE -dQUIET -dBATCH -sOutputFile=temp.pdf input.pdf
+& "../.tools/gs/bin/gswin64c.exe" -sDEVICE=pdfwrite -dCompatibilityLevel=1.4 -dPDFSETTINGS=/screen -dDownsampleColorImages=true -dColorImageResolution=72 -dDownsampleGrayImages=true -dGrayImageResolution=72 -dNOPAUSE -dQUIET -dBATCH -sOutputFile=temp.pdf input.pdf
 ```
 
 ### Pass 2: QPDF (structure optimization)
 ```powershell
-& ".tools/qpdf/bin/qpdf.exe" --linearize --object-streams=generate --stream-data=compress --compress-streams=y --optimize-images --flatten-annotations=screen temp.pdf output.pdf
+& "../.tools/qpdf/bin/qpdf.exe" --linearize --object-streams=generate --stream-data=compress --compress-streams=y --optimize-images --flatten-annotations=screen temp.pdf output.pdf
 Remove-Item temp.pdf
 ```
 
@@ -212,19 +212,19 @@ Before optimizing, analyze the PDF to understand what's consuming space.
 
 ### Get PDF info
 ```powershell
-& ".tools/poppler/Library/bin/pdfinfo.exe" "input.pdf"
+& "../.tools/poppler/Library/bin/pdfinfo.exe" "input.pdf"
 ```
 
 ### List all images with details
 ```powershell
-& ".tools/poppler/Library/bin/pdfimages.exe" -list "input.pdf"
+& "../.tools/poppler/Library/bin/pdfimages.exe" -list "input.pdf"
 ```
 
 Shows: page, dimensions, color space, compression, DPI, size. Use to determine if images can be further compressed.
 
 ### Count images
 ```powershell
-& ".tools/poppler/Library/bin/pdfimages.exe" -list "input.pdf" | Measure-Object
+& "../.tools/poppler/Library/bin/pdfimages.exe" -list "input.pdf" | Measure-Object
 ```
 
 ## Optimization Strategies (by effectiveness)
@@ -251,17 +251,17 @@ Tested on 6 real-world annual reports (50-100 MB each):
 
 ### Strategy 1: Aggressive (best for large reductions)
 ```powershell
-cmd /c "& '.tools/gs/bin/gswin64c.exe' -sDEVICE=pdfwrite -dCompatibilityLevel=1.4 -dPDFSETTINGS=/screen -dDetectDuplicateImages=true -dCompressFonts=true -dSubsetFonts=true -dConvertCMYKImagesToRGB=true -dColorImageDownsampleType=/Bicubic -dNOPAUSE -dBATCH -sOutputFile=output.pdf input.pdf"
+cmd /c "& '../.tools/gs/bin/gswin64c.exe' -sDEVICE=pdfwrite -dCompatibilityLevel=1.4 -dPDFSETTINGS=/screen -dDetectDuplicateImages=true -dCompressFonts=true -dSubsetFonts=true -dConvertCMYKImagesToRGB=true -dColorImageDownsampleType=/Bicubic -dNOPAUSE -dBATCH -sOutputFile=output.pdf input.pdf"
 ```
 
 ### Strategy 2: Balanced (preserves more quality)
 ```powershell
-cmd /c "& '.tools/gs/bin/gswin64c.exe' -sDEVICE=pdfwrite -dCompatibilityLevel=1.4 -dPDFSETTINGS=/ebook -dDetectDuplicateImages=true -dCompressFonts=true -dSubsetFonts=true -dConvertCMYKImagesToRGB=true -dNOPAUSE -dBATCH -sOutputFile=output.pdf input.pdf"
+cmd /c "& '../.tools/gs/bin/gswin64c.exe' -sDEVICE=pdfwrite -dCompatibilityLevel=1.4 -dPDFSETTINGS=/ebook -dDetectDuplicateImages=true -dCompressFonts=true -dSubsetFonts=true -dConvertCMYKImagesToRGB=true -dNOPAUSE -dBATCH -sOutputFile=output.pdf input.pdf"
 ```
 
 ### Strategy 3: Structure only (no quality loss)
 ```powershell
-& ".tools/qpdf/bin/qpdf.exe" --linearize --object-streams=generate --compress-streams=y --recompress-flate input.pdf output.pdf
+& "../.tools/qpdf/bin/qpdf.exe" --linearize --object-streams=generate --compress-streams=y --recompress-flate input.pdf output.pdf
 ```
 
 ## Key Optimization Flags
@@ -286,10 +286,10 @@ cmd /c "& '.tools/gs/bin/gswin64c.exe' -sDEVICE=pdfwrite -dCompatibilityLevel=1.
 For initial installation, see `SETUP.md` in this skill folder.
 
 **Tool locations:**
-- 7-Zip: `.tools/7z/`
-- Poppler: `.tools/poppler/`
-- QPDF: `.tools/qpdf/`
-- Ghostscript: `.tools/gs/`
-- Installers: `.tools/_installer/`
-- JPG output: `.tools/_pdf_to_jpg_converted/`
-- PDF output: `.tools/_pdf_output/`
+- 7-Zip: `../.tools/7z/`
+- Poppler: `../.tools/poppler/`
+- QPDF: `../.tools/qpdf/`
+- Ghostscript: `../.tools/gs/`
+- Installers: `../.tools/_installer/`
+- JPG output: `../.tools/_pdf_to_jpg_converted/`
+- PDF output: `../.tools/_pdf_output/`

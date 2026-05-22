@@ -2,17 +2,24 @@
 
 Rules for writing specification documents with GOOD/BAD examples.
 
+**Writing quality:** Apply `APAPALAN_RULES.md` to all spec content. Key rules for specs: AP-PR-07 (be specific), AP-PR-08 (examples for every rule), AP-NM-01 (one name per concept), AP-PR-09 (consistent patterns).
+
 ## Rule Index
 
 **Requirements (RQ)**
 - **SPEC-RQ-01**: Use numbered IDs for functional requirements (XXXX-FR-01)
 - **SPEC-RQ-02**: Use numbered IDs for design decisions (XXXX-DD-01)
 - **SPEC-RQ-03**: Use numbered IDs for implementation guarantees (XXXX-IG-01)
+- **SPEC-RQ-04**: Use numbered IDs for non-functional requirements (XXXX-NFR-01)
 
 **Diagrams (DG)**
-- **SPEC-DG-01**: Use ASCII box diagrams with component boundaries
+- **SPEC-DG-01**: Use Unicode box diagrams with component boundaries
 - **SPEC-DG-02**: Show ALL buttons and actions in UI diagrams
 - **SPEC-DG-03**: Use layer diagrams for multi-tier systems
+- **SPEC-DG-04**: Adjacent BEFORE/AFTER for change proposals
+- **SPEC-DG-05**: UX text fidelity - button/label text must match implementation 1:1
+- **SPEC-DG-06**: Unicode box-drawing for UI mockups (not ASCII +/-/|)
+- **SPEC-DG-07**: Modal footer buttons: Primary LEFT, Secondary RIGHT, both right-aligned
 
 **Content (CT)**
 - **SPEC-CT-01**: Summarize styling - avoid CSS detail
@@ -23,6 +30,11 @@ Rules for writing specification documents with GOOD/BAD examples.
 - **SPEC-CT-06**: Compact object definitions - use lists, no empty lines between properties
 - **SPEC-CT-07**: Compact gate checklists - use simple lists, not ASCII box diagrams
 
+**Logging (LG)**
+- **SPEC-LG-01**: Identify logging types applicable to the implementation
+- **SPEC-LG-02**: Define logging audience and goal per type
+- **SPEC-LG-03**: Provide log output examples for key operations
+
 **Format (FT)**
 - **SPEC-FT-01**: Use timestamped changelog, reverse chronological
 - **SPEC-FT-02**: No Markdown tables in changelogs
@@ -31,7 +43,10 @@ Rules for writing specification documents with GOOD/BAD examples.
 ## Table of Contents
 
 - [Requirements Format](#requirements-format)
+- [Logging Requirements](#logging-requirements)
 - [UI Diagrams](#ui-diagrams)
+- [Before/After Change Diagrams](#beforeafter-change-diagrams)
+- [UX Text Fidelity](#ux-text-fidelity)
 - [Layer Architecture Diagrams](#layer-architecture-diagrams)
 - [Summarize Styling](#summarize-styling)
 - [Code Outline Only](#code-outline-only)
@@ -72,66 +87,277 @@ Rules for writing specification documents with GOOD/BAD examples.
 **CRWL-EC-02:** Network timeout -> Retry 3 times, then fail with error
 ```
 
-## UI Diagrams
+## Logging Requirements
 
-Use ASCII box diagrams with component boundaries. Show ALL buttons and actions.
+When an implementation produces output (console, logs, test results), the SPEC must define logging requirements. If logging is not applicable, state why in the section.
+
+**Reference documents** (@skills:coding-conventions):
+- `LOGGING-RULES.md` - General rules (LOG-GN-01 to LOG-GN-12), philosophy, and patterns
+- `LOGGING-RULES-USER-FACING.md` - End-user console/SSE output (LOG-UF-01 to LOG-UF-06)
+- `LOGGING-RULES-APP-LEVEL.md` - Server/debug logging (LOG-AP-01 to LOG-AP-05)
+- `LOGGING-RULES-SCRIPT-LEVEL.md` - QA/selftest output (LOG-SC-01 to LOG-SC-07)
+
+### SPEC-LG-01: Identify Applicable Logging Types
+
+**Decision tree - which logging types apply:**
+
+```
+Does the implementation produce console output for end users?
+├─ Yes -> User-Facing (UF) applies
+│         Goal: Users always know what is happening
+│         Rules: LOG-UF-01 to LOG-UF-06
+└─ No
+
+Does the implementation run as a server/service with debug logging?
+├─ Yes -> App-Level (AP) applies
+│         Goal: Human-readable AND machine-parseable
+│         Rules: LOG-AP-01 to LOG-AP-05
+└─ No
+
+Does the implementation include selftest/verification scripts?
+├─ Yes -> Script-Level (SC) applies
+│         Goal: All failure info in logs alone
+│         Rules: LOG-SC-01 to LOG-SC-07
+└─ No
+
+None of the above -> Logging section states "N/A: [reason]"
+```
+
+General rules (LOG-GN) apply to ALL types when any type is selected.
+
+### SPEC-LG-02: Define Audience and Goal Per Type
+
+For each applicable logging type, state:
+- **Audience** - Who reads this output (end users, developers, QA)
+- **Goal** - What the reader must learn from the output
+- **Key operations** - Which operations produce logged output
 
 **BAD:**
 ```
-+-------------------------------------------------------------+
-|  Jobs Table (Reactive Rendering)                            |
-|  +----+---------+----------+---------+------------------+   |
-|  | ID | Router  | Endpoint | State   | Actions          |   |
-|  +----+---------+----------+---------+------------------+   |
-|  | 42 | crawler | update   | running | [Monitor] [Pause]|   |
-|  | 41 | crawler | update   | done    | [Monitor]        |   |
-|  +----+---------+----------+---------+------------------+   |
-|                                                             |
-|  +----------------------------------------------------------+
-|  | [Resize Handle - Draggable]                              |
-|  | Console Output                                   [Clear] |
-|  | ---------------------------------------------------------|
-|  | [ 1 / 20 ] Processing 'document_001.pdf'...              |
-|  |   OK.                                                    |
-|  +----------------------------------------------------------+
-|                                                             |
-|  +----------------------------------------------------------+
-|  | Job Started | ID: 42 | Total: 20 items               [x] | <- Toast
-|  +----------------------------------------------------------+
-+-------------------------------------------------------------+
+The system should log operations.
 ```
 
 **GOOD:**
 ```
+**User-Facing (UF):**
+- Audience: Admin users monitoring crawl progress via console
+- Goal: Know which site is being crawled, how many files processed, errors
+- Key operations: site connection, library scanning, file processing
+
+**App-Level (AP):**
+- Audience: Developers debugging failed crawls via server logs
+- Goal: Trace request flow, identify failure point with full error chain
+- Key operations: API calls, authentication, file operations
+```
+
+### SPEC-LG-03: Provide Log Output Examples
+
+Show expected log output for key operations. Use the Announce > Track > Report pattern from `LOGGING-RULES.md`.
+
+**BAD:**
+```
+Log the crawl progress.
+```
+
+**GOOD:**
+```
+**Expected user-facing output for crawl operation:**
+Crawling site 'https://contoso.sharepoint.com/sites/ProjectA'...
+  3 libraries found.
+  [ 1 / 3 ] Processing library 'Documents'...
+    342 files retrieved.
+    12 added, 3 changed, 0 removed.
+    OK.
+  [ 2 / 3 ] Processing library 'Reports'...
+    ERROR: Access denied -> (403) Forbidden
+  PARTIAL FAIL: 2 libraries processed, 1 failed.
+```
+
+## UI Diagrams
+
+Use Unicode box-drawing characters for UI mockups. Show ALL buttons and actions.
+
+**Required characters:**
+- Corners: `┌` `┐` `└` `┘`
+- Lines: `─` `│`
+- Junctions: `├` `┤` `┬` `┴` `┼`
+
+**BAD** (ASCII art - harder to read, inconsistent rendering):
+```
++-------+
+| Title |
++-------+
+```
+
+**GOOD** (Unicode - clean, consistent):
+```
+┌───────┐
+│ Title │
+└───────┘
+```
+
+**BAD** (missing component separation, toast inside main box):
+```
+┌─────────────────────────────────────────────────────────────┐
+│  Jobs Table (Reactive Rendering)                            │
+│  ┌────┬─────────┬──────────┬─────────┬──────────────────┐   │
+│  │ ID │ Router  │ Endpoint │ State   │ Actions          │   │
+│  ├────┼─────────┼──────────┼─────────┼──────────────────┤   │
+│  │ 42 │ crawler │ update   │ running │ [Monitor] [Pause]│   │
+│  │ 41 │ crawler │ update   │ done    │ [Monitor]        │   │
+│  └────┴─────────┴──────────┴─────────┴──────────────────┘   │
+│                                                             │
+│  ┌──────────────────────────────────────────────────────┐   │
+│  │ Console Output                               [Clear] │   │
+│  ├──────────────────────────────────────────────────────┤   │
+│  │ [ 1 / 20 ] Processing 'document_001.pdf'...          │   │
+│  │   OK.                                                │   │
+│  └──────────────────────────────────────────────────────┘   │
+│                                                             │
+│  ┌──────────────────────────────────────────────────────┐   │
+│  │ Job Started │ ID: 42 │ Total: 20 items           [x] │   │  <- Toast
+│  └──────────────────────────────────────────────────────┘   │
+└─────────────────────────────────────────────────────────────┘
+```
+
+**GOOD** (clear separation, toast as separate component):
+```
 Main HTML:
-+-------------------------------------------------------------------------------+
-|  Streaming Jobs (2)                                                           |
-|                                                                               |
-|  [Start Job]  [Refresh]                                 [Toasts appear here]  |
-|                                                                               |
-|  +----+---------+----------+---------+-------------------------------------+  |
-|  | ID | Router  | Endpoint | State   | Actions                             |  |
-|  +----+---------+----------+---------+-------------------------------------+  |
-|  | 42 | crawler | update   | running | [Monitor] [Pause / Resume] [Cancel] |  |
-|  | 41 | crawler | update   | done    | [Monitor]                           |  |
-|  +----+---------+----------+---------+-------------------------------------+  |
-|                                                                               |
-|  +-------------------------------------------------------------------------+  |
-|  | [Resize Handle - Draggable]                                             |  |
-|  | Console Output                                                  [Clear] |  |
-|  | ------------------------------------------------------------------------|  |
-|  | [ 1 / 20 ] Processing 'document_001.pdf'...                             |  |
-|  |   OK.                                                                   |  |
-|  | [ 2 / 20 ] Processing 'document_002.pdf'...                             |  |
-|  |   OK.                                                                   |  |
-|  +-------------------------------------------------------------------------+  |
-|                                                                               |
-+-------------------------------------------------------------------------------+
+┌───────────────────────────────────────────────────────────────────────────────┐
+│  Streaming Jobs (2)                                                           │
+│                                                                               │
+│  [Start Job]  [Refresh]                                 [Toasts appear here]  │
+│                                                                               │
+│  ┌────┬─────────┬──────────┬─────────┬─────────────────────────────────────┐  │
+│  │ ID │ Router  │ Endpoint │ State   │ Actions                             │  │
+│  ├────┼─────────┼──────────┼─────────┼─────────────────────────────────────┤  │
+│  │ 42 │ crawler │ update   │ running │ [Monitor] [Pause / Resume] [Cancel] │  │
+│  │ 41 │ crawler │ update   │ done    │ [Monitor]                           │  │
+│  └────┴─────────┴──────────┴─────────┴─────────────────────────────────────┘  │
+│                                                                               │
+│  ┌─────────────────────────────────────────────────────────────────────────┐  │
+│  │ [Resize Handle - Draggable]                                             │  │
+│  │ Console Output                                                  [Clear] │  │
+│  ├─────────────────────────────────────────────────────────────────────────┤  │
+│  │ [ 1 / 20 ] Processing 'document_001.pdf'...                             │  │
+│  │   OK.                                                                   │  │
+│  │ [ 2 / 20 ] Processing 'document_002.pdf'...                             │  │
+│  │   OK.                                                                   │  │
+│  └─────────────────────────────────────────────────────────────────────────┘  │
+│                                                                               │
+└───────────────────────────────────────────────────────────────────────────────┘
 
 Toast:
-+-----------------------------------------------+
-| Job Started | ID: 42 | Total: 20 items   [x]  |
-+-----------------------------------------------+
+┌───────────────────────────────────────────────┐
+│ Job Started │ ID: 42 │ Total: 20 items   [x]  │
+└───────────────────────────────────────────────┘
+```
+
+## Before/After Change Diagrams
+
+Specs that propose changes to existing solutions MUST show BEFORE and AFTER states with high proximity. Place them adjacent (one immediately after the other) so readers can compare and understand the change intent.
+
+**BAD:**
+```
+## 2. Context
+
+### Current Architecture
+[BEFORE diagram here]
+
+... 200 lines of other content ...
+
+## 11. UX Design
+
+### Proposed Layout
+[AFTER diagram here - reader must scroll back to compare]
+```
+
+**GOOD:**
+```
+## 2. Context
+
+### Current UI Architecture (BEFORE)
+┌─────────────────────────────────────────────────────────────────────────────────────┐
+│  Sites (3)  [Reload]                                                                │
+│  Back to Main Page | Domains | Sites | ...                                         │
+└─────────────────────────────────────────────────────────────────────────────────────┘
+
+### Proposed UI Architecture (AFTER)
+┌─────────────────────────────────────────────────────────────────────────────────────┐
+│  Sites (3)  [Reload]         [OpenAI (API Key)] [SharePoint (Managed Identity)]    │
+│  Back to Main Page | Domains | Sites | ...                                         │
+└─────────────────────────────────────────────────────────────────────────────────────┘
+
+Auth buttons added to page header row, right-aligned.
+```
+
+**When to apply:**
+- UI layout changes (show old and new wireframes adjacent)
+- Data structure changes (show old and new schema adjacent)
+- API changes (show old and new endpoints/payloads adjacent)
+- Architecture changes (show old and new component diagrams adjacent)
+
+**Labels:** Use "(BEFORE)" and "(AFTER)" or "Current" and "Proposed" in heading text.
+
+## UX Text Fidelity
+
+Button labels, menu items, and UI text in diagrams MUST match the final implementation exactly. No abbreviations, no placeholders, no shortened forms.
+
+**Rationale:** UX diagrams serve as the source of truth for implementation. Abbreviations create ambiguity and force implementers to guess the actual text.
+
+**BAD:**
+```
+[SP (MI)]                    <- Abbreviation - what does MI mean?
+[Auth]                       <- Too vague
+[SharePoint Auth...]         <- Truncated
+```
+
+**GOOD:**
+```
+[SharePoint (Managed Identity)]    <- Exact text that will appear in UI
+[OpenAI (API Key)]                 <- Full label as implemented
+```
+
+**Apply to:**
+- Button labels
+- Menu items and navigation links
+- Dialog titles and messages
+- Toast notifications
+- Error messages
+- Form labels and placeholders
+
+## Modal Footer Button Alignment
+
+Modal dialog footers with multiple buttons MUST follow this order:
+1. **Primary action** (Confirm, OK, Submit, Save) - LEFT position
+2. **Secondary action** (Cancel, Back, Close) - RIGHT position
+3. **Both buttons right-aligned** with the dialog edge
+
+**Rationale:** Windows UX Standards. Also aplies to Microsoft M365 Platform and SharePoint. Windows dialogs place primary action (commit) left, secondary action (cancel) right.
+
+**BAD:**
+```
+├──────────────────────────────────────────────────────────────────────┤
+│  [Cancel]                                              [Confirm]     │  <- Cancel first = wrong
+└──────────────────────────────────────────────────────────────────────┘
+
+├──────────────────────────────────────────────────────────────────────┤
+│  [Confirm]    [Cancel]                                               │  <- Left-aligned = wrong
+└──────────────────────────────────────────────────────────────────────┘
+```
+
+**GOOD:**
+```
+├──────────────────────────────────────────────────────────────────────┤
+│                                        [Confirm]        [Cancel]     │
+└──────────────────────────────────────────────────────────────────────┘
+```
+
+**Single button (Back, OK):** Right-aligned.
+```
+├──────────────────────────────────────────────────────────────────────┤
+│                                                             [OK]     │
+└──────────────────────────────────────────────────────────────────────┘
 ```
 
 ## Layer Architecture Diagrams

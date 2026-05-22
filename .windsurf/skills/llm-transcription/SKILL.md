@@ -57,6 +57,31 @@ python transcribe-audio-to-markdown.py --input meeting.wav --model whisper-1 --o
 - **Cost tracking** with token usage reports
 - **Multiple model support** - OpenAI and Anthropic
 
+## Model Recommendations for Legal Documents
+
+Tested on EU AI Act (144 pages, German legal text, 2024-02-04):
+
+| Model | Avg Score | Accuracy | Cost | Use Case |
+|-------|-----------|----------|------|----------|
+| **gpt-5-mini** | 4.87 | ~99.5% | $3.89 | Legal, regulatory, contracts |
+| **gpt-5-nano** | 4.17 | ~92% | $1.23 | Informal notes, drafts |
+
+**gpt-5-mini** (recommended for legal):
+- Verbatim transcription preserving exact wording
+- Correct regulation numbers (e.g., "2022/2065")
+- Accurate technical terminology
+- No [unclear] markers - confident reading
+- 0 critical errors in 144 pages
+
+**gpt-5-nano** (not recommended for legal):
+- Rewrites/summarizes instead of transcribing verbatim
+- Wrong regulation numbers (e.g., "2022/665" instead of "2022/2065")
+- Wrong terminology with legal/medical implications (e.g., "Blutanalyse" instead of "Blutdruck")
+- 50+ [unclear] markers indicating reading difficulties
+- Content duplication and structural issues
+
+**For legal documents**: Use `--model gpt-5-mini --dpi 120` to avoid factual errors that could have regulatory consequences. The 120 DPI setting provides optimal balance between image quality and processing speed for document transcription.
+
 ## Configuration
 
 API keys required in `~/.llm-keys` or environment variables:

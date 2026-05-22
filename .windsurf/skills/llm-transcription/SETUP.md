@@ -16,9 +16,7 @@ pip install openai anthropic httpx
 
 ### 2. Configure API Keys
 
-**Standard location**: `[WORKSPACE_FOLDER]\..\.api-keys.txt` (workspace-external, shared across projects)
-
-**Alternative**: `[WORKSPACE_FOLDER]\.tools\.api-keys.txt` (project-local)
+**Standard location**: `[WORKSPACE_FOLDER]\..\.tools\.api-keys.txt` (in shared .tools folder)
 
 **Format** (one key per line):
 ```
@@ -28,7 +26,7 @@ ANTHROPIC_API_KEY=sk-ant-...
 
 **Usage**: Pass `--keys-file` to scripts:
 ```powershell
-python transcribe-image-to-markdown.py --keys-file ..\..\.api-keys.txt --input-file image.png
+python transcribe-image-to-markdown.py --keys-file ..\.tools\.api-keys.txt --input-file image.png
 ```
 
 ### 3. Verify Installation

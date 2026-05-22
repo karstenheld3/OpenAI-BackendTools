@@ -71,9 +71,9 @@ Populated by `/learn` workflow. Extracts transferable lessons from resolved prob
 
 ## Location Rules
 
-- **SESSION-BASED**: `[SESSION_FOLDER]/LEARNINGS.md`
-- **PROJECT-WIDE + SINGLE-PROJECT**: `[WORKSPACE_FOLDER]/LEARNINGS.md`
-- **PROJECT-WIDE + MONOREPO**: `[PROJECT_FOLDER]/LEARNINGS.md`
+- **SESSION-MODE**: `[SESSION_FOLDER]/LEARNINGS.md`
+- **PROJECT-MODE + SINGLE-PROJECT**: `[WORKSPACE_FOLDER]/LEARNINGS.md`
+- **PROJECT-MODE + MONOREPO**: `[PROJECT_FOLDER]/LEARNINGS.md`
 
 ## Management Rules
 

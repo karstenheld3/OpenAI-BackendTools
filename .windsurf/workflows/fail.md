@@ -11,6 +11,11 @@ Record failures to prevent repetition. Can be triggered explicitly or run analys
 
 - @write-documents for FAILS_TEMPLATE.md structure
 
+## MUST-NOT-FORGET
+
+- Suggest `/learn` after problem is resolved
+- Session entries sync to workspace on `/session-finalize`
+
 ## Trigger
 
 - [ACTOR] reports a failure: `/fail [description]`
@@ -78,33 +83,60 @@ Gather supporting artifacts:
 - **What**: Exact problem description
 - **Evidence**: Link, test output, or example proving the issue
 
-## Step 5: Analyze Root Cause (Brief)
+## Step 5: Re-read Failed Workflow/Rules
 
-Quick assessment of why it went wrong:
-- What assumption was incorrect?
-- What was missed?
-- Keep brief - detailed analysis is for `/learn` workflow
+**CRITICAL**: Before analyzing root cause, re-read what SHOULD have happened:
 
-## Step 6: Suggest Fix
+1. If failure occurred during a workflow execution:
+   - Re-read the workflow file completely
+   - Note all MNF items, rules, and constraints
+   - Note any scripts or commands provided by the workflow
+   - **Follow references**: If workflow says "read NOTES.md" or other documents, read those too
+
+2. If failure involved rule violations:
+   - Re-read the relevant rule files
+   - Note specific requirements that were violated
+
+3. If failure involved configuration:
+   - Re-read NOTES.md, !NOTES.md for workspace config
+   - Re-read any referenced configuration sections
+
+4. Compare workflow/rules/config to actual execution:
+   - What did the workflow say to do?
+   - What config values applied?
+   - What did I actually do?
+   - Where is the gap?
+
+This step produces "Workflow re-read findings" for the FAILS entry.
+
+## Step 6: Analyze Root Cause
+
+Root cause analysis comparing instructions to execution:
+- What did the workflow/rules specify?
+- What did I actually execute?
+- Why was there a gap? (rushed, assumed, invented, ignored)
+- Keep concrete - cite line numbers when possible
+
+## Step 7: Suggest Fix
 
 Brief recommendation for resolution:
 - Immediate action to take
 - Keep actionable and specific
 
-## Step 7: Create FAILS Entry
+## Step 8: Create FAILS Entry
 
 Add entry to FAILS.md:
 
 1. **Determine location (SESSION-FIRST rule)**:
    
-   Check current work mode using AGEN states:
+   Check current work mode:
    
-   **If SESSION-BASED** (working in `[SESSION_FOLDER]`):
+   **If SESSION-MODE** (working in `[SESSION_FOLDER]`):
    - Write to `[SESSION_FOLDER]/FAILS.md`
    - Create file if it doesn't exist
    - Session entries sync to workspace on `/session-finalize`
    
-   **If PROJECT-WIDE** (no active session):
+   **If PROJECT-MODE** (no active session):
    - Write to `[WORKSPACE_FOLDER]/FAILS.md` or `[PROJECT_FOLDER]/FAILS.md`
    - For workspace-wide issues (DevSystem, tooling, MCP servers)
    - For issues affecting multiple projects
@@ -115,7 +147,7 @@ Add entry to FAILS.md:
 
 4. Include code example if applicable (before/after)
 
-## Step 8: Report
+## Step 9: Report
 
 Confirm to [ACTOR]:
 - Created `[TOPIC]-FL-NNN` in FAILS.md
@@ -125,7 +157,10 @@ Confirm to [ACTOR]:
 ## Quality Gate
 
 Before completing:
+- [ ] Failed workflow/rules re-read (Step 5 completed)
+- [ ] "Workflow re-read findings" included in entry
 - [ ] Severity correctly classified
 - [ ] Evidence is concrete (not vague)
 - [ ] Location is specific (file:line when applicable)
+- [ ] Root cause compares instructions vs execution
 - [ ] Suggested fix is actionable

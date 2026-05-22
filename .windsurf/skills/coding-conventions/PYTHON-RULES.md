@@ -9,7 +9,6 @@
 5. [Code Generation Rules (CG)](#code-generation-rules-cg)
 6. [Naming Rules (NM)](#naming-rules-nm)
 7. [Comment Rules (CM)](#comment-rules-cm)
-8. [Logging Rules (LG)](#logging-rules-lg)
 
 ## Rule Index
 
@@ -42,6 +41,11 @@
 - **PYTHON-NM-01**: Use clear, fully written names
 - **PYTHON-NM-02**: Follow existing naming patterns
 - **PYTHON-NM-03**: Avoid ambiguous abbreviations
+- **PYTHON-NM-04**: Corresponding pairs (pack/unpack, do/undo)
+- **PYTHON-NM-05**: Avoid misleading concepts (visible/hidden vs visible/invisible)
+- **PYTHON-NM-06**: Specific over generic (leftTo, rightTo vs nextTo)
+- **PYTHON-NM-07**: Origin/destination not source/target
+- **PYTHON-NM-08**: Don't rename established APIs (association field)
 
 **Comments (CM)**
 - **PYTHON-CM-01**: Comment intent, not obvious code
@@ -49,20 +53,6 @@
 - **PYTHON-CM-03**: Docstrings for complex functions with examples
 - **PYTHON-CM-04**: Use ASCII quotes in documentation
 - **PYTHON-CM-05**: Use tree characters for hierarchies
-
-**Logging (LG)**
-- **PYTHON-LG-01**: Indent sub-actions with 2 spaces
-- **PYTHON-LG-02**: Log action before executing
-- **PYTHON-LG-03**: Status keywords on separate indented line
-- **PYTHON-LG-04**: Surround paths/names/IDs with single quotes
-- **PYTHON-LG-05**: Iteration format `[ x / n ]`
-- **PYTHON-LG-06**: Retry format `( x / n )` inline
-- **PYTHON-LG-07**: Numbers first in results (exception: activity verbs)
-- **PYTHON-LG-08**: Property format `property_name='value'`
-- **PYTHON-LG-09**: Use UNKNOWN constant for missing values
-- **PYTHON-LG-10**: Nested function indentation (+2 spaces per level)
-- **PYTHON-LG-11**: Error concatenation with ` -> `
-- **PYTHON-LG-12**: Additional identifiers in parentheses `(ID=xxx)`
 
 ## Definitions
 
@@ -264,6 +254,31 @@ content -> html_content
 dynamic_count -> use_dynamic_count_for_updating
 ```
 
+### PYTHON-NM-04: Corresponding Pairs
+Use same word stem for opposites.
+
+**Verbs:**
+`send/receive`, `pack/unpack`, `accept/reject`, `enable/disable`, `visible/hidden`, `show/hide`, `do/undo`, `open/close`, `check/uncheck`, `validate/invalidate`, `include/exclude`, `existant/nonExistant`, `empty/filled`, `expand/shrink`
+
+**Entities:**
+`Input/Output`, `Addition/Removal`, `Activation/Deactivation`, `Source/Target`, `Current/Target`, `Origin/Destination`, `Departure/Arrival`, `Prefix/Suffix`
+
+### PYTHON-NM-05: Avoid Misleading Concepts
+`visible/invisible` implies object still occupies space. Use `visible/hidden` if hidden means "not there at all".
+
+### PYTHON-NM-06: Specific Over Generic
+Avoid `nextTo` (what context?). Use specific names:
+- `leftTo`, `rightTo` (direction)
+- `northTo`, `southTo` (axis)
+- `nearTo` (distance)
+- `closeTo` (relationship)
+
+### PYTHON-NM-07: Origin/Destination Not Source/Target
+"Several planes with the target Bagdad" = bad news. "Several planes with the destination Bagdad" = travel plans.
+
+### PYTHON-NM-08: Don't Rename Established APIs
+Even if the name became a misnomer, don't rename it. People predict behavior by the evoked association field, not the literal name. If `login()` worked for years, don't rename to `authenticate()` when credentials are no longer required. "Login" already means "authenticate" in users' minds. Like "horsepower" doesn't mean horses - it's the association field, not the name.
+
 ## Comment Rules (CM)
 
 ### PYTHON-CM-01: Comment Intent
@@ -339,208 +354,3 @@ For documentation or UI output, avoid "typographic quotes" and use typewriter / 
 ### PYTHON-CM-05: Hierarchy Characters
 When creating hierarchies and maps, use "└──" for indenting.
 
-## Logging Rules (LG)
-
-### PYTHON-LG-01: Sub-Action Indentation
-Indent sub-actions with 2 spaces.
-
-### PYTHON-LG-02: Log Before Action
-Log the action description before executing it.
-
-### PYTHON-LG-03: Status Keywords
-Put status keywords on a separate, indented line: `OK`, `ERROR`, `FAIL`, `WARNING`.
-- `OK` = action succeeded
-- `ERROR` = intermediate or final error occurred
-- `FAIL` = action failed even after error mitigation
-- `WARNING` = intermediate error that will be mitigated
-
-### PYTHON-LG-04: Quote Paths and IDs
-Surround file paths, names and IDs with single quotes `'...'`.
-
-### PYTHON-LG-05: Iteration Format
-For iterations, prefix lines with `[ x / n ]` at the beginning of a line where x = current item number, n = total items.
-
-### PYTHON-LG-06: Retry Format
-For retries, use `( x / n )` inline where x = current retry, n = max retries.
-
-### PYTHON-LG-07: Numbers First
-When logging results, always state numbers first. Honor the singular / plural rule.
-**Exception**: When starting activities, the activity verb should go first.
-
-*BAD*:
-```
-Retrieved 1 items so far...
-Total files retrieved: 2
-Successfully converted 2 of 10 files to SharePointFile objects
-```
-*GOOD*:
-```
-Retrieving 1 item from 'https://xxx'...
-  1 item retrieved so far...
-2 total files retrieved.
-2 of 10 files successfully converted to SharePointFile objects.
-```
-
-### PYTHON-LG-08: Property Format
-When logging IDs, paths, names, or properties that may contain spaces, use `property_name='value'` format. This disambiguates values and makes logs parseable. Do not use colons after prepositions like "from".
-
-*BAD*:
-```
-Loading domain AiSearchTest01 from: E:\dev\domains\domain.json
-Using file source: SharedDocuments
-Site URL: https://example.com/sites/Test
-Library: /Shared Documents
-```
-*GOOD*:
-```
-Loading domain 'AiSearchTest01' from 'E:\dev\domains\domain.json'...
-Using file source: source_id='SharedDocuments'
-Site: site_url='https://example.com/sites/Test'
-Library: sharepoint_url_part='/Shared Documents'
-```
-
-### PYTHON-LG-09: UNKNOWN Constant
-Missing values returned by APIs **should NOT be converted to arbitrary default values**. Define a global `UNKNOWN` constant in `common_logging_functions_v2.py`. Use `or UNKNOWN` pattern for values that go to logs. **NEVER risk breaking logging**.
-
-*BAD*:
-```python
-# Inconsistent placeholders
-lib_title = props.get('Title', '?')
-lib_id = props.get('Id', 'Unknown')
-file_path = props.get('Path', '')
-
-# None shown directly in logs
-lib_title = props.get('Title')  # Returns None
-logger.log(f"Library: '{lib_title}'")  # Output: "Library: 'None'"
-
-# Magic strings scattered everywhere
-lib_title = props.get('Title', '[UNKNOWN]')
-```
-
-*GOOD*:
-```python
-# In self-containing files use
-UNKNOWN = '[UNKNOWN]'
-
-# In other files - import and use
-from routers_v2.common_logging_functions_v2 import MiddlewareLogger, UNKNOWN
-
-lib_title = props.get('Title') or UNKNOWN
-lib_id = props.get('Id') or UNKNOWN
-logger.log(f"Library: '{lib_title}' (ID={lib_id})")
-```
-
-Output examples:
-- With value: `Library: 'Documents' (ID=045229b3-57de-49ce-b36a-00c3ec0f4fd4)`
-- Without value: `Library: '[UNKNOWN]' (ID=[UNKNOWN])`
-
-### PYTHON-LG-10: Nested Function Indentation
-When functions call other functions that also log, each nesting level adds 2 spaces:
-- Depth 1 (top-level function): 2 spaces from section header
-- Depth 2 (nested function): 4 spaces
-- Depth 3 (doubly nested): 6 spaces
-
-*BAD*:
-```
-[ 9 / 12 ] export_list_to_csv()
-START: export_list_to_csv()...
-START: get_list_items()...
-6 list items retrieved.
-END: get_list_items()
-6 items exported.
-END: export_list_to_csv()
-```
-*GOOD*:
-```
-[ 9 / 12 ] export_list_to_csv()
-  START: export_list_to_csv()...
-    START: get_list_items()...
-    6 list items retrieved.
-    END: get_list_items()
-  6 items exported.
-  END: export_list_to_csv()
-```
-
-### PYTHON-LG-11: Error Concatenation
-When logging errors, concatenate the description with the exception using ` -> ` without dot before. Always include paths and identifiers of the current activity to track down individual items in logs.
-
-*BAD*:
-```
-Uploading file...
-Success.
-Download complete
-failed to process file
-Warning: retrying...
-ERROR: Connection refused
-```
-*GOOD*:
-```
-Uploading file 'C:\abc\def.pdf' to library 'https://...'...
-  OK.
-Downloading file 'https://...' (ID=xxx)...
-  ERROR: Connection timeout -> ConnectionRefusedError: [Errno 111] Connection refused
-Processing file 'C:\abc\def.pdf'...
-  FAIL: Skipped processing after 3 retries.
-Opening file 'C:\abc\def.pdf'...
-  WARNING: File locked, waiting for release -> BlockingIOError: [Errno 11] Resource temporarily unavailable
-```
-
-Code examples:
-```python
-# Simple error logging
-try:
-  download_file()
-except Exception as e:
-  logger.log(f"  ERROR: Could not download file -> {e}")
-
-# With context
-try:
-  ctx.execute_query()
-except Exception as e:
-  logger.log(f"  ERROR: Failed to retrieve files for library '{lib_title}' (ID={lib_id}) -> {e}")
-
-# Warning with recovery
-try:
-  open_file(path)
-except BlockingIOError as e:
-  logger.log(f"  WARNING: File could not be opened -> {e}")
-  wait_and_retry()
-```
-
-### PYTHON-LG-12: Additional Info in Parentheses
-Use parentheses for **additional/secondary information** that supplements the main log message. Primary identifiers can be inline.
-
-**Primary identifier inline** (no parentheses needed):
-- `Deleted file ID=file_xyz789`
-- `File file_xyz789 removed from vector store vs_abc123`
-- `Download source 'source01' (type=file_sources, mode=full, dry_run=false)`
-
-**Additional info in parentheses**:
-- `Library: 'Documents' (ID=045229b3...)`
-- `Downloading file 'report.pdf' (ID=xxx)...`
-
-*BAD*: `Deleted file (ID='file_xyz789').` (over-parenthesizing primary attribute or identifyer)
-*GOOD*: `Deleted file ID=file_xyz789`
-
-## Complete Logging Example
-
-*BAD*:
-```
-Uploading item 1/2 Example.docx to vs_62573645276345
-SUCCESS: Verified uploaded file.
-Uploading item 1/2 Test.docx to vs_62573645276345
-ERROR: BlockingIOError: [Errno 11] Resource temporarily unavailable
-```
-
-*GOOD*:
-```
-[ 1 / 2 ] Uploading file 'C:\Example.docx' to vector store ID='vs_62573645276345'...
-  Verifying uploaded file ID='file_923748237' (file_path='C:\Example.docx')...
-  OK.
-[ 2 / 2 ] Uploading file 'C:\Test.docx' to vector store ID='vs_62573645276345'...
-  WARNING: File could not be opened. Maybe it's locked -> BlockingIOError: [Errno 11] Resource temporarily unavailable
-  Waiting 5 seconds ( 1 / 2 ) for retry...
-  Uploading file...
-  Verifying uploaded file ID='file_238756235'...
-  OK.
-```

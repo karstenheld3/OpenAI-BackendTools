@@ -1,12 +1,12 @@
 # LLM Evaluation Skill Setup
 
-Setup for LLM (Large Language Model) evaluation pipelines. Run once to install Python dependencies in `[WORKSPACE_FOLDER]/.tools/llm-venv/`.
+Setup for LLM (Large Language Model) evaluation pipelines. Run once to install Python dependencies in `[WORKSPACE_FOLDER]/../.tools/llm-venv/`.
 
 ## 1. Set Workspace Folder
 
 ```powershell
 $workspaceFolder = (Get-Location).Path  # or set explicitly: $workspaceFolder = "C:\Projects\MyProject"
-$toolsDir = "$workspaceFolder\.tools"
+$toolsDir = "$workspaceFolder\..\.tools"
 $venvDir = "$toolsDir\llm-venv"
 
 # Create .tools folder if needed
@@ -208,7 +208,7 @@ $env:ANTHROPIC_API_KEY = "sk-ant-api03-your-key"
 ## Completion
 
 Setup complete:
-- **Virtual environment**: `[WORKSPACE_FOLDER]/.tools/llm-venv/`
+- **Virtual environment**: `[WORKSPACE_FOLDER]/../.tools/llm-venv/`
 - **Python packages**: openai, anthropic
 - **API keys**: `.env` file (user-created)
 

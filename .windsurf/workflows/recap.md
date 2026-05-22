@@ -9,16 +9,18 @@ Backward-looking assessment of current state.
 
 ## Step 1: Read All Tracking Documents
 
+**Topic Folder Detection:** Run @skills:session-management **Topic Folder Detection** procedure first. If in `T##_*` folder, read both parent and topic folder tracking docs below.
+
 **Mandatory re-read before recap:**
 
-**SESSION-BASED mode** - Re-read session folder documents:
+**SESSION-MODE** - Re-read session folder documents:
 - NOTES.md
 - PROBLEMS.md
 - PROGRESS.md
 - FAILS.md
 - LEARNINGS.md (if exists)
 
-**PROJECT-WIDE mode** - Re-read workspace-level documents:
+**PROJECT-MODE** - Re-read workspace-level documents:
 - README.md
 - !NOTES.md or NOTES.md
 - !PROBLEMS.md or PROBLEMS.md (if exists)
@@ -35,7 +37,7 @@ Then read plan documents (improvise if missing):
 5. **_SPEC_*.md** - What we're building (requirements, FRs)
 6. **_IMPL_*.md** - How we're building (implementation steps)
 7. **_TEST_*.md** - How we verify (test cases)
-8. **_TASKS_*.md** - Partitioned work items with checkboxes
+8. **_TASKS_*.md** / **__TASKS_*.md** - Partitioned work items with checkboxes
 
 ## Step 2: Determine Exact Position
 

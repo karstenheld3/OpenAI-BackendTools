@@ -4,7 +4,7 @@ Rules for writing JSON configuration and data files.
 
 ## Principle
 
-**ASANAPAP**: As Short As Necessary, As Precise As Possible.
+**APAPALAN**: As Precise As Possible, As Little As Necessary.
 
 JSON files should be minimal but unambiguous. Avoid abbreviations in field names.
 

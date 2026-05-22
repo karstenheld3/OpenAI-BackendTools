@@ -186,7 +186,7 @@ python llm-evaluation-selftest.py [--skip-api-calls]
 ## Pipeline Example
 
 ```powershell
-$venv = ".tools\llm-venv\Scripts\python.exe"
+$venv = "..\.tools\llm-venv\Scripts\python.exe"
 $skill = ".windsurf\skills\llm-evaluation"
 
 # 1. Transcribe images

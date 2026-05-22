@@ -358,20 +358,20 @@ if __name__ == '__main__':
   class RAGParams: vector_store_name: str; folder_path: str; query: str; use_existing_vector_store: bool; create_assistant: bool; truncate_output: bool; chunk_size: int; chunk_overlap: int; create_assistant: bool; assistant_name: str; assistant_instructions: str; assistant_model: str; assistant_temperature: float; delete_vector_store_after_run: bool; delete_assistant_after_run: bool
 
   params = RAGParams(
-    vector_store_name="test_vector_store"
-    ,folder_path="./RAGFiles/Batch01"
+    vector_store_name="tmp_legal_eu_ai_act"
+    ,folder_path=r"e:\Karsten\Karsten Held Softwareingenieur\Legal - Documents\EU AI Act\Original PDFs"
     ,query="Who is Arilena Drovik?"
     ,use_existing_vector_store=False
     ,truncate_output=True
     ,chunk_size=4096
     ,chunk_overlap=2048
     ,create_assistant=False
-    ,assistant_name="Test RAG Assistant"
+    ,assistant_name="tmp_legal_eu_ai_act"
     ,assistant_instructions=default_assistant_instruction
     ,assistant_model="gpt-4o-mini"
     ,assistant_temperature=0
-    ,delete_vector_store_after_run=True
-    ,delete_assistant_after_run=True
+    ,delete_vector_store_after_run=False
+    ,delete_assistant_after_run=False
   )
 
   # delete_vector_store_by_name(client, params.vector_store_name, True)
