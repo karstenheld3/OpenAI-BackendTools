@@ -1,0 +1,25 @@
+{
+  "_version": "2.3.0",
+  "_updated": "2026-05-30",
+  "_comment": "CLI params: --temperature, --reasoning-effort, --output-length, --verbosity. Each uses same keywords mapped to different values.",
+  
+  "effort_levels": ["none", "minimal", "low", "medium", "high", "xhigh", "max"],
+  
+  "defaults": {
+    "temperature": "medium",
+    "reasoning_effort": "medium",
+    "output_length": "medium",
+    "seed": null,
+    "response_format": "text"
+  },
+  
+  "effort_mapping": {
+    "none":    { "temperature_factor": 0.0,  "openai_reasoning_effort": "none",    "openai_verbosity": "low",    "anthropic_thinking_factor": 0.0,  "anthropic_adaptive_effort": "low",    "output_length_factor": 0.25 },
+    "minimal": { "temperature_factor": 0.1,  "openai_reasoning_effort": "minimal", "openai_verbosity": "low",    "anthropic_thinking_factor": 0.01, "anthropic_adaptive_effort": "low",    "output_length_factor": 0.5 },
+    "low":     { "temperature_factor": 0.2,  "openai_reasoning_effort": "low",     "openai_verbosity": "low",    "anthropic_thinking_factor": 0.04, "anthropic_adaptive_effort": "low",    "output_length_factor": 0.5 },
+    "medium":  { "temperature_factor": 0.35, "openai_reasoning_effort": "medium",  "openai_verbosity": "medium", "anthropic_thinking_factor": 0.1,  "anthropic_adaptive_effort": "medium", "output_length_factor": 0.75 },
+    "high":    { "temperature_factor": 0.5,  "openai_reasoning_effort": "high",    "openai_verbosity": "high",   "anthropic_thinking_factor": 0.32, "anthropic_adaptive_effort": "high",   "output_length_factor": 1.0 },
+    "xhigh":   { "temperature_factor": 0.5,  "openai_reasoning_effort": "xhigh",   "openai_verbosity": "high",   "anthropic_thinking_factor": 1.0,  "anthropic_adaptive_effort": "xhigh",  "output_length_factor": 1.0 },
+    "max":     { "temperature_factor": 0.5,  "openai_reasoning_effort": "xhigh",   "openai_verbosity": "high",   "anthropic_thinking_factor": 1.0,  "anthropic_adaptive_effort": "max",    "output_length_factor": 1.0 }
+  }
+}
