@@ -1,6 +1,6 @@
 # MECT Writing Rules
 
-Writing principles derived from MECT (Minimal Explicit Consistent Terminology). Complement to `APAPALAN_RULES.md`.
+Writing principles derived from MECT (Minimal Explicit Consistent Terminology). Complement to `APAPALAN_RULES.md`. Origin: `_INFO_MECT_PHILOSOPHY.md [MECT-IN01]` (Karsten Held, 2017).
 
 **Abstraction levels:**
 - **MECT** (this file) = General principles that guide judgment. Answers: "What makes good writing?" Examples illustrate the principle, not enforce a specific format.

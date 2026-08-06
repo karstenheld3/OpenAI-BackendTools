@@ -1,6 +1,8 @@
 # [Article Title]
 
 **Doc ID**: [TOPIC]-MINTO-[NN]
+<!-- Topic IDs: 7-14 uppercase chars. Inside T##/S## folders use nested: [TOPIC]-[SUBTOPIC]-MINTO-[NN] -->
+**Timeline**: Created YYYY-MM-DD, Updated N times (YYYY-MM-DD - YYYY-MM-DD)
 **Source**: __MINTO-DRAFT_[Article].md
 **Argument**: [Root argument A restated]
 
@@ -94,3 +96,8 @@ A: [Root argument]
 - [ ] Same Kind, Same Level: all items per grouping describable by one plural noun
 - [ ] Headings state ideas, not categories
 - [ ] Every prose paragraph maps to an AMINTON node
+
+## Document History
+
+**[YYYY-MM-DD HH:MM]**
+- Initial article created

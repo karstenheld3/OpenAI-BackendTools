@@ -53,6 +53,14 @@ OPENAI_TESTS = [
   ("gpt-5.5", "low", "none", None, "reasoning_effort"),
   ("gpt-5.5", "high", "none", None, "reasoning_effort"),
   ("gpt-5.5-pro", "high", "none", None, "reasoning_effort"),
+    
+  # Reasoning models - gpt-5.6 family (Sol, Terra, Luna)
+  ("gpt-5.6-sol", "none", "none", None, "reasoning_effort"),
+  ("gpt-5.6-sol", "high", "none", None, "reasoning_effort"),
+  ("gpt-5.6-terra", "none", "none", None, "reasoning_effort"),
+  ("gpt-5.6-terra", "high", "none", None, "reasoning_effort"),
+  ("gpt-5.6-luna", "none", "none", None, "reasoning_effort"),
+  ("gpt-5.6-luna", "high", "none", None, "reasoning_effort"),
 ]
 
 ANTHROPIC_TESTS = [
@@ -62,8 +70,6 @@ ANTHROPIC_TESTS = [
   ("claude-haiku-4-5-20251001", "high", "medium", None, "temperature"),
     
   # Thinking models (use low/medium to avoid streaming requirement)
-  ("claude-sonnet-4-20250514", "low", "none", None, "thinking"),
-  ("claude-sonnet-4-20250514", "medium", "none", None, "thinking"),
   ("claude-sonnet-4-5-20250929", "low", "none", None, "thinking"),
   ("claude-sonnet-4-5-20250929", "medium", "low", None, "thinking"),
     

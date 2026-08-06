@@ -101,7 +101,8 @@ Each document type builds on the previous. INFO informs SPEC decisions. SPEC def
 7. For WORKFLOW documents: also read `WORKFLOW_RULES.md` (required)
 8. For SKILL documents: also read `SKILL_RULES.md` (required)
 9. For CONVERSATION documents: also read `CONVERSATION_RULES.md` (required)
-10. Follow the template structure exactly, except when user requests exceptions
+10. For creating/modifying templates: also read `TEMPLATE_GUIDE.md` (before writing) and `TEMPLATE_RULES.md` (required)
+11. Follow the template structure exactly, except when user requests exceptions
 
 ## Document Writing Rules
 

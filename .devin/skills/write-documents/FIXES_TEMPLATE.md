@@ -1,7 +1,10 @@
 # FIX: [Issue Description]
 
+**Doc ID**: [TOPIC]-FX[NN]
+<!-- Topic IDs: 7-14 uppercase chars. Inside T##/S## folders use nested: [TOPIC]-[SUBTOPIC]-FX[NN] -->
 **Goal**: [Single sentence describing fix purpose]
-**Target files**:
+**Timeline**: Created YYYY-MM-DD, Updated N times (YYYY-MM-DD - YYYY-MM-DD)
+**Target file(s)**:
 - `[path/to/file1.py]`
 - `[path/to/file2.py]`
 
@@ -15,7 +18,7 @@
 
 ## 1. Rules Summary
 
-*(If fixing rule violations)*
+<!-- Conditional: include if fixing rule violations. -->
 
 - [Rule 1 being violated]
 - [Rule 2 being violated]

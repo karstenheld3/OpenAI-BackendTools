@@ -1,10 +1,12 @@
 # TEST: [Component Name]
 
-**Doc ID (TDID)**: [TOPIC]-TP[NN]
+**Doc ID**: [TOPIC]-TP[NN]
+<!-- Topic IDs: 7-14 uppercase chars. Inside T##/S## folders use nested: [TOPIC]-[SUBTOPIC]-TP[NN] -->
 **Feature**: [FEATURE_SLUG]
 **Goal**: [Single sentence describing test purpose]
 **Timeline**: Created YYYY-MM-DD, Updated N times (YYYY-MM-DD - YYYY-MM-DD)
-**Target file**: `[path/to/test_file.py]`
+**Target file(s)**:
+- `[path/to/test_file.py]`
 
 **Depends on:**
 - `_SPEC_[X].md` [[DOC_ID]] for requirements

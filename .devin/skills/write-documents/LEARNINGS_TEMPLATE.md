@@ -69,19 +69,18 @@ Populated by `/learn` workflow. Extracts transferable lessons from resolved prob
 - `[TOPIC]-FL-NNN`: Updated "Why it went wrong" with [insight]
 - `[TOPIC]-FL-NNN`: Updated "Suggested fix" with [recommendation]
 
-## Location Rules
+<!-- Location:
+- SESSION-MODE: [SESSION_FOLDER]/LEARNINGS.md
+- PROJECT-MODE + SINGLE-PROJECT: [WORKSPACE_FOLDER]/LEARNINGS.md
+- PROJECT-MODE + MONOREPO: [PROJECT_FOLDER]/LEARNINGS.md
 
-- **SESSION-MODE**: `[SESSION_FOLDER]/LEARNINGS.md`
-- **PROJECT-MODE + SINGLE-PROJECT**: `[WORKSPACE_FOLDER]/LEARNINGS.md`
-- **PROJECT-MODE + MONOREPO**: `[PROJECT_FOLDER]/LEARNINGS.md`
-
-## Management Rules
-
-- Run `/learn` workflow after marking problem as resolved
+Management:
+- Run /learn workflow after marking problem as resolved
 - Most recent entries at top
 - Never delete entries
 - Always update linked FAILS.md entries with insights
-- Include in `/prime` workflow to load lessons learned
+- Include in /prime workflow to load lessons learned
+-->
 
 ## Document History
 

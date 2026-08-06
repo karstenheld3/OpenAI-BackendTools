@@ -1,6 +1,6 @@
 # APAPALAN Writing Rules
 
-Concrete enforceable rules for applying the APAPALAN principle across all document types, code, logging, and communication.
+Concrete enforceable rules for applying the APAPALAN principle across all document types, code, logging, and communication. Origin: `_INFO_APAPALAN_PRINCIPLE.md [APAPALAN-IN01]` (Karsten Held, 2017).
 
 **APAPALAN** = As Precise As Possible (Priority 1), As Little As Necessary (Priority 2)
 

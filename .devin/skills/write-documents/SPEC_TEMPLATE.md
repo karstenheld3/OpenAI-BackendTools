@@ -1,11 +1,12 @@
 # SPEC: [Component Name]
 
-**Doc ID (TDID)**: [TOPIC]-SP[NN]
+**Doc ID**: [TOPIC]-SP[NN]
 <!-- Topic IDs: 7-14 uppercase chars. Inside T##/S## folders use nested: [TOPIC]-[SUBTOPIC]-SP[NN] -->
 **Feature**: [FEATURE_SLUG]
 **Goal**: [Single sentence describing what to specify]
 **Timeline**: Created YYYY-MM-DD, Updated N times (YYYY-MM-DD - YYYY-MM-DD)
-**Target file**: `[path/to/file.py]`
+**Target file(s)**:
+- `[path/to/file.py]`
 
 **Depends on:**
 - `_SPEC_[X].md [TOPIC-SP01]` for [what it provides]
@@ -30,8 +31,8 @@
 8. [Key Mechanisms](#8-key-mechanisms)
 9. [Action Flow](#9-action-flow)
 10. [Data Structures](#10-data-structures)
-11. [User Actions](#11-user-actions) *(UI specs only)*
-12. [UX Design](#12-ux-design) *(UI specs only)*
+11. [User Actions](#11-user-actions)
+12. [UX Design](#12-ux-design)
 13. [Logging Requirements](#13-logging-requirements)
 14. [Technical Constraints](#14-technical-constraints)
 15. [Document History](#15-document-history)
@@ -159,13 +160,13 @@ User clicks [Button]
 
 ## 11. User Actions
 
-*(For UI specs only)*
+<!-- Conditional: include only for UI specifications. -->
 
 - **[Action Name]**: [Description of user interaction and expected result]
 
 ## 12. UX Design
 
-*(For UI specs only)*
+<!-- Conditional: include only for UI specifications. -->
 
 Use ASCII box diagrams. Show ALL buttons and actions:
 
@@ -185,7 +186,7 @@ Use ASCII box diagrams. Show ALL buttons and actions:
 
 ## 13. Logging Requirements
 
-*(If implementation produces no output, state: "N/A: [reason, e.g., pure library with no console output]")*
+<!-- Conditional: if implementation produces no output, state: "N/A: [reason, e.g., pure library with no console output]" -->
 
 Use decision tree from SPEC-LG-01 (@skills:write-documents `SPEC_RULES.md`) to identify applicable types. Reference @skills:coding-conventions logging rules.
 

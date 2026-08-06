@@ -1,12 +1,12 @@
 # IMPL: [Feature Name]
 
-**Doc ID (TDID)**: [TOPIC]-IP[NN]
+**Doc ID**: [TOPIC]-IP[NN]
 <!-- Topic IDs: 7-14 uppercase chars. Inside T##/S## folders use nested: [TOPIC]-[SUBTOPIC]-IP[NN] -->
 **Feature**: [FEATURE_SLUG]
 **Goal**: [Single sentence describing what to implement]
 **Timeline**: Created YYYY-MM-DD, Updated N times (YYYY-MM-DD - YYYY-MM-DD)
 
-**Target files**:
+**Target file(s)**:
 - `[path/to/file1.py]` (NEW)
 - `[path/to/file2.py]` (EXTEND +50 lines)
 - `[path/to/file3.py]` (MODIFY)
@@ -100,7 +100,7 @@ def renderJobRow(job): ...
 
 ## 4. Logging Preview
 
-*(If implementation produces no logged output, state: "N/A: [reason, e.g., pure data transform with no console output]")*
+<!-- Conditional: if implementation produces no logged output, state: "N/A: [reason, e.g., pure data transform with no console output]" -->
 
 Show the exact log output the implementation will produce for key operations. This is the contract between SPEC logging requirements and implementation. Follow @skills:coding-conventions logging rules.
 

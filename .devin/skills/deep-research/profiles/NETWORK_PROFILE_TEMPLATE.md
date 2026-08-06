@@ -1,6 +1,7 @@
 # INFO: [Network Name] - Network Profile
 
 **Doc ID**: [TOPIC]-IN[NN]
+<!-- Topic IDs: 7-14 uppercase chars. Inside T##/S## folders use nested: [TOPIC]-[SUBTOPIC]-IN[NN] -->
 **Goal**: Network analysis of [Network Name] for [stated purpose]
 **Research date**: [YYYY-MM-DD]
 **Timeline**: Created YYYY-MM-DD, Updated N times (YYYY-MM-DD - YYYY-MM-DD)

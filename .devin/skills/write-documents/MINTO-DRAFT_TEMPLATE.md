@@ -1,5 +1,6 @@
 # Minto Draft: [Article Title]
 
+**Timeline**: Created YYYY-MM-DD, Updated N times (YYYY-MM-DD - YYYY-MM-DD)
 **Generated**: YYYY-MM-DD HH:MM
 **Source material**: [list of files read]
 **Purpose**: [persuade / explain / propose / investigate]

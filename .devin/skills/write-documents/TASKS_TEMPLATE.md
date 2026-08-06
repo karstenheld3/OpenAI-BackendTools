@@ -1,45 +1,36 @@
-# TASKS Template
+<!-- TASKS TEMPLATE. Remove this comment block after creating the document.
+Created from partitioned IMPL/TEST plans.
+-->
 
-Template for creating task plan documents from partitioned IMPL/TEST plans.
-
-## Header Block
-
-```markdown
 # TASKS: [TOPIC] Tasks Plan
 
-**Doc ID (TDID)**: [TOPIC]-TK01
+**Doc ID**: [TOPIC]-TK01
 <!-- Topic IDs: 7-14 uppercase chars. Inside T##/S## folders use nested: [TOPIC]-[SUBTOPIC]-TK01 -->
 **Feature**: [FEATURE_SLUG]
 **Goal**: Partitioned tasks for [TOPIC] implementation
+**Timeline**: Created YYYY-MM-DD, Updated N times (YYYY-MM-DD - YYYY-MM-DD)
+**Target file(s)**:
+- `[path/to/file1]`
+- `[path/to/file2]`
 **Source**: `IMPL_[TOPIC].md [TOPIC-IP01]`, `TEST_[TOPIC].md [TOPIC-TP01]`
 **Strategy**: PARTITION-[STRATEGY]
-```
 
-## Task Overview Section
-
-```markdown
 ## Task Overview
 
 - Total tasks: N
 - Estimated total: X HHW
 - Parallelizable: M tasks
-```
 
 ## Task 0 - Baseline (MANDATORY)
 
-Always include as first task:
+<!-- Always include as first task. Run before starting any implementation. -->
 
-```markdown
-## Task 0 - Baseline (MANDATORY)
-
-Run before starting any implementation:
 - [ ] Run existing tests, record pass/fail baseline
 - [ ] Note pre-existing failures (not caused by this feature)
-```
 
-## Task Item Structure
+## Tasks
 
-```markdown
+<!-- Task item structure:
 - [ ] **[TOPIC]-TK-001** - Description
   - Files: [files affected]
   - Done when: [specific completion criteria]
@@ -49,70 +40,53 @@ Run before starting any implementation:
   - Parallel: [P] or blank
   - Model: Sonnet | Opus | Haiku
   - Est: 0.5 HHW
-```
 
-**Required fields:**
-- Task ID and description
-- Files affected
-- Done when (completion criteria)
-- Est (HHW estimate)
+Required: Task ID, description, Files, Done when, Est.
+Optional: Verify, Guardrails, Depends, Parallel, Model.
 
-**Optional fields:**
-- Verify (commands)
-- Guardrails (constraints)
-- Depends (dependencies)
-- Parallel marker
-- Model (for auto model switching)
+Model hints from !NOTES.md "Cascade Model Switching". Recommendations only.
+-->
 
-## Model Hints
+### [Category]
 
-Tasks may include model hints for auto model switching.
-
-**Source:** Model definitions and activity mappings are in `!NOTES.md` under `## Cascade Model Switching`.
-
-Model hints are recommendations - agent decides based on actual task.
+- [ ] **[TOPIC]-TK-001** - [Description]
+  - Files: [files affected]
+  - Done when: [completion criteria]
+  - Est: [N] HHW
 
 ## Task N - Final Verification (MANDATORY)
 
-Always include as last task:
+<!-- Always include as last task. Run after all tasks complete. -->
 
-```markdown
-## Task N - Final Verification (MANDATORY)
-
-Run after all tasks complete:
 - [ ] Compare test results to Task 0 baseline
 - [ ] New failures = regressions (must fix)
 - [ ] Run /verify workflow
 - [ ] Update PROGRESS.md - mark complete
-```
 
-## Dependency Graph Section
-
-```markdown
 ## Dependency Graph
 
-TK-001 ─> TK-003
-TK-002 ─> TK-003
-TK-003 ─> TK-004
-```
+[TOPIC]-TK-001 ─> [TOPIC]-TK-002
 
-## Document History Section
-
-```markdown
 ## Document History
 
 **[YYYY-MM-DD HH:MM]**
 - Initial tasks plan created from IMPL/TEST
-```
+
+<!-- EXAMPLE: Reference only. Do not copy into new documents. Shows a completed TASKS document. -->
 
 ## Full Example
 
 ```markdown
 # TASKS: AUTH Tasks Plan
 
-**Doc ID (TDID)**: AUTH-TK01
+**Doc ID**: AUTH-TK01
 **Feature**: user-authentication
 **Goal**: Partitioned tasks for AUTH implementation
+**Timeline**: Created 2026-01-17, Updated 0 times
+**Target file(s)**:
+- `src/models/user.py` (NEW)
+- `src/services/auth.py` (NEW)
+- `src/api/auth.py` (NEW)
 **Source**: `IMPL_AUTH.md [AUTH-IP01]`, `TEST_AUTH.md [AUTH-TP01]`
 **Strategy**: PARTITION-DEPENDENCY
 

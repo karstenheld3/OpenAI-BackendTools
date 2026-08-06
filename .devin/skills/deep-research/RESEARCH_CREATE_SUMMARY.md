@@ -45,8 +45,9 @@ The Summary file (`_INFO_[TOPIC]-01_Summary.md`) is the master index and cross-d
     - All items marked [ASSUMED], each states evidence basis
     - Skip if no hypotheses emerged
 11. **Write Limitations**: Data quality caveats, scope boundaries, source freshness
-12. **Delete template instructions**: Remove the HTML comment block
+12. **Delete template instructions**: Remove the `<!-- Template Instructions ... -->` comment block. Keep the `<!-- Content depth improvements (SD-CD-*) ... -->` comment block - it is used during Phase 4 finalization and `/improve`
 13. **Run quality pipeline**: verify → critique → reconcile → implement → verify
+14. **Delete SD-CD comment block**: After Phase 4 finalization (Per-Topic Summaries written, content depth applied), remove the `<!-- Content depth improvements ... -->` comment block
 
 ## File Naming
 

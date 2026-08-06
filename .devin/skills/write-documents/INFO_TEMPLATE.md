@@ -1,6 +1,7 @@
 # INFO: [Topic]
 
 **Doc ID**: [TOPIC]-IN[NN]
+<!-- Topic IDs: 7-14 uppercase chars. Inside T##/S## folders use nested: [TOPIC]-[SUBTOPIC]-IN[NN] -->
 **Goal**: [Single sentence describing purpose]
 **Timeline**: Created YYYY-MM-DD, Updated N times (YYYY-MM-DD - YYYY-MM-DD)
 

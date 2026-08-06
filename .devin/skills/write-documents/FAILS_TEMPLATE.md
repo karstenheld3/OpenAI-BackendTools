@@ -52,32 +52,29 @@ Populated by `/fail` workflow. Records mistakes and lessons learned to prevent r
 - **Solution**: [What was done to fix it]
 - **Link**: [Reference to commit, PR, or document]
 
-## Failure Categories
+<!-- Failure categories:
+- [CRITICAL] - Flawed assumption causing production failure
+- [HIGH] - Logic error likely to cause failure under normal conditions
+- [MEDIUM] - Edge case could cause failure under specific conditions
+- [LOW] - Minor issue, unlikely to cause failure
 
-- `[CRITICAL]` - Flawed assumption causing production failure
-- `[HIGH]` - Logic error likely to cause failure under normal conditions
-- `[MEDIUM]` - Edge case could cause failure under specific conditions
-- `[LOW]` - Minor issue, unlikely to cause failure
+Assumption labels:
+- [UNVERIFIED] - Assumption made without evidence
+- [CONTRADICTS] - Logic conflicts with other statement/code
+- [OUTDATED] - Assumption may no longer be valid
+- [INCOMPLETE] - Reasoning missing critical considerations
 
-## Assumption Labels
+Location:
+- SESSION-MODE: [SESSION_FOLDER]/FAILS.md
+- PROJECT-MODE + SINGLE-PROJECT: [WORKSPACE_FOLDER]/FAILS.md
+- PROJECT-MODE + MONOREPO: [PROJECT_FOLDER]/FAILS.md
 
-- `[UNVERIFIED]` - Assumption made without evidence
-- `[CONTRADICTS]` - Logic conflicts with other statement/code
-- `[OUTDATED]` - Assumption may no longer be valid
-- `[INCOMPLETE]` - Reasoning missing critical considerations
-
-## Location Rules
-
-- **SESSION-MODE**: `[SESSION_FOLDER]/FAILS.md`
-- **PROJECT-MODE + SINGLE-PROJECT**: `[WORKSPACE_FOLDER]/FAILS.md`
-- **PROJECT-MODE + MONOREPO**: `[PROJECT_FOLDER]/FAILS.md`
-
-## Management Rules
-
+Management:
 - Most recent entries at top
-- Never delete entries - mark as `[RESOLVED]` with date and solution
-- Link to `_REVIEW` files containing detailed analysis
-- Include in `/prime` workflow to load lessons learned
+- Never delete entries - mark as [RESOLVED] with date and solution
+- Link to _REVIEW files containing detailed analysis
+- Include in /prime workflow to load lessons learned
+-->
 
 ## Document History
 

@@ -113,7 +113,7 @@ Create Summary file (skeletal), topic template, TASKS plan, run second VCRIV.
 
 ### Step 2: Template Creation
 
-- Create `__TEMPLATE_[TOPIC]_TOPIC.md` (working template, deleted after research)
+- Run `/write-template` to create `__TEMPLATE_[TOPIC]_TOPIC.md` (working template, retained for research extension)
 - Template structure (base + domain-specific additions from active profile):
   - Header block (Doc ID, Goal, Dependencies, **Version/Date scope**)
   - Summary: **5-15 sentences** (scale with complexity)

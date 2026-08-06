@@ -144,3 +144,4 @@ Tag: 2026-01-27
 - Include ALL sessions since last release, not just completed ones
 - Mark in-progress sessions clearly in release notes
 - If `gh` not installed, provide manual release URL
+- All prior DevSystem version folders MUST be backed up in `[WORKSPACE]\_OldDevSystemVersions\` before deletion (see `SOPS.md` SOP 4)

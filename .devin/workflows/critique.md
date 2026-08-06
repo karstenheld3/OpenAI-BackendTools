@@ -47,7 +47,7 @@ Invoke based on context:
 
 ## Workflow
 
-1. Determine context (Code, Document, Conversation, Logs)
+1. Determine context (Code, Document, Template, Workflow, Skill, Research Output, Translation, Session Tracking, Conversation, Logs)
 2. Read `FAILS.md` first (if exists) - learn from past mistakes
 3. Read Global Rules
 4. Read relevant Context-Specific section
@@ -195,6 +195,60 @@ When called without specific document, review the entire conversation:
 - What integration points are assumed to work?
 - Can tests fail for wrong reasons (flaky)?
 - Are test dependencies isolated?
+
+**For TASKS plans**:
+- Are effort estimates based on verified complexity, or optimistic guessing?
+- Do tasks marked "Depends: none" truly have no hidden dependencies?
+- What happens if the highest-risk task fails? Is there a recovery path?
+- Are "Done when" criteria actually verifiable, or subjective ("works correctly")?
+- Can the critical path shift if one task takes 2x longer?
+
+**For Template documents** (`*_TEMPLATE.md` or `__TEMPLATE_*`):
+
+Evaluate design fitness, not rule compliance (use `/verify` for TMPL-* rules).
+
+- Can the reader answer the stated Goal from a filled-in instance alone?
+- Would two agents filling the same section produce comparable results?
+- What questions will the audience ask that no section captures?
+- Can each XML comment instruction be interpreted only one way?
+- Would two agents make the same include/exclude decision on conditional sections?
+- Which sections will be empty in >50% of instances? (should be conditional)
+- Do placeholders indicate expected depth, format, and content type?
+- Does section order match the audience's workflow?
+- Is a Full Example needed and present?
+
+**For Workflow documents**:
+- What happens when the agent has no match for a branching condition?
+- Which steps assume the previous step succeeded without verifying?
+- What if the agent runs this workflow with partial or conflicting context?
+- Can a step produce output that makes the next step impossible?
+- Are stuck detection and recovery paths realistic, or do they just say "retry"?
+
+**For Skill documents**:
+- What domain knowledge does this skill assume the agent already has?
+- Which decision points require judgment not encoded in the skill?
+- What mistakes would a first-time user make that the author wouldn't?
+- Are edge cases only discoverable by failing first?
+- Can the agent and user actually use this? What if a dependency is missing, outdated, or unavailable?
+- If SETUP exists: what breaks if setup is interrupted or partially completed? Is UNINSTALL safe to run twice?
+
+**For Research Output** (multi-file INFO sets):
+- Are conclusions actually supported by cited sources, or extrapolated beyond the evidence?
+- Is there selection bias in sources (only confirming evidence collected)?
+- Do topic files contradict each other without the Summary noting it?
+- Are `[ASSUMED]` claims actually testable but left untested?
+- Would a different research strategy (Most Executable Point of Information (MEPI) vs Most Complete Point of Information (MCPI)) have produced different conclusions?
+
+**For Translation Output**:
+- Are there passages where literal accuracy sacrifices the original's persuasive or emotional effect?
+- Does the translation assume cultural context the target audience lacks?
+- Are there implicit references (idioms, legal concepts, brand associations) that don't transfer across cultures?
+
+**For Session Tracking** (NOTES, PROBLEMS, PROGRESS):
+- Do "resolved" problems have verified fixes, or just workarounds?
+- Do NOTES contradict decisions made later in the session?
+- Are deferred items genuinely deferred with rationale, or abandoned?
+- Does PROGRESS reflect actual state, or optimistic reporting?
 
 ### Code Being Created/Reviewed
 

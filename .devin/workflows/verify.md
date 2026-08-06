@@ -42,7 +42,7 @@ Invoke based on context:
 
 ## Workflow
 
-1. First find out what the context is (INFO, SPEC, IMPL, Code, TEST, Session, Workflow, Skill, Conversation, Translation Output)
+1. First find out what the context is (INFO, SPEC, IMPL, Code, TEST, Session, Workflow, Skill, Template, Conversation, Translation Output)
 2. Read GLOBAL-RULES and Verification Labels
 3. Read the relevant Context-Specific section
 4. Create a verification task list
@@ -133,6 +133,9 @@ Execute the 6-step verification procedure from `RESEARCH_RULES.md`:
 4. **Topic Files Check** (TF-01 through TF-10) - per-file quality
 5. **STRUT Check** (ST-01 through ST-07) - process execution
 6. **Quality Check** (QA-01 through QA-11) - cross-cutting quality
+
+After SM-* checks pass, verify summary content depth:
+7. **Summary Depth Check** (SD-CD-01 through SD-CD-07, SD-ES-* conditionals): Read @skills:deep-research `RESEARCH_SUMMARY_RULES.md`. Execute the Verification Procedure from that file.
 
 Additionally:
 - Verify against @skills:write-documents `APAPALAN_RULES.md` (precision, brevity, structure, naming)
@@ -250,6 +253,35 @@ Read the rule file for your context and verify against all rules. Also verify ag
   - For _GUIDE: numbered decision steps, no verification checklists (belongs in _RULES)
   - For _CHECKS: action + evidence + failure indicator per check item
   - No redundancy with referenced files (`core-conventions.md`, templates, other rule files)
+
+## Templates
+
+Detect by: filename pattern `*_TEMPLATE.md` in skill or workflow folder, or `__TEMPLATE_*` working template in session/topic folder.
+
+**Read**: @skills:write-documents `TEMPLATE_RULES.md` (all TMPL-*), `TEMPLATE_GUIDE.md`
+
+### Branching by Template Type
+
+**Permanent template** (`*_TEMPLATE.md` in skill/workflow folder):
+- Reusable across sessions and projects
+- Must follow all TMPL-* rules
+- Companion `*_RULES.md` or `*_GUIDE.md` if template has complex verification rules (TMPL-ST-06)
+- Verify SK-CT-05: no visual-only formatting (bold only in template content fields like `**Doc ID**:`)
+- Verify SK-CT-06: no Document History section in the template FILE (template may CONTAIN a Document History section for instances)
+
+**Working template** (`__TEMPLATE_*` in session/topic folder):
+- Scaffolding for one research or task set, retained for extension
+- Must follow structural TMPL-* rules (ST, AN, PH)
+- Header rules (HD) adapt to domain context
+- No companion files needed
+
+### Verification
+
+- Run audit checklist from `TEMPLATE_RULES.md` (all TMPL-* rules)
+- Dynamic components: conditional markers have insertion criteria, agent instructions present at non-obvious sections
+- No redundancy with companion `*_RULES.md` or `*_GUIDE.md` files
+- Verify against @skills:write-documents `APAPALAN_RULES.md` (precision, brevity, naming)
+- Verify against @skills:write-documents `MECT_WRITING_RULES.md` (voice, word choice, terminology)
 
 ## Minto Documents
 

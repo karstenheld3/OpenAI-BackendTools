@@ -1,6 +1,7 @@
 # [SUBJECT] - Table of Contents
 
 **Doc ID**: [TOPIC]-TOC
+<!-- Topic IDs: 7-14 uppercase chars. Inside T##/S## folders use nested: [TOPIC]-[SUBTOPIC]-TOC -->
 **Goal**: Master index for all [SUBJECT] documentation files
 **Version scope**: [VERSION or Documentation date YYYY-MM-DD]
 **Research stats**: [pending - added in final phase]
@@ -76,7 +77,7 @@
 
 <!-- Template Instructions (delete when using):
 1. Replace all [PLACEHOLDERS] with actual values
-2. [TOPIC] = 2-6 char uppercase identifier (e.g., OAIAPI, GRPH, AUTH)
+2. [TOPIC] = 7-14 char uppercase identifier (e.g., OAIAPIS, GRPHAPI, AUTHSYST)
 3. [SUBJECT] = Full name (e.g., "OpenAI API", "Microsoft Graph API")
 4. Categories should group related topics logically
 5. Each topic file link format: [`_INFO_[TOPIC]-[NN]_[Name].md`](./_INFO_[TOPIC]-[NN]_[Name].md) [TOPIC-IN[NN]]

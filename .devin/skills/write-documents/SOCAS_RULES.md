@@ -1,6 +1,6 @@
 # SOCAS Evaluation Rules
 
-Rules for applying Signs of Confusion and Sloppiness (SOCAS) criteria during quality evaluation.
+Rules for applying Signs of Confusion and Sloppiness (SOCAS) criteria during quality evaluation. Origin: `_INFO_SOCAS_SIGNS_OF_CONFUSION_AND_SLOPPINESS.md [SOCAS-IN01]` (Karsten Held, 2026).
 
 Use during `/verify`, `/critique`, `/improve`, and `/research` workflows.
 

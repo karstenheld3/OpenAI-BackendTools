@@ -218,6 +218,43 @@ Progress indication via iteration counters, running totals, and feedback every ~
 - 100-char START/END headers/footers for scripts
 - Plain language, no jargon
 
+### Principle of Announce Before Blocking
+
+**Never enter a potentially long-running action without stating what is about to happen.**
+
+Any call that could take more than 10 seconds (network requests, file I/O, external processes, browser operations) MUST be preceded by a log line announcing the action. Without this, a working process is indistinguishable from a hanging process.
+
+**The problem:** When code enters a blocking call silently, the user sees no output for minutes. They cannot tell whether the system is:
+1. Working correctly on a slow operation, or
+2. Hung on a dead connection, infinite loop, or unresponsive server
+
+**The rule:**
+- Log the action BEFORE entering any call with timeout > 10 seconds
+- Include enough context to identify WHICH action (URL, filename, service name)
+- If the action has a timeout, state the timeout so the user knows how long to wait
+- If the action has no timeout, add one (unbounded blocking calls are bugs)
+
+**BAD** (silent entry into blocking call):
+```python
+response = urllib.request.urlopen(url)          # hangs forever, no output
+data = await client.get(url, timeout=300)       # 5 min silence
+result = subprocess.run(cmd, timeout=120)       # 2 min silence
+```
+
+**GOOD** (announce before blocking):
+```python
+context.log(f"Fetching 'robots.txt' from '{domain}' (timeout 5s)...")
+response = urllib.request.urlopen(url, timeout=5)
+
+context.verbose(f"GET '{filename}' from '{domain}' (timeout 300s)...")
+data = await client.get(url, timeout=300)
+
+context.log(f"Running '{cmd[0]}' (timeout 120s)...")
+result = subprocess.run(cmd, timeout=120)
+```
+
+**Corollary: Every blocking call must have a finite timeout.** An unbounded blocking call (`timeout=None`, no timeout parameter) is a latent hang. The robots.txt fetch without timeout, the database query without statement timeout, the socket read without deadline - all are bugs waiting to manifest as silent hangs with zero diagnostic output.
+
 ## Philosophy-to-Rules Mapping
 
 Shows how each philosophy goal maps to specific rules.

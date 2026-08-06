@@ -52,6 +52,7 @@ Delete files and directories matching these patterns:
 - **Pattern**: `.tmp_*` files, `*.tmp` files
 - **Locations**: `[WORKSPACE_FOLDER]` recursive, `[DEFAULT_SESSIONS_FOLDER]` recursive
 - **Source**: Agent scripts, `/test`, `/implement`, `/go`, `/improve` STRUT plans, youtube-downloader metadata
+- **Note**: `.tmp_*` files are dotfiles - invisible to `fd`/`find_by_name` by default. Always use PowerShell `Get-ChildItem -Force` or `fd --hidden` to scan for them.
 
 ### 2. Python Build Artifacts
 
@@ -156,8 +157,8 @@ Scan per active context. Collect full paths.
 **File Cleanup scan:**
 
 ```powershell
-# 1. Agent temp files
-Get-ChildItem -Path "[SCOPE]" -Recurse -File | Where-Object { $_.Name -like '.tmp_*' -or $_.Name -like '*.tmp' }
+# 1. Agent temp files (dotfiles: -Force required)
+Get-ChildItem -Path "[SCOPE]" -Recurse -File -Force | Where-Object { $_.Name -like '.tmp_*' -or $_.Name -like '*.tmp' }
 
 # 2. Python artifacts
 Get-ChildItem -Path "[SCOPE]" -Recurse -Directory | Where-Object { $_.Name -in @('__pycache__', '.pytest_cache', '.mypy_cache') }

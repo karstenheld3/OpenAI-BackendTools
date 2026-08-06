@@ -5,7 +5,7 @@ description: Apply when conducting deep research on technologies, APIs, framewor
 
 # Deep Research Skill
 
-Systematic research using MCPI (Most Complete Point of Information) or MEPI (Most Executable Point of Information) approaches.
+Systematic research using MCPI (Most Complete Point of Information) or MEPI (Most Executable Point of Information) approaches. Origin: `_INFO_MEPI_MCPI_PRINCIPLE.md [MEPI-IN01]` (Karsten Held, 2003).
 
 ## When to Use
 
@@ -117,6 +117,7 @@ Store PromptDecomposition in STRUT plan. Do NOT proceed to source collection unt
 
 ## MUST-NOT-FORGET
 
+- **MEPI = Most Executable Point of Information, MCPI = Most Complete Point of Information** - Never invent alternative expansions. Verify against this line if unsure.
 - **NEVER ask questions** - Derive goal or best option from the previous prompt, or from conversation context. Act on best inference
 - **STRUT required** for all research sessions (include pipeline steps and time log)
 - **Assumptions check first** - write down what you think you know before researching
@@ -244,6 +245,7 @@ MEPI uses its own output format (see RESEARCH_STRATEGY_MEPI.md) with Comparison 
 ## Reference Files
 
 - [RESEARCH_RULES.md](RESEARCH_RULES.md) - Verification and improvement rules for research output (used by `/verify` and `/improve`)
+- [RESEARCH_SUMMARY_RULES.md](RESEARCH_SUMMARY_RULES.md) - Summary content depth and enrichment rules (used by `/verify` and `/improve` after SM-* checks pass)
 - [RESEARCH_TOOLS.md](RESEARCH_TOOLS.md) - Tools, source processing, configuration
 - [RESEARCH_TOC_TEMPLATE.md](RESEARCH_TOC_TEMPLATE.md) - TOC template (MUST use when >1 topic files)
 - [RESEARCH_CREATE_TOC.md](RESEARCH_CREATE_TOC.md) - TOC creation workflow

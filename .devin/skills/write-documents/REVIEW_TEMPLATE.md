@@ -1,7 +1,9 @@
 # [Filename]_REVIEW.md
 
 **Doc ID**: [SOURCE-DOC-ID]-RV[NN]
+<!-- Topic IDs: 7-14 uppercase chars. Review IDs use source doc ID + -RV suffix. -->
 **Goal**: Document potential issues, risks, and suggestions for improvement
+**Timeline**: Created YYYY-MM-DD, Updated N times (YYYY-MM-DD - YYYY-MM-DD)
 **Reviewed**: [YYYY-MM-DD HH:MM]
 **Context**: [Brief description of what was reviewed]
 
