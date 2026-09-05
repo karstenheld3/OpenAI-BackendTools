@@ -42,6 +42,7 @@ Skills are in `[AGENT_FOLDER]/skills/`. Each has a `SKILL.md` with usage instruc
 - **@git-conventions** - Commit messages, .gitignore configuration
 - **@github** - GitHub repositories, issues, PRs, authentication
 - **@google-account** - Google services (Gmail, Calendar, Drive, Tasks) via gogcli CLI
+- **@image-tools** - Image conversion, resizing, compression, batch processing (ImageMagick, Pillow)
 - **@llm-computer-use** - Desktop automation via LLM vision (click, type, navigate)
 - **@llm-evaluation** - LLM performance testing, model comparison, LLM-as-judge scoring
 - **@llm-transcription** - Image/audio to markdown transcription (ensemble + judge + refinement)
@@ -65,4 +66,5 @@ Executable tools outside the workspace:
 - **Ghostscript**: `[WORKSPACE_FOLDER]/../.tools/gs/bin/`
 - **QPDF**: `[WORKSPACE_FOLDER]/../.tools/qpdf/bin/`
 - **7-Zip**: `[WORKSPACE_FOLDER]/../.tools/7z/`
+- **ImageMagick**: `[WORKSPACE_FOLDER]/../.tools/magick/`
 - **gogcli config**: `[WORKSPACE_FOLDER]/../.tools/gogcli-client-secret.json`

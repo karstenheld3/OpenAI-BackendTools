@@ -13,7 +13,7 @@ Structure (ST)
 - TMPL-ST-03: No meta-headings describing sections
 - TMPL-ST-04: Repeatable items show one instance
 - TMPL-ST-05: Full example at end with `<!-- EXAMPLE: -->` annotation
-- TMPL-ST-06: Complex rules in companion `*_RULES.md` or `*_GUIDE.md` files
+- TMPL-ST-06: Complex rules in companion `*_RULES.md` or `*_GUIDES.md` files
 
 Annotation (AN)
 - TMPL-AN-01: All annotations use XML comments
@@ -131,7 +131,7 @@ Include a full example when the template has 3+ sections, uses conditional secti
 
 ## TMPL-ST-06: Rules in Companion Files
 
-Complex rules, decision logic, categories, and verification procedures belong in `*_RULES.md` or `*_GUIDE.md` companion files. The template is the skeleton only.
+Complex rules, decision logic, categories, and verification procedures belong in `*_RULES.md` or `*_GUIDES.md` companion files. The template is the skeleton only.
 
 **BAD:** Template contains 20-line rule explanation with decision tree.
 
@@ -163,7 +163,7 @@ Bracket markers `[text]` overlap with the placeholder convention, creating polys
 
 **BAD:** `[conditional - insert when research produces actionable conclusions]`
 
-**GOOD:** `<!-- Conditional: insert when research produces actionable conclusions. Per INFO_GUIDE.md Section 3.3 -->`
+**GOOD:** `<!-- Conditional: insert when research produces actionable conclusions. Per INFO_GUIDES.md Section 3.3 -->`
 
 ## TMPL-AN-04: No Italic Markers
 
@@ -313,7 +313,7 @@ When creating or reviewing a template, verify all rules:
 - [ ] TMPL-ST-01: Template IS the document, not wrapped in code blocks
 - [ ] TMPL-AN-01: Annotations as XML comments (no prose, brackets, or italic markers)
 - [ ] TMPL-AN-05: BAD/GOOD examples wrapped in XML comments, not inline
-- [ ] TMPL-ST-06: Complex rules in companion `*_RULES.md` or `*_GUIDE.md`
+- [ ] TMPL-ST-06: Complex rules in companion `*_RULES.md` or `*_GUIDES.md`
 - [ ] TMPL-HD-01: Doc ID uses `**Doc ID**:` not `**Doc ID (TDID)**:`
 - [ ] TMPL-HD-02: Doc ID present for per-task documents, absent for others
 - [ ] TMPL-HD-03: Topic ID XML comment present after Doc ID

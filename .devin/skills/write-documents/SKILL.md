@@ -20,14 +20,15 @@ Read APAPALAN and MECT before writing any document. Read SOCAS when evaluating q
 ## Verb Mapping
 
 This skill implements:
-- [WRITE-INFO] - Create INFO documents (use `INFO_TEMPLATE.md`, read `INFO_GUIDE.md`, `INFO_RULES.md`)
+- [WRITE-INFO] - Create INFO documents (use `INFO_TEMPLATE.md`, read `INFO_GUIDES.md`, `INFO_RULES.md`)
 - [WRITE-SPEC] - Create SPEC documents (use `SPEC_TEMPLATE.md`, read `SPEC_RULES.md`)
 - [WRITE-IMPL-PLAN] - Create IMPL documents (use `IMPL_TEMPLATE.md`)
 - [WRITE-TEST-PLAN] - Create TEST documents (use `TEST_TEMPLATE.md`)
 - [WRITE-FIX] - Create FIX documents (use `FIXES_TEMPLATE.md`)
 - [WRITE-FAIL] - Create/update FAILS.md (use `FAILS_TEMPLATE.md`)
-- [WRITE-REVIEW] - Create _REVIEW.md documents (use `REVIEW_TEMPLATE.md`)
+- [WRITE-REVIEW] - Create _REVIEW.md documents (use `CRITIQUE_REVIEW_TEMPLATE.md` for `/critique`, `FACT-CHECK_REVIEW_TEMPLATE.md` for `/fact-check`)
 - [WRITE-TASKS-PLAN] - Create TASKS documents (use `TASKS_TEMPLATE.md`)
+- [WRITE-PROMPTS] - Create prompt queue files (use `PROMPTS_TEMPLATE.md`, read `PROMPTS_GUIDES.md`, `PROMPTS_RULES.md`)
 - [WRITE-STRUT] - Create/insert STRUT plans (use `STRUT_TEMPLATE.md`)
 - [WRITE-SKILL] - Create/update skill folders (use `SKILL_TEMPLATE.md`, read `SKILL_RULES.md`)
 - [WRITE-CONVERSATION] - Create conversation files (use `CONVERSATION_TEMPLATE.md`, read `CONVERSATION_RULES.md`)
@@ -52,14 +53,17 @@ This skill implements:
 ## Document Types and When to Use
 
 **Research and Knowledge:**
-- **INFO** (`_INFO_[TOPIC].md`) - Research, analysis, option evaluation. Use when gathering information before making decisions. Read template: `INFO_TEMPLATE.md`, guide: `INFO_GUIDE.md`, rules: `INFO_RULES.md`
-- **REVIEW** (`_REVIEW_[TOPIC].md`) - Structured review of existing documents. Use for `/critique` and `/reconcile` outputs. Read template: `REVIEW_TEMPLATE.md`
+- **INFO** (`_INFO_[TOPIC].md`) - Research, analysis, option evaluation. Use when gathering information before making decisions. Read template: `INFO_TEMPLATE.md`, guide: `INFO_GUIDES.md`, rules: `INFO_RULES.md`
+- **REVIEW** (`_REVIEW_[TOPIC].md`) - Structured review of existing documents. Use for `/critique`, `/fact-check`, and `/reconcile` outputs. Read template: `CRITIQUE_REVIEW_TEMPLATE.md` (for `/critique`), `FACT-CHECK_REVIEW_TEMPLATE.md` (for `/fact-check`)
 
 **Planning:**
 - **SPEC** (`_SPEC_[COMPONENT].md`) - Technical specifications. Define WHAT to build and WHY, never HOW (no code, line numbers, or function signatures - those belong in IMPL). Read template: `SPEC_TEMPLATE.md`, rules: `SPEC_RULES.md`
 - **IMPL** (`_IMPL_[COMPONENT].md`) - Implementation plans. Use to define HOW to build what SPEC describes. Read template: `IMPL_TEMPLATE.md`
 - **TEST** (`_TEST_[COMPONENT].md`) - Test plans. Use to define how to VERIFY what SPEC requires. Read template: `TEST_TEMPLATE.md`
 - **TASKS** (`TASKS_[TOPIC].md`) - Partitioned task lists from IMPL/TEST plans. Use to break plans into discrete work items. Read template: `TASKS_TEMPLATE.md`
+
+**Execution:**
+- **PROMPTS** (`_PROMPTS_[Topic].md`) - Prompt queue files for headless agent execution. Use to define sequential prompts that execute as turns of one session. Read template: `PROMPTS_TEMPLATE.md`, guide: `PROMPTS_GUIDES.md`, rules: `PROMPTS_RULES.md`
 
 **Execution Tracking:**
 - **STRUT** (embedded in any document) - Structured execution plans with checkboxes. Use for phased work with verification gates. Read template: `STRUT_TEMPLATE.md`
@@ -96,13 +100,14 @@ Each document type builds on the previous. INFO informs SPEC decisions. SPEC def
 2. Read `APAPALAN_RULES.md` for precision, brevity, structure, naming
 3. Read `MECT_WRITING_RULES.md` for voice, word choice, terminology, headings, lists
 4. Read the template for your document type (required)
-5. For INFO documents: also read `INFO_GUIDE.md` (before writing) and `INFO_RULES.md` (required)
+5. For INFO documents: also read `INFO_GUIDES.md` (before writing) and `INFO_RULES.md` (required)
 6. For SPEC documents: also read `SPEC_RULES.md` (required)
 7. For WORKFLOW documents: also read `WORKFLOW_RULES.md` (required)
 8. For SKILL documents: also read `SKILL_RULES.md` (required)
 9. For CONVERSATION documents: also read `CONVERSATION_RULES.md` (required)
-10. For creating/modifying templates: also read `TEMPLATE_GUIDE.md` (before writing) and `TEMPLATE_RULES.md` (required)
-11. Follow the template structure exactly, except when user requests exceptions
+10. For PROMPTS files: also read `PROMPTS_GUIDES.md` (before writing) and `PROMPTS_RULES.md` (required)
+11. For creating/modifying templates: also read `TEMPLATE_GUIDES.md` (before writing) and `TEMPLATE_RULES.md` (required)
+12. Follow the template structure exactly, except when user requests exceptions
 
 ## Document Writing Rules
 

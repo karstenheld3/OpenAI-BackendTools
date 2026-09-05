@@ -6,12 +6,12 @@ Template for creating STRUT plans (Structured Thinking notation) that can be emb
 
 ## When to Use
 
-STRUT plans can be inserted into:
-- **PROGRESS.md** - Session progress tracking
-- **IMPL documents** - Implementation phase plans
-- **TASKS documents** - Task execution plans
-- **NOTES.md** - Capturing planned approaches
-- Any document where structured planning with progress tracking is needed
+STRUT plans go to:
+- **`__STRUT_[TOPIC].md`** - Standalone scaffolding file (default, deleted by `/cleanup`)
+- **IMPL documents** - Embedded in implementation plans
+- **TASKS documents** - Embedded in task plans
+
+NEVER embed STRUTs in tracking documents (PROGRESS.md, PROBLEMS.md, NOTES.md, FAILS.md). Tracking docs are session state, not agent operation artifacts.
 
 ## Core Rules
 

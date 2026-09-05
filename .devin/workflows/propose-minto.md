@@ -1,6 +1,6 @@
 ---
 description: Generate MINTO-structured argument candidates for a Minto Pyramid article
-auto_execution_mode: 1
+auto_execution_mode: 3
 ---
 
 # Propose Minto Workflow
@@ -15,7 +15,7 @@ Generate 3 candidate arguments with full AMINTON Root Sections from source mater
 
 ## Required Skills
 
-- @skills:write-documents `MINTO_GUIDE.md` for strategic decisions (magnet, ordering, selection)
+- @skills:write-documents `MINTO_GUIDES.md` for strategic decisions (magnet, ordering, selection)
 - @skills:write-documents `MINTO_RULES.md` for structural verification (quality gate)
 - @skills:write-documents `MINTO-DRAFT_TEMPLATE.md` for output structure
 - @skills:write-documents for APAPALAN/MECT compliance
@@ -24,7 +24,7 @@ Generate 3 candidate arguments with full AMINTON Root Sections from source mater
 
 - Selection funnel: 8 candidates → 3 selected (scored), 5 questions → 3 selected (scored), 5 answers → 3 selected
 - Magnet Rule: every candidate A must connect to a listener motivator - eliminate before scoring
-- Question ordering: must follow a stated logical method (see MINTO_GUIDE.md Section 3.1); Why-How-What is default for persuasion
+- Question ordering: must follow a stated logical method (see MINTO_GUIDES.md Section 3.1); Why-How-What is default for persuasion
 - One-Argument Test: can tree collapse to 1Q with 3 answers? If yes, restructure
 - Evidence traceability: every answer must be supportable from findings inventory
 - MECE (Mutually Exclusive, Collectively Exhaustive) at every level: no overlapping questions, no overlapping answers

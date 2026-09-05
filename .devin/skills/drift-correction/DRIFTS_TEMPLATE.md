@@ -103,7 +103,7 @@ After accumulating 10+ entries, look for:
 
 ## 2026-06-13 14:30 CRWL
 
-**Audited workflow**: /build
+**Audited workflow**: /go
 **Context**: Code Implementation
 **Directive**: full audit
 **Complexity**: MEDIUM
@@ -118,7 +118,7 @@ After accumulating 10+ entries, look for:
   - Mentioned in MNF?: no
   - Previous FAILS entry?: none
 - **MISSED** Cat 2 HIGH — /verify not run after implementation
-  - Source: /build workflow MNF item 3
+  - Source: /go workflow MNF item 3
   - Requirement depth: top-level
   - Mentioned in MNF?: yes
   - Previous FAILS entry?: GLOB-FL-0012

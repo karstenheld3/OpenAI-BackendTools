@@ -1,6 +1,6 @@
 ---
 description: Resume a development session
-auto_execution_mode: 1
+auto_execution_mode: 3
 ---
 
 # Load Session Workflow

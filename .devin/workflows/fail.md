@@ -1,6 +1,6 @@
 ---
 description: Record a failure in FAILS.md, either from user input or by analyzing context
-auto_execution_mode: 1
+auto_execution_mode: 3
 ---
 
 # Fail Workflow

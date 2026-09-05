@@ -1,6 +1,6 @@
 ---
 description: Finalize a development session, sync findings, and prepare for archive
-auto_execution_mode: 1
+auto_execution_mode: 3
 ---
 
 # Finalize Session Workflow
@@ -23,11 +23,11 @@ Run @skills:session-management **Topic Folder Finalize** procedure. If finalizin
 
 ## Steps
 
-1. **Sync problems to project !PROBLEMS.md**
+1. **Sync problems to project PROBLEMS.md**
    - Read session PROBLEMS.md
    - For each problem:
-     - RESOLVED: Mark in `!PROBLEMS.md` as FIXED with date
-     - OPEN/DEFERRED: Add to `!PROBLEMS.md`
+     - RESOLVED: Mark in `PROBLEMS.md` as FIXED with date
+     - OPEN/DEFERRED: Add to `PROBLEMS.md`
 
 2. **Sync FAILS to project FAILS.md (MEDIUM and HIGH only)**
    - Read session FAILS.md

@@ -1,6 +1,6 @@
 ---
 description: Translate markdown, PDF, or subtitle files to one or more target languages
-auto_execution_mode: 1
+auto_execution_mode: 3
 ---
 
 # Translate Workflow

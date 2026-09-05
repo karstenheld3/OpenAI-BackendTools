@@ -1,6 +1,6 @@
 ---
 description: Create a dated release with comprehensive release notes
-auto_execution_mode: 1
+auto_execution_mode: 3
 ---
 
 # Project Release Workflow
@@ -12,6 +12,10 @@ Create a dated release with comprehensive release notes.
 - All work committed and pushed
 - GitHub CLI (`gh`) installed and authenticated
 - No uncommitted changes
+
+## Mandatory Read
+
+Read `SOPS.md` before executing. It defines post-release procedures (SOP 7: version bump) that are part of this workflow.
 
 ## Steps
 
@@ -42,7 +46,11 @@ For each session, collect:
 
 ### 3. Generate Release Notes
 
-Create `RELEASE_NOTES_[YYYY-MM-DD].md` using template:
+Create release notes in `Docs/ReleaseNotes/`. Check existing files there for naming convention.
+
+Default naming: `RELEASE_NOTES_v[VERSION]_[YYYY-MM-DD].md`
+
+Use template:
 
 ```markdown
 # Release Notes: [YYYY-MM-DD]
@@ -97,8 +105,8 @@ This release covers [N] sessions from [date range], focusing on [themes].
 ### 4. Commit Release Notes
 
 ```powershell
-git add "RELEASE_NOTES_[YYYY-MM-DD].md"
-git commit -m "docs: add release notes for [YYYY-MM-DD]"
+git add "Docs/ReleaseNotes/RELEASE_NOTES_v[VERSION]_[YYYY-MM-DD].md"
+git commit -m "docs: add release notes for v[VERSION]"
 ```
 
 ### 5. Create Tag
@@ -127,6 +135,16 @@ gh release create "[YYYY-MM-DD]" --title "Release [YYYY-MM-DD]" --notes-file "RE
 ```
 
 Report release URL to user.
+
+### 8. Post-Release Version Bump (SOP 7)
+
+Execute `SOPS.md` SOP 7 immediately after push:
+
+1. Rename `DevSystem[OLD_VERSION]` to `DevSystem[NEW_VERSION]` (increment minor)
+2. Update `NOTES.md`: `Current [DEVSYSTEM]: DevSystem[NEW_VERSION]`
+3. Sync to `.devin/`: `Copy-Item -Path "[WORKSPACE]\DevSystem[NEW_VERSION]\*" -Destination "[WORKSPACE]\.devin\" -Recurse -Force`
+4. Commit: `git add -A; git commit -m "chore: bump working version to V[NEW_VERSION]"`
+5. Push
 
 ## Example Output
 

@@ -67,7 +67,7 @@ Use appropriate notation based on scope:
 
 ## Workflow Types
 
-### BUILD (`/build`)
+### BUILD (via `/go`)
 
 Primary output is working code. Triggers: "Add a feature...", "Build...", "Implement..."
 
@@ -80,7 +80,7 @@ Required documents by complexity:
 
 **Gate enforcement**: DESIGN→IMPLEMENT gate MUST list actual file paths created. If files don't exist, gate fails.
 
-### SOLVE (`/solve`)
+### SOLVE (via `/go`)
 
 Primary output is knowledge, decisions, or documents. Triggers: "Research...", "Evaluate...", "Write...", "Decide..."
 

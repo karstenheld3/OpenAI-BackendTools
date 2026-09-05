@@ -11,14 +11,14 @@
 
 ## Goals
 
-<!-- Conditional: insert when research request defines explicit goals, success criteria, or deliverables. Skip when Goal field in header block is sufficient. Per INFO_GUIDE.md Section 3.1 -->
+<!-- Conditional: insert when research request defines explicit goals, success criteria, or deliverables. Skip when Goal field in header block is sufficient. Per INFO_GUIDES.md Section 3.1 -->
 
 - [Goal 1] → [ACHIEVED] / [PARTIAL] / [NOT ACHIEVED]
 - [Goal 2] → [outcome label]
 
 ## Questions
 
-<!-- Conditional: insert when research request poses specific questions, or research triggered by uncertainty. At least one of Goals or Questions is required. Per INFO_GUIDE.md Section 3.2 -->
+<!-- Conditional: insert when research request poses specific questions, or research triggered by uncertainty. At least one of Goals or Questions is required. Per INFO_GUIDES.md Section 3.2 -->
 
 Q1: [Question from user prompt]
 A1: [1-3 sentence answer] [LABEL]
@@ -78,14 +78,14 @@ A2: [Answer] [LABEL]
 
 ## 3. Conclusions
 
-<!-- Conditional: insert when research produces actionable conclusions derived from cross-topic analysis. Reference supporting topics by IN-number. Per INFO_GUIDE.md Section 3.3 -->
+<!-- Conditional: insert when research produces actionable conclusions derived from cross-topic analysis. Reference supporting topics by IN-number. Per INFO_GUIDES.md Section 3.3 -->
 
 1. [Conclusion derived from findings] (IN-XX, IN-YY)
 2. [Conclusion] (IN-XX)
 
 ## 4. Emergent Hypotheses
 
-<!-- Conditional: insert when research reveals patterns or theories emerging from combined evidence, not directly stated by any single source. All items [ASSUMED]. Per INFO_GUIDE.md Section 3.4 -->
+<!-- Conditional: insert when research reveals patterns or theories emerging from combined evidence, not directly stated by any single source. All items [ASSUMED]. Per INFO_GUIDES.md Section 3.4 -->
 
 1. **[Hypothesis name]**: [Description with supporting evidence and validation approach]. [ASSUMED]
 

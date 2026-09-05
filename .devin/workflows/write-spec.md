@@ -1,6 +1,6 @@
 ---
 description: Create specification from requirements
-auto_execution_mode: 1
+auto_execution_mode: 3
 ---
 
 # Write Specification Workflow
@@ -14,6 +14,8 @@ Create technical specifications from requirements.
 ## MUST-NOT-FORGET
 
 - Run `/verify` after spec complete
+- **NEVER modify tracking documents** (PROGRESS.md, PROBLEMS.md, NOTES.md, FAILS.md). Write-* workflows create NEW files only. Tracking docs are session state, not agent operation artifacts.
+- Pre-Write Privacy Gate (`agent-behavior.md`): General-purpose documents → all content generic. ILLUSTRATIVE content in any file → examples generic. Assess context BEFORE writing.
 
 ## Prerequisites
 

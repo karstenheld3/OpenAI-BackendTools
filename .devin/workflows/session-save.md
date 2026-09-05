@@ -1,6 +1,6 @@
 ---
 description: Save session progress
-auto_execution_mode: 1
+auto_execution_mode: 3
 ---
 
 # Save Session Workflow

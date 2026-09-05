@@ -1,6 +1,6 @@
 ---
 description: Find flawed assumptions, logic errors, and hidden risks (not rule violations)
-auto_execution_mode: 1
+auto_execution_mode: 3
 ---
 
 # Devil's Advocate
@@ -16,7 +16,7 @@ Find flawed assumptions, logic errors, and hidden risks.
 ## Required Skills
 
 Invoke based on context:
-- @write-documents for document review (use REVIEW_TEMPLATE.md, FAILS_TEMPLATE.md)
+- @write-documents for document review (use CRITIQUE_REVIEW_TEMPLATE.md, FAILS_TEMPLATE.md)
 
 **Note**: Code review against rules/conventions is done by `/verify`. This workflow focuses on logic, strategy, and goal alignment.
 
@@ -47,7 +47,7 @@ Invoke based on context:
 
 ## Workflow
 
-1. Determine context (Code, Document, Template, Workflow, Skill, Research Output, Translation, Session Tracking, Conversation, Logs)
+1. Determine context (Code, Document, Template, Prompts, Workflow, Skill, Research Output, Translation, Session Tracking, Conversation, Logs)
 2. Read `FAILS.md` first (if exists) - learn from past mistakes
 3. Read Global Rules
 4. Read relevant Context-Specific section
@@ -73,6 +73,8 @@ Invoke based on context:
 - Hidden complexity and edge cases
 - What happens when things fail unexpectedly
 - Contradictions between stated intent and actual behavior
+- Data boundary violations: private data leaking into general-purpose documents or illustrative examples (Pre-Write Privacy Gate, `agent-behavior.md`)
+- GDPR and privacy risks: personal data exposed in logs, error messages, examples, or documents beyond their intended audience
 
 **DO NOT focus on** (use `/verify` instead):
 - Rule violations and convention compliance
@@ -88,7 +90,7 @@ Invoke based on context:
 - **Prioritize by impact** - Critical logic flaws first
 - **Apply SOCAS** - Use @write-documents `SOCAS_RULES.md` for systematic quality evaluation. Report findings with SOCAS IDs and severity.
 
-**Categories and Labels**: See FAILS_TEMPLATE.md and REVIEW_TEMPLATE.md in @write-documents skill.
+**Categories and Labels**: See FAILS_TEMPLATE.md and CRITIQUE_REVIEW_TEMPLATE.md in @write-documents skill.
 
 **FAILS.md Location and Format**: See FAILS_TEMPLATE.md in @write-documents skill.
 
@@ -126,7 +128,7 @@ For each topic:
 
 ### Adding Research to Review
 
-Add "Industry Research Findings" section to `_REVIEW.md` - see REVIEW_TEMPLATE.md for format.
+Add "Industry Research Findings" section to `_REVIEW.md` - see CRITIQUE_REVIEW_TEMPLATE.md for format.
 
 ## Context-Specific Sections
 
@@ -202,6 +204,15 @@ When called without specific document, review the entire conversation:
 - What happens if the highest-risk task fails? Is there a recovery path?
 - Are "Done when" criteria actually verifiable, or subjective ("works correctly")?
 - Can the critical path shift if one task takes 2x longer?
+
+**For Prompts files** (`_PROMPTS_*.md`):
+- Does each prompt have a clear, verifiable done criterion, or is success subjective?
+- Could the model misinterpret the objective and still "pass" the verification criteria?
+- Does state flow between prompts: does each dependent prompt explicitly reference what the prior prompt produced?
+- What happens if an earlier prompt fails or produces unexpected output - does the next prompt detect or cascade the failure?
+- Are constraints specific enough to prevent unwanted model behavior, or vague ("be careful")?
+- Could fence depth cause parsing errors (inner code blocks matching or exceeding outer fence)?
+- Would a fresh agent with no prior context execute these prompts correctly on first attempt?
 
 **For Template documents** (`*_TEMPLATE.md` or `__TEMPLATE_*`):
 
@@ -297,6 +308,7 @@ Create `[filename]_REVIEW.md` with findings.
 - Authentication: Can it be bypassed?
 - Authorization: Are all paths checked?
 - Secrets: Hardcoded or properly externalized?
+- Data leakage: Personal data in logs, error messages, debug output, or telemetry? GDPR-relevant fields (names, emails, IPs, identifiers) logged without anonymization?
 
 **Performance**:
 - What's the worst-case complexity?
@@ -328,7 +340,7 @@ When reviewing error logs or console output:
 
 Detect by: `__MINTO-DRAFT_*` or `_MINTO_*` filename pattern.
 
-**Read**: @skills:write-documents `MINTO_GUIDE.md` for intended structure; `MINTO_RULES.md` for rule IDs; `SOCAS_RULES.md` for logic attack patterns.
+**Read**: @skills:write-documents `MINTO_GUIDES.md` for intended structure; `MINTO_RULES.md` for rule IDs; `SOCAS_RULES.md` for logic attack patterns.
 
 **Attack vectors** (reference AMINTON node IDs in findings):
 - **Magnet failure** - A does not connect to listener motivator (MINTO-AQ-01)
@@ -355,6 +367,8 @@ Ask these for EVERY review:
 6. **What sensitive data could leak in logs/errors?**
 7. **What would break if we deployed this at 3 AM during a database migration?**
 8. **What would a new team member misunderstand?**
+9. **Does this document or code expose personal data beyond its intended audience?** (addresses, IBANs, tax IDs, names in general-purpose files, illustrative examples, logs, error messages, or public-facing output)
+10. **If this artifact were shared publicly, would it reveal the user's identity, location, family, or finances?**
 
 ## Final Checklist
 

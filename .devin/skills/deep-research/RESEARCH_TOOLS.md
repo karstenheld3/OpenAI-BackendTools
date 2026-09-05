@@ -149,12 +149,16 @@ browser_navigate → browser_fill → browser_click → browser_snapshot
 
 #### Scenario 3: Full-Page Documentation Capture
 
+**RULE: `fullPage: true` and `type: "jpeg"` are MANDATORY for all research screenshots.** Viewport-only captures miss 80-95% of page content. PNG produces 3-5x larger files than JPEG with no benefit for text-based pages. No exceptions for source validation, archival, or evidence purposes. See `@skills:ms-playwright-mcp` SKILL.md MNF #4 (JPEG) and #11 (fullPage). (GLOB-FL-0042)
+
 ```
 Need complete visual record of web page
      ↓
-browser_navigate → browser_screenshot(fullPage: true)
+browser_navigate → browser_take_screenshot(fullPage: true, type: "jpeg")
      ↓
-(optional) transcribe-image-to-markdown.py
+MANDATORY: transcribe to _SOURCES/[SOURCE-ID]_transcription.md
+  - Preferred: browser_snapshot + browser_evaluate (text extraction, faster)
+  - Fallback: transcribe-image-to-markdown.py (OCR, for canvas/image-heavy pages)
 ```
 
 **Use Playwright screenshots for:**
@@ -388,6 +392,7 @@ Mandatory tool overrides for specific websites. These rules take precedence over
 - **Using Playwright first** - Always try built-in tools first (faster, cheaper)
 - **Skipping PDF analysis** - Use `pdfinfo` before choosing extraction method
 - **Screenshots without transcription** - Visual captures need markdown conversion for searchability
+- **Viewport-only or PNG screenshots for research** - ALWAYS use `fullPage: true, type: "jpeg"`. Viewport captures only ~900px of 5,000-20,000px pages. PNG wastes 3-5x disk/upload vs JPEG. See `@skills:ms-playwright-mcp` MNF #4, #11 (GLOB-FL-0042)
 - **Single extraction attempt** - Retry with different tool if first fails
 
 ## Tool Locations

@@ -1,11 +1,15 @@
 ---
 description: Verify work against specs and rules
-auto_execution_mode: 1
+auto_execution_mode: 3
 ---
 
 # Verify Workflow
 
 Verify work against specs, rules, and quality standards.
+
+**Goal**: Validated work with all issues identified and fixed
+
+**Why**: Prevents shipping bugs, spec violations, rule breaks, and factual errors
 
 ## Required Skills
 
@@ -35,14 +39,14 @@ Invoke based on context:
 **PROJECT-MODE** - Re-read workspace-level documents:
 - README.md
 - !NOTES.md or NOTES.md
-- !PROBLEMS.md or PROBLEMS.md (if exists)
+- PROBLEMS.md (if exists)
 - !PROGRESS.md or PROGRESS.md (if exists)
 - FAILS.md
 - LEARNINGS.md (if exists)
 
 ## Workflow
 
-1. First find out what the context is (INFO, SPEC, IMPL, Code, TEST, Session, Workflow, Skill, Template, Conversation, Translation Output)
+1. First find out what the context is (Cross-Document, INFO, SPEC, IMPL, Code, TEST, Session, Workflow, Skill, Template, Prompts, Conversation, Translation Output)
 2. Read GLOBAL-RULES and Verification Labels
 3. Read the relevant Context-Specific section
 4. Create a verification task list
@@ -80,6 +84,21 @@ Apply to ALL document types and contexts:
   - Exempt: Established system labels: `[ASSUMED]`, `[VERIFIED]`, `[TESTED]`, `[PROVEN]`
   - Short label found? Check: Is a legend visible at every usage point (no scrolling)? If yes: pass. If no: replace with full word or add legend.
   - For labels 3+ characters: apply Reconstruction Test - can the full term be recovered from the short form? If not, flag as opaque abbreviation
+- **Privacy Leak Scan** (Post-generation enforcement of Pre-Write Privacy Gate from `agent-behavior.md`):
+  - For every file in verification scope, classify by context:
+    - **General-purpose document** (reusable knowledge, guides, rules, HOW-TOs, topic-independent INFO): scan ALL content for private data
+    - **ILLUSTRATIVE content** in ANY file (BAD/GOOD blocks, code snippets, sample data, templates, demonstrations): scan examples for private data
+  - Grep for known private data patterns: real IBANs, postal codes, phone numbers, tax IDs, addresses with house numbers, names of real people, session-specific references (certificate dates, contract numbers, case IDs)
+  - Cross-check against session data files (e.g., project data files, `NOTES.md`) if available - values from those files must not appear in general-purpose documents or ILLUSTRATIVE sections
+  - Any match = `[CRITICAL]` finding → fix immediately by replacing with generic placeholder
+  - Stranger test: Would someone reading this file learn the user's identity, location, family, or finances? If yes → fix
+- **Minimal fact-check** - Spot-check concrete claims without running full `/fact-check` pipeline:
+  - Scan for: version numbers, URLs, existence claims ("X supports Y"), quantitative assertions (limits, thresholds, counts), product/feature names
+  - Trust hierarchy: observed behavior > source code > official docs > community sources > LLM output
+  - Verify up to 5 highest-risk claims via web search, file reading, or code inspection
+  - Hallucination triage signals (prioritize these): generic phrasing without specifics, stale version numbers, wrong terminology, assumptions stated as facts
+  - Fix incorrect claims immediately. If uncertain, add `[ASSUMED]` label
+  - For thorough fact-checking, run `/fact-check` separately
 
 ## Conceptual verification
 
@@ -120,6 +139,58 @@ Apply these labels to findings, requirements, and decisions in all document type
 
 # CONTEXT-SPECIFIC
 
+## Cross-Document Verification
+
+Detect by: user provides both a File (derivative) and a Source (authority) in the invocation, e.g. `/verify README.md against core-conventions.md`.
+
+**Goal**: Fix semantic drift between derivative File and authoritative Source. Source is truth, File must align.
+
+### Phase 1: Extract
+
+1. Read Source completely. Extract every key concept as a numbered list: one line per concept with topic + core claim
+2. Read File completely. Extract the same way
+3. Map concepts bidirectionally:
+   - Source concept has matching File concept → paired
+   - Source concept has no File match → gap
+   - File concept has no Source match → addition
+
+### Phase 2: Compare
+
+For each paired concept, extract atomic claims from both sides and compare:
+1. Meaning matches → skip (no action needed)
+2. Meaning diverged → note what Source says vs. what File says
+3. Source is more current/complete → File needs update
+4. File contains detail Source lacks → determine if valid extension or drift
+
+For gaps (Source concepts missing from File):
+- Determine if File should cover this concept given its scope
+- If yes → needs addition
+
+For additions (File concepts absent from Source):
+- Determine if intentional extension or unsourced claim
+- Unsourced claims that imply Source authority → needs removal or rewrite
+
+### Phase 3: Fix Plan
+
+Build a single consolidated fix plan. One numbered list, each item is an actionable edit:
+
+```
+Fix plan for [File] against [Source]:
+1. [section] - Update [topic] to match Source: [what to change]
+2. [section] - Add missing coverage of [topic] from Source
+3. [section] - Remove unsourced claim about [topic]
+4. [section] - Rewrite [topic] to reflect Source wording
+...
+```
+
+Do NOT modify Source. If Source appears outdated, note at end of plan: `Source issues (for user): [description]`
+
+### Phase 4: Execute
+
+1. Apply each fix plan item sequentially
+2. After all fixes applied, re-read both documents at changed locations to confirm alignment
+3. Apply GLOBAL-RULES to the File
+
 ## Deep Research Output (Multi-File Research Set)
 
 Detect by: folder contains `_INFO_[TOPIC]-01_Summary.md` + `_INFO_[TOPIC]-02_Sources.md` + topic files + `__STRUT_[TOPIC].md`.
@@ -154,7 +225,7 @@ Additionally:
 
 **Priority 2: Document structure** (template compliance)
 - Read @skills:write-documents `INFO_RULES.md` and verify against all INFO-* rules
-- If research document: verify optional sections positioned per @skills:write-documents `INFO_GUIDE.md`
+- If research document: verify optional sections positioned per @skills:write-documents `INFO_GUIDES.md`
 - Read `[AGENT_FOLDER]/workflows/research.md` again and verify against instructions
 
 ## Specifications (SPEC)
@@ -246,7 +317,7 @@ Read the rule file for your context and verify against all rules. Also verify ag
 - Workflows → @skills:write-documents `WORKFLOW_RULES.md` (all WF-*), also @skills:coding-conventions `WORKFLOW-RULES.md` (design principles)
 - Skills → @skills:write-documents `SKILL_RULES.md` (all SK-*)
   - If SETUP.md exists: verify UNINSTALL.md also exists (not in SK-* rules)
-- Skill Resource Files (`*_RULES.md`, `*_GUIDE.md`, `*_CHECKS.md` in skill folders) → @skills:write-documents `WORKFLOW_RULES.md` (applicable WF-*)
+- Skill Resource Files (`*_RULES.md`, `*_GUIDES.md`, `*_CHECKS.md` in skill folders) → @skills:write-documents `WORKFLOW_RULES.md` (applicable WF-*)
   - Verify SK-CT-05: no visual-only formatting (no bold, no filler phrases)
   - Verify SK-CT-06: no Document History section
   - For _RULES: Rule Index present, BAD/GOOD pairs for non-trivial rules
@@ -258,14 +329,14 @@ Read the rule file for your context and verify against all rules. Also verify ag
 
 Detect by: filename pattern `*_TEMPLATE.md` in skill or workflow folder, or `__TEMPLATE_*` working template in session/topic folder.
 
-**Read**: @skills:write-documents `TEMPLATE_RULES.md` (all TMPL-*), `TEMPLATE_GUIDE.md`
+**Read**: @skills:write-documents `TEMPLATE_RULES.md` (all TMPL-*), `TEMPLATE_GUIDES.md`
 
 ### Branching by Template Type
 
 **Permanent template** (`*_TEMPLATE.md` in skill/workflow folder):
 - Reusable across sessions and projects
 - Must follow all TMPL-* rules
-- Companion `*_RULES.md` or `*_GUIDE.md` if template has complex verification rules (TMPL-ST-06)
+- Companion `*_RULES.md` or `*_GUIDES.md` if template has complex verification rules (TMPL-ST-06)
 - Verify SK-CT-05: no visual-only formatting (bold only in template content fields like `**Doc ID**:`)
 - Verify SK-CT-06: no Document History section in the template FILE (template may CONTAIN a Document History section for instances)
 
@@ -279,9 +350,21 @@ Detect by: filename pattern `*_TEMPLATE.md` in skill or workflow folder, or `__T
 
 - Run audit checklist from `TEMPLATE_RULES.md` (all TMPL-* rules)
 - Dynamic components: conditional markers have insertion criteria, agent instructions present at non-obvious sections
-- No redundancy with companion `*_RULES.md` or `*_GUIDE.md` files
+- No redundancy with companion `*_RULES.md` or `*_GUIDES.md` files
 - Verify against @skills:write-documents `APAPALAN_RULES.md` (precision, brevity, naming)
 - Verify against @skills:write-documents `MECT_WRITING_RULES.md` (voice, word choice, terminology)
+
+## Prompts Files
+
+Detect by: filename pattern `_PROMPTS_*.md` or file starts with a fenced code block (opening fence as first non-empty line) and contains `---` separators between fenced blocks.
+
+**Read**: @skills:write-documents `PROMPTS_RULES.md` (all PRMT-*), `PROMPTS_GUIDES.md`
+
+- Verify against all PRMT-* rules in `PROMPTS_RULES.md` (Format, Structure, Sequence, Content categories)
+- Verify fence depth per prompt: outer fence exceeds deepest inner fence (PRMT-FT-02)
+- Verify no model-intended content outside fences (PRMT-FT-06)
+- Verify `---` separator between every pair of consecutive prompts (PRMT-FT-03)
+- Verify against @skills:write-documents `APAPALAN_RULES.md` (precision, brevity)
 
 ## Minto Documents
 
@@ -297,7 +380,7 @@ Detect by: filename pattern `__MINTO-DRAFT_*.md` (draft) or `_MINTO_*.md` (artic
   - Per candidate: Score, Magnet, One-Argument Test, Question ordering, AMINTON tree, Same Kind check
 - Verify against MINTO-DS-* rules (3 candidates, recommended marked, criteria, inventory)
 - Verify against MINTO-AQ-* rules (magnet, ordering, one-argument test, declarative answers, same kind)
-- Verify against MINTO-ME-* rules (MECE at all levels)
+- Verify against MINTO-ME-* rules (Mutually Exclusive, Collectively Exhaustive (MECE) at all levels)
 
 **Verification checklist for Minto Article (`_MINTO_*`):**
 - Structure matches `MINTO_TEMPLATE.md` (MINTO-AS-08):
@@ -306,7 +389,7 @@ Detect by: filename pattern `__MINTO-DRAFT_*.md` (draft) or `_MINTO_*.md` (artic
   - One section per Q with idea-stating heading (not category label)
   - Bold claim per answer, evidence woven into paragraphs
   - Conclusion: one summary line per Q + restated A
-  - Appendix: full AMINTON tree (A through E-nodes with source Fnn refs)
+  - Appendix: full AMINTON (Argument, Main claim, Insight, Node, Tree, Opposition, Nuance) tree (A through E-nodes with source Fnn refs)
 - Verify against MINTO-TI-* rules (sub-questions, evidence, no orphans, source references)
 - Verify against MINTO-AS-* rules (Doc ID, SCQA Executive Summary, section per Q, appendix, top-down order)
 - Verify against MINTO-CL-* rules (closing present, one line per answer, no new claims)
@@ -402,3 +485,41 @@ Verify before phase transition (when evaluating Transitions):
 - Objective is verified when ALL linked Deliverables are checked
 - Check Objective checkbox only after confirming linked Deliverables
 - If Objective has no links (`←`), require explicit [ACTOR] confirmation
+
+## Workspace Setup
+
+Detect by: user runs `/verify workspace` or `/verify setup` or context is workspace configuration.
+
+Read @skills:workspace-management SKILL.md, WORKSPACE-RULES.md, and WORKSPACE-GUIDES.md before verifying. Read templates (DEV_REPO_NOTES_TEMPLATE.md, PRODUCT_REPO_README_TEMPLATE.md, COMPANY_REPO_NOTES_TEMPLATE.md) for comparison against workspace files.
+
+Verification checklist (sourced from WORKSPACE-RULES.md):
+
+1. Read workspace constants from DevRepo NOTES.md
+2. Check required constants (8): [DEV_REPO_FOLDER], [PRODUCT_REPO_FOLDER], [COMPANY_REPO_FOLDER], [KNOWLEDGE_FOLDER], [KNOWLEDGE_SOURCE_FOLDER], [RULES_FOLDER], [RULES_SOURCE_FOLDER], [PRODUCT_DOCS_FOLDER]
+3. Check required files per workspace type:
+   - DevRepo: NOTES.md, PROBLEMS.md, PROGRESS.md, ID-REGISTRY.md, SOPS.md, FAILS.md
+   - ProductRepo: README.md
+   - CompanyRepo (if exists): NOTES.md
+4. Check agent folder structure: rules/, workflows/, skills/ subfolders exist
+5. Check skill registration: all skills in skills/ folder are in [SKILL_CATEGORIES], and vice versa
+6. Check workspace structure matches declared mode (SINGLE-PROJECT, MONOREPO, WORKSPACE)
+7. Check no deprecated files in agent folder
+
+Fix actions per gap type:
+- Missing constant -> add with template default from DEV_REPO_NOTES_TEMPLATE.md
+- Missing required file -> create from template
+- Broken reference -> report only (requires user judgment)
+- Structural violation -> report only
+
+Downstream repo modifications are allowed (customizations are valid). Do not fail verification for intentional customizations.
+
+Report all fixes with what was changed and why.
+
+## No Context Match
+
+If document type does not match any context above:
+
+1. Apply GLOBAL-RULES (formatting, privacy, fact-check)
+2. Read @skills:write-documents `APAPALAN_RULES.md` and `MECT_WRITING_RULES.md`
+3. Verify document structure consistency (headings, lists, references)
+4. Run Final Steps

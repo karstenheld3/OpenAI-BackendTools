@@ -1,11 +1,11 @@
 ---
 description: Create tasks plan document from IMPL/TEST
-auto_execution_mode: 1
+auto_execution_mode: 3
 ---
 
 # Write Tasks Plan Workflow
 
-Create partitioned task documents from IMPL plans. Combines `/partition` workflow with document creation.
+Create partitioned task documents from IMPL plans.
 
 ## Required Skills
 
@@ -13,7 +13,8 @@ Create partitioned task documents from IMPL plans. Combines `/partition` workflo
 
 ## MUST-NOT-FORGET
 
-- Run `/partition` to split IMPL into tasks
+- **NEVER modify tracking documents** (PROGRESS.md, PROBLEMS.md, NOTES.md, FAILS.md). Write-* workflows create NEW files only. Tracking docs are session state, not agent operation artifacts.
+- Pre-Write Privacy Gate (`agent-behavior.md`): General-purpose documents → all content generic. ILLUSTRATIVE content in any file → examples generic. Assess context BEFORE writing.
 
 ## Prerequisites
 
@@ -22,9 +23,9 @@ Create partitioned task documents from IMPL plans. Combines `/partition` workflo
 
 ## Steps
 
-1. **Run `/partition`**
-   - Apply `/partition` workflow with STRATEGY if specified
-   - Collect partitioned tasks
+1. **Partition IMPL into tasks**
+   - Split IMPL steps into discrete, independently executable tasks
+   - Apply STRATEGY if specified
 
 2. **Create Tasks Plan File**
    - Create `TASKS_[TOPIC].md` in session folder

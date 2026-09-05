@@ -68,6 +68,7 @@ Files matching these patterns should NOT be downloaded. If downloaded, delete th
 
 ### Todos and Deliverables
 
+- **2026-03-16 10:30** - DRAFT: Follow-up proposal to Jane - Status: TODO:REPLY
 - **2026-03-15 09:15** - Send proposal draft - Deadline: 2026-03-20, Status: TODO:REPLY
 - **2026-03-17 14:30** - Review contract terms - Status: DONE
 
@@ -109,6 +110,8 @@ Files matching these patterns should NOT be downloaded. If downloaded, delete th
   - Action: Send updated document by Friday
   - Attachment: [Doc.pdf](Attachments_gitignore/2026-03-17_14-30_Topic/Doc.pdf) | [Doc.md](Attachments/2026-03-17_14-30_Topic/Doc.md)
   - [Email](#2026-03-17-1430---q2-timeline-discussion)
+- **2026-03-16 10:30** - DRAFT: Follow-up proposal to Jane
+  - [Draft](#2026-03-16-1030---draft-follow-up-proposal-to-jane)
 - **2026-03-15 09:15** - Initial project kickoff
   - Decision: Use agile methodology
   - [Email](#2026-03-15-0915---project-kickoff)
@@ -121,6 +124,24 @@ From: contact@example.com | To: your@email.com | CC: second@example.com | BCC: -
 Subject: Re: Q2 Timeline | Reply-To: - | Thread: Q2 Planning | Message-ID: abc123
 
 Email body here.
+
+---
+
+### 2026-03-16 10:30 - DRAFT: Follow-up proposal to Jane
+
+From: your@email.com | To: contact@example.com | CC: - | BCC: -
+Subject: Proposal for Q2 collaboration | Reply-To: - | Thread: Q2 Planning | Message-ID: -
+
+**STATUS: DRAFT - NOT SENT**
+
+Hi Jane,
+
+following up on our call on Friday (2026-03-14) - I think we should move forward with the joint proposal.
+
+Question: Can you review the attached outline and send feedback by Wednesday, 2026-03-18?
+
+Best,
+Max
 
 ---
 

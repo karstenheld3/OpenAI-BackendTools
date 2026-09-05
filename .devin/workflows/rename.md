@@ -1,6 +1,6 @@
 ---
 description: Global and local refactoring with exhaustive search and verification
-auto_execution_mode: 1
+auto_execution_mode: 3
 ---
 
 # Rename / Refactor Workflow

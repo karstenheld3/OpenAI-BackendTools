@@ -142,7 +142,7 @@ After writing `__DRIFT_[TOPIC].md` (same as normal mode), ALSO:
 
 ## Trigger
 
-- `/drift-detect` - after any `/build`, `/implement`, `/solve` completion
+- `/drift-detect` - after any `/go`, `/implement` completion
 - `/drift-detect` - after `/deep-research` completion
 - `/drift-detect [directive]` - when specific aspect needs assessment
 - `/drift-detect log` - after any task to accumulate drift data

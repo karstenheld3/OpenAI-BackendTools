@@ -27,6 +27,7 @@ Files (FL)
 - SK-FL-04: Config example files use lowercase: `playwright_config_examples.json`
 - SK-FL-05: All files referenced from SKILL.md References section
 - SK-FL-06: 12+ files for a specific topic justifies a subfolder (e.g., `examples/`)
+- SK-FL-07: Template files use `_TEMPLATE` suffix: `_TEMPLATE.md` for documents, `_template.ext` for scripts/code
 
 Content (CT)
 - SK-CT-01: SKILL.md provides procedures and decision logic, not tool parameter docs
@@ -99,6 +100,31 @@ Files unique to a skill use an uppercase prefix derived from the skill's domain.
 **BAD:** `TOOLS.md` (ambiguous across skills)
 
 **GOOD:** `PLAYWRIGHT_TOOLS.md` (clearly scoped)
+
+## SK-FL-07: Template File Naming
+
+Files intended as templates (copied and adapted per project) MUST use the `_TEMPLATE` suffix to distinguish them from operational files.
+
+- Documents: `_TEMPLATE.md` (uppercase, matches document convention)
+- Scripts and code: `_template.ext` (lowercase extension matches code convention)
+
+**BAD:**
+```
+hosting/netlify/
+  _deploy.bat           # Looks like a runnable script
+  _deploy.ps1           # Ambiguous: template or operational?
+```
+
+**GOOD:**
+```
+hosting/netlify/
+  _deploy_template.bat  # Clearly a template to copy and adapt
+  _deploy_template.ps1  # Clearly a template to copy and adapt
+```
+
+**BAD:** `CONVERSATION.md` used as a template (no suffix)
+
+**GOOD:** `CONVERSATION_TEMPLATE.md` (existing convention, already correct)
 
 ## SK-CT-01: Procedures Over Parameters
 

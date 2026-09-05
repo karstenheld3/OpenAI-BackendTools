@@ -21,8 +21,10 @@ LLM-introduced noise patterns. Each violates a rule above - scan every draft aga
 - Over-humanizing: vague times, topics, commitments - CV-HM-01, AP-CM-01
 - Humanizing in structural sections (Log, Todos, Status) - CV-HM-01
 - Question or call-to-action buried inside a paragraph, unlabeled, or not self-contained ("Sound good?" without context) - AP-CM-02
+- Question in own paragraph but missing `Question:`/`Frage:` label prefix ("Does Tuesday work?" instead of "Question: Does Tuesday work?") - AP-CM-02, GLOB-FL-0053
 - Bare period reference ("Q2", "next quarter") without year - AP-CM-03
 - Locale date formats ("March 24", "24.3."), missing weekday or timezone - CV-DT-01, AP-CM-03
+- Wrong timezone abbreviation: CET in summer (should be CEST) or CEST in winter (should be CET) - AP-CM-03, GLOB-FL-0054
 - Vague commitment without deliverable and timing - AP-CM-01
 - Ignoring the user's extracted profile, or extracting without applying - CV-HM-02
 - Randomized spelling variants between or within drafts - CV-HM-03

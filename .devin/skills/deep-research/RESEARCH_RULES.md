@@ -41,7 +41,7 @@ Summary (SM) - Summary file quality
 - SM-05: Doc ID is `[TOPIC]-IN01`
 - SM-06: Depends-on references `_INFO_[TOPIC]-02_Sources.md`
 - SM-07: Document History section exists and is current
-- SM-08: Goals and/or Questions section present (at least one required; per `INFO_GUIDE.md` Section 3)
+- SM-08: Goals and/or Questions section present (at least one required; per `INFO_GUIDES.md` Section 3)
 - SM-09: Per-Topic Summaries section present (3-20 sentences + Key Findings per topic file)
 - SM-10: Conclusions section present when research produces actionable conclusions (reference IN-numbers)
 - SM-11: Emergent Hypotheses section present when patterns emerged from combined evidence (all [ASSUMED])
@@ -57,6 +57,7 @@ Topic Files (TF) - Individual topic file quality
 - TF-08: Critical conclusions have inline citations: `[LABEL] (SOURCE_ID | URL or filename)`
 - TF-09: All claims have verification labels: [VERIFIED], [ASSUMED], [TESTED], [PROVEN], [COMMUNITY]
 - TF-10: Referenced `_SOURCES/` files exist on disk
+- TF-11: Product/company profiles MUST include primary website URL as clickable markdown link in header block (`**Website**: [Name](URL)`)
 
 STRUT Compliance (ST) - Process execution
 - ST-01: STRUT plan exists with all phases defined
@@ -79,6 +80,7 @@ Quality (QA) - Cross-cutting quality
 - QA-09: Verification labels used consistently across all files (applied by writing/verification workflows, never pre-filled in templates)
 - QA-10: Strategy and domain documented in Summary header with rationale
 - QA-11: Native special characters used when writing in non-English languages (e.g., ae → ä, oe → ö, ue → ü, ss → ß). Never ASCII approximations.
+- QA-12: All URLs in document body MUST be clickable markdown links (`[display text](URL)`), never bare `https://` text. Exception: Sources section where `SOURCE_ID: description URL (Accessed: date)` format is established.
 
 ## Verification Procedure (`/verify`)
 

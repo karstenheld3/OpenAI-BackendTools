@@ -39,7 +39,7 @@ Core definitions and structure for the development system.
   - Example: `CRAWLENG-TP01`, `AUTHSYST-TP01`
 - **[TASKS]** (TK): Partitioned task lists from IMPL/TEST plans
   - Example: `CRAWLENG-TK01`, `AUTHSYST-TK01`
-  - Created via `/write-tasks-plan` or `/partition`
+  - Created via `/write-tasks-plan`
 
 ### Tracking Documents
 
@@ -52,7 +52,7 @@ Tracking documents exist at workspace, project, or session level. Only one of ea
 
 ### Placeholders
 
-- **[ACTOR]**: Decision-making entity (default: user, in /go-autonomous: agent)
+- **[ACTOR]**: Decision-making entity (default: user, in `/go` autonomous mode: agent)
 
 ### MNF (MUST-NOT-FORGET) Technique
 
@@ -86,8 +86,8 @@ Determines where implementation outputs are placed:
   - Affects existing code, configuration, runtime
 
 - **IMPL-ISOLATED**: Implement separately from existing codebase
-  - For: [PROVE], POCs, prototypes, self-contained test scripts
-  - Output: `[SESSION_FOLDER]/` or `[SESSION_FOLDER]/poc/`
+  - For: [PROVE], Proofs of Concept (POCs), prototypes, self-contained test scripts
+  - Output: `[SESSION_FOLDER]/`, `[SESSION_FOLDER]/poc/`, `T##_` (Topic) folders, or `S##_` (Step) folders
   - Existing code/config/runtime MUST NOT be affected
   - NEVER create folders in workspace root
   - **REQUIRES SESSION**: If no session exists, run `/session-new` first
@@ -100,6 +100,7 @@ Three dimensions define how the agent should behave:
 
 - **SINGLE-PROJECT** - Workspace contains one project
 - **MONOREPO** - Workspace contains multiple independent projects
+- **WORKSPACE** - Workspace root with multiple independent repos (not monorepo). Detected by presence of `main.code-workspace` file
 
 ### Dimension 2: Version Strategy
 
@@ -133,7 +134,7 @@ Three dimensions define how the agent should behave:
 │   └── FAILS.md            # Lessons learned
 ├── src/                    # Source code
 ├── !NOTES.md               # Workspace notes (priority file)
-├── !PROBLEMS.md            # Known problems
+├── PROBLEMS.md            # Known problems
 ├── !PROGRESS.md            # Overall progress
 └── FAILS.md                # Lessons learned (workspace-level)
 ```
@@ -158,7 +159,7 @@ Three dimensions define how the agent should behave:
 ├── [PROJECT_B]/
 │   └── ...                 # Same structure
 ├── !NOTES.md               # Workspace-level notes
-├── !PROBLEMS.md            # Workspace-level problems
+├── PROBLEMS.md            # Workspace-level problems
 ├── !PROGRESS.md            # Workspace-level progress
 └── FAILS.md                # Lessons learned (workspace-level)
 ```
@@ -211,26 +212,27 @@ Patterns in `.gitignore`: `*_gitignore.*` and `*_gitignore/`
 ## Workflow Reference
 
 - `/bugfix` - Record and fix bugs (SESSION-MODE or PROJECT-MODE)
-- `/build` - BUILD workflow entry point (code output)
 - `/cleanup` - Delete temporary files and artifacts left by workflows
 - `/commit` - Create conventional commits
+- `/conversation-draft` - Draft emails, messages, or other text as the user
 - `/conversation-start` - Create new conversation tracking file
 - `/conversation-update` - Update existing conversation tracking file
 - `/critique` - Devil's Advocate review
-- `/deep-research` - Deep research (MEPI or MCPI) with domain-specific patterns
-- `/drift-correct` - Close gaps identified by /drift-detect
-- `/drift-detect` - Post-execution drift detection, persist gaps to __DRIFT_ file
+- `/deep-research` - Deep research (Most Executable Point of Information (MEPI) or Most Complete Point of Information (MCPI)) with domain-specific patterns
+- `/deploy` - Deploy project to configured hosting platform
+- `/drift-correct` - Close gaps identified by `/drift-detect`
+- `/drift-detect` - Post-execution drift detection, persist gaps to `__DRIFT_` file
+- `/fact-check` - Verify factual claims against external reality
 - `/fail` - Record failures to FAILS.md
 - `/fix` - Fix any problem by reading relevant DevSystem knowledge
 - `/go` - Autonomous loop until goal reached
-- `/implement` - Execute implementation from plan
+- `/implement` - Implement approved changes - code from plans or corrections from reviews
 - `/improve` - Depth-first improvement (one proven change per run)
 - `/learn` - Extract learnings from resolved problems
-- `/partition` - Split plans into discrete tasks
 - `/prime` - Load workspace context
 - `/project-release` - Create a dated release with comprehensive release notes
 - `/propose-minto` - Generate AMINTON argument candidates from research material
-- `/reconcile` - Pragmatic review of critique findings
+- `/reconcile` - Pragmatic review of critique and fact-check findings
 - `/remove` - Remove session content, conversation content, or specific files with preview and confirmation
 - `/rename` - Global/local refactoring with verification
 - `/research` - Structured research with verification
@@ -239,7 +241,6 @@ Patterns in `.gitignore`: `*_gitignore.*` and `*_gitignore/`
 - `/session-load` - Resume existing session
 - `/session-new` - Initialize new session
 - `/session-save` - Save session progress
-- `/solve` - SOLVE workflow entry point (knowledge output)
 - `/switch-model` - Switch Cascade AI model tier (HIGH, MID, LOW)
 - `/sync` - Document synchronization
 - `/test` - Run tests based on scope
@@ -252,7 +253,21 @@ Patterns in `.gitignore`: `*_gitignore.*` and `*_gitignore/`
 - `/write-spec` - Create specification from requirements
 - `/write-strut` - Create STRUT plans with proper format
 - `/write-tasks-plan` - Create tasks plan from IMPL/TEST
+- `/write-template` - Create purpose-built document templates
+- `/write-prompts` - Create prompt queue files for sequential headless execution
 - `/write-test-plan` - Create test plan from spec
+
+## Quality Pipelines
+
+**Verify-Critique-Reconcile-Implement-Verify (VCRIV)** - logic and design review:
+`/verify` → `/critique` → `/reconcile` → `/implement` → `/verify`
+
+**Fact-check-Reconcile-Implement-Verify (FACRIV)** - factual claim verification:
+`/fact-check` → `/reconcile` → `/implement` → `/verify`
+
+**Roles:** `/critique` and `/fact-check` = JUDGE (produce `*_REVIEW.md` only, never modify originals). `/reconcile` = TRIAGE (chat output only). `/implement` = EXECUTOR (applies approved corrections to source documents).
+
+**Rules:** Sequential execution. When user says "run VCRIV" or "run FACRIV", execute full pipeline in order.
 
 ## STRUT Execution
 

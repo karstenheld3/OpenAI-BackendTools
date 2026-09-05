@@ -26,8 +26,9 @@ Workflow guidance for Microsoft Playwright MCP server. Tool parameters are deliv
 6. `browser_fill_form` takes `fields` array (NOT `browser_fill`). `browser_take_screenshot` (NOT `browser_screenshot`)
 7. Opt-in tools need `--caps` flag. Cookie read needs `--caps=storage`. Route mocking needs `--caps=network`
 8. `browser_evaluate` runs in browser (no Node.js APIs). `browser_run_code` runs server-side with Playwright `page` object
-9. Downloads go to `--output-dir` path. Default: `.playwright-mcp/` under the IDE user data folder (NOT the system Downloads folder). Use `find_by_name` in the IDE data dir to locate downloaded files if path unknown
+9. Downloads go to `--output-dir` path. Default: `.playwright-mcp/` under the IDE installation folder (e.g., `[LOCALAPPDATA]\Programs\Devin\.playwright-mcp\`). NOT the system Downloads folder. File names are typically UUIDs (e.g., `765984ac-5fcb-4bad-9aa3-e4163a93fa5d`) or descriptive names from the server. Use `Get-ChildItem "[LOCALAPPDATA]\Programs\Devin\.playwright-mcp" -File | Sort-Object LastWriteTime -Descending | Select-Object -First 10 FullName, Length, LastWriteTime` to find recent downloads. For PDFs, extract text with poppler: `& "[TOOLS]\poppler\Library\bin\pdftotext.exe" "<path>" -`
 10. Extension mode: Chrome/Edge only, uses Chrome Web Store extension, NOT `--remote-debugging-port`
+11. **`fullPage: true` + `type: "jpeg"` is MANDATORY for research, archival, or source-validation screenshots.** Viewport-only (`fullPage: false`) captures ~900px of a 5,000-20,000px page - missing 80-95% of content. PNG produces 3-5x larger files than JPEG with no benefit for text pages. Only use viewport for UI debugging or above-the-fold checks. (GLOB-FL-0042)
 
 ## Intent Lookup
 

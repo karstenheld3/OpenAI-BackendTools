@@ -18,7 +18,7 @@ Universal formatting and writing conventions for all documents.
 - Arrow symbol `→` must have spaces around it: `A → B` not `A→B`
 - Never use `▼` (U+25BC); use `v` instead
 - Try to fit single statements/decisions/objects on a single line
-- Format workflow references as inline code: `/verify`, `/go`, `/build`
+- Format workflow references as inline code: `/verify`, `/go`, `/implement`
 - Inline enumerations use `N)` format, not `(N)`: `1) first, 2) second, 3) third`
 - URLs must always include the scheme (`https://` or `http://`). Never write bare domains: `msn.com` → `https://msn.com`
 
@@ -31,6 +31,37 @@ Universal formatting and writing conventions for all documents.
   2. Detected encoding (e.g., ISO-8859-1, Windows-1252)
   3. How to preserve encoding (e.g., which PowerShell `[System.IO.File]::` encoding parameters)
 - Test and verify PowerShell snippets to correctly read and write file (use copy of file for testing) before recording 3. in NOTES.md.
+
+## Authoritative Literals
+
+Some values are **lexical, not semantic** - every character matters. Addresses, IBANs, reference numbers, registration codes, and official names must be reproduced exactly as recorded. GenAI systematically introduces format drift on these values (Unicode normalization, abbreviation, punctuation changes).
+
+**Rules:**
+- Values marked `[LITERAL]` MUST be copied character-for-character
+- No Unicode substitution: `o` stays `o` (not `º`), `.` stays `.` (not `ª`), comma stays comma (not dash)
+- No abbreviation or expansion of any part of the literal value
+- No reformatting: punctuation, spacing, and casing exactly as recorded
+- Source of truth for new literals: official documents (government registrations, contracts, bank confirmations) - never from secondary documents
+- When a literal is used in outbound communication (emails, letters, forms), copy from the `[LITERAL]`-marked source
+
+**Marking format** - tag values in-place where they are already defined (no separate section, no duplication):
+```
+- **Street**: Rua da Liberdade, 42, 3.o Esq. [LITERAL: registration certificate 2026-01-15]
+- **IBAN**: DE89370400440532013000 [LITERAL]
+- **Tax ID**: 123456789 (obtained 2026-03-10) [LITERAL]
+```
+
+`[LITERAL]` = copy character-for-character, AP-PR-13 applies. Optional source after colon.
+
+**Known GenAI corruption categories** (why this rule exists):
+- **Unicode normalization**: `o` → `º`, `.` → `ª`, straight quotes → curly quotes, half-width → full-width (CJK)
+- **Punctuation drift**: commas → dashes, spaces inserted/removed in IBANs, slash direction changed
+- **Abbreviation/expansion**: "Dto." → "D", "Apt." → "Apartment", "S/O" → "Son of"
+- **Sub-premise loss**: Floor/unit/door numbers dropped or merged into building number (critical for Indian, Portuguese, Japanese addresses where "Flat 4B, 3rd Floor" or "1.o Dto." determines deliverability)
+- **Identifier transposition**: LLM token prediction silently swaps digits in similar IDs sharing a prefix (`acct_7H9j2` → `acct_7H9j3`). Corrupted ID still parses, routes to wrong record
+- **Script/romanization mixing**: Kanji address rewritten in romaji, Devanagari transliterated, Arabic addresses reversed (RTL)
+- **Postal code reformatting**: spaces added/removed (`1000-001` → `1000001`), country-specific formats broken (UK: `SW1A 1AA`, India 6-digit PIN, Japan `〒100-0000`)
+- **"Looks right" hallucination**: Model fills gaps with plausible-but-wrong values (invents house numbers, "corrects" postal codes to nearby valid ones)
 
 ## Date and Time Format
 

@@ -1,6 +1,6 @@
 ---
 description: Structured research with verification labels and source retention
-auto_execution_mode: 1
+auto_execution_mode: 3
 ---
 
 # Research Workflow
@@ -17,7 +17,7 @@ Scope: Single-topic research producing one `_INFO_*.md`. Use `/deep-research` fo
 
 Read before proceeding:
 - `[AGENT_FOLDER]/rules/research-and-report-writing-rules.md` for Most Executable Point of Information (MEPI) / Most Complete Point of Information (MCPI) research depth
-- @write-documents `INFO_GUIDE.md` and `INFO_RULES.md` for INFO document structure
+- @write-documents `INFO_GUIDES.md` and `INFO_RULES.md` for INFO document structure
 - @write-documents `APAPALAN_RULES.md` for writing quality
 
 ## MUST-NOT-FORGET

@@ -1,28 +1,27 @@
 ---
-description: Remove session content, conversation content, or specific files with preview and confirmation
-auto_execution_mode: 1
+description: Remove session content, conversation content, or specific files with preview
+auto_execution_mode: 3
 ---
 
 # Remove Workflow
 
 Remove session artifacts, Cascade conversations, or specified files from disk. Handles dependency cleanup. ALWAYS previews before removal.
 
-**Goal**: Remove specified content with full preview, dependency cleanup, and explicit confirmation
+**Goal**: Remove specified content with full preview and dependency cleanup
 
 **Why**: Sessions accumulate, conversations persist encrypted on disk, and manual cleanup is error-prone
 
-Scope: Destructive file deletion. Requires explicit confirmation after preview.
+Scope: Destructive file deletion. User can run `/commit` before `/remove` if backups are needed.
 
 ## MUST-NOT-FORGET
 
 - ALWAYS preview before deleting - no silent deletions
-- NEVER delete without explicit user confirmation after preview
 - NEVER delete active session files without user explicitly naming them
 - Check dependencies (references from other files) before deleting documents
 - Cascade .pb files are encrypted - identification by date/size only
 - Close Windsurf before deleting cascade conversations to avoid file handle conflicts
 - NEVER delete `.devin/`, `DevSystemV4.1/`, or `_OldDevSystemVersions/`
-- NEVER delete `ID-REGISTRY.md`, `FAILS.md`, `LEARNINGS.md`, `!NOTES.md`, `!PROBLEMS.md`, `!PROGRESS.md`
+- NEVER delete `ID-REGISTRY.md`, `FAILS.md`, `LEARNINGS.md`, `!NOTES.md`, `PROBLEMS.md`, `!PROGRESS.md`
 
 ## Trigger
 
@@ -37,7 +36,7 @@ Apply to all delete operations regardless of context.
 1. Identify targets before any deletion
 2. Scan for dependencies (grep for references to target in other files)
 3. Show preview with full paths and sizes
-4. Require explicit "yes" confirmation
+4. Execute deletion immediately after preview
 5. Report results with counts and freed space
 
 # CONTEXT-SPECIFIC
@@ -50,19 +49,18 @@ Detection: determine context from trigger arguments.
 
 **Todo list for session deletion:**
 
-1. Identify session folder (from argument, current session, or ask user)
+1. Identify session folder (from argument or current session)
 2. Check if session is active (has uncommitted changes or is current working session)
 3. Scan for outbound references:
    - `ID-REGISTRY.md` entries referencing session topic
-   - `!PROGRESS.md` or `!PROBLEMS.md` entries referencing session
+   - `!PROGRESS.md` or `PROBLEMS.md` entries referencing session
    - Other sessions referencing this session's documents
 4. Scan for inbound references:
    - Files inside the session that reference external documents
 5. Preview: list all files, total size, reference scan results
-6. Confirm with user
-7. Clean up references (remove ID-REGISTRY entries, update PROGRESS/PROBLEMS)
-8. Delete session folder
-9. Report results
+6. Clean up references (remove ID-REGISTRY entries, update PROGRESS/PROBLEMS)
+7. Delete session folder
+8. Report results
 
 **Preview format:**
 ```
@@ -75,8 +73,7 @@ _2026-05-14_CrawlerRefactor/
   - Inbound references (informational): 1
       _Sessions\_2026-06-01_IndexerV2\NOTES.md:15 - "See _SPEC_CRAWLENG-01.md for API format"
 
-IMPORTANT: This will permanently delete the session folder and clean 2 outbound references.
-Confirm? (yes/no)
+Deleting session folder and cleaning 2 outbound references.
 ```
 
 ## Conversation Content
@@ -93,11 +90,10 @@ Files are encrypted on disk but the agent has access to conversation content via
 1. Run cascade-search.ps1 to list recent conversations (default: last 10)
 2. For each conversation, use `trajectory_search` (empty query) to retrieve title and messages
 3. Build preview with: title, first 2 messages (truncated to 80 chars), last 2 messages (truncated to 80 chars)
-4. Present preview to user - user selects by number or title
+4. Match conversations to user's selection criteria (from trigger args)
 5. Run cascade-delete.ps1 with specified parameters (uses -DryRun first)
-6. Confirm with user
-7. Execute deletion
-8. Report results, advise Windsurf restart
+6. Execute deletion
+7. Report results, advise Windsurf restart
 
 **Correlation strategy**: Match .pb file LastWriteTime with conversation timestamps from `trajectory_search`. The cascade ID from the trajectory metadata maps to the .pb filename UUID.
 
@@ -107,7 +103,7 @@ Files are encrypted on disk but the agent has access to conversation content via
 - By date: "delete conversations before 2026-06-01"
 - By age: "delete conversations older than 30 days"
 - Current: "delete this conversation" (match by current cascade ID)
-- All: "delete all conversations" (requires double confirmation)
+- All: "delete all conversations"
 
 **Preview format:**
 ```
@@ -148,9 +144,8 @@ Enter number(s) to delete (e.g., "1", "1-3", "all"):
 4. If file: show file info (path, size, last modified)
 5. Scan for references to this path in other files (grep basename)
 6. Preview with dependency info
-7. Confirm with user
-8. Delete
-9. Report results
+7. Delete
+8. Report results
 
 **Preview format (directory):**
 ```
@@ -172,8 +167,7 @@ e:\Dev\IPPS\_Sessions\_2026-05-14_CrawlerRefactor/
       !PROGRESS.md:28 - "Crawler refactor complete (2026-05-14)"
       _Sessions\_2026-06-01_IndexerV2\NOTES.md:15 - "See _SPEC_CRAWLENG-01.md for API format"
 
-IMPORTANT: This will permanently delete the directory and all 12 files.
-Confirm? (yes/no)
+Deleting directory and all 12 files.
 ```
 
 **Preview format (file):**
@@ -184,8 +178,7 @@ e:\Dev\IPPS\_Sessions\_2026-05-14_CrawlerRefactor\_INFO_CRAWLENG-01.md
   - References found: 1
       _IMPL_CRAWLENG-01.md:8 - "Depends on: _INFO_CRAWLENG-01.md [CRAWLENG-IN01]"
 
-WARNING: Other documents depend on this file.
-Confirm? (yes/no)
+WARNING: Other documents depend on this file. Proceeding with deletion.
 ```
 
 # EXECUTION
@@ -196,7 +189,7 @@ Parse user input to determine which context applies:
 - Contains "session" → Session Content
 - Contains "conversation" or "cascade" → Conversation Content
 - Contains a file/folder path → Specific Path
-- Ambiguous → ask user which context (one question only)
+- Ambiguous → infer from conversation context (default to Specific Path)
 
 ## Step 2: Gather Targets
 
@@ -223,20 +216,13 @@ Show grouped results per context-specific format above. Include:
 - Dependency scan results
 - Warnings for irreversible operations
 
-## Step 5: Confirm
-
-Require explicit "yes" response. Accept: `yes`, `y`, `confirm`.
-Anything else = abort.
-
-For "delete all conversations": require typing "DELETE ALL" (double confirmation).
-
-## Step 6: Execute
+## Step 5: Execute
 
 - Sessions: clean references first, then delete folder
-- Conversations: run cascade-delete.ps1 with -Confirm flag
-- Specific paths: Remove-Item -Recurse -Force
+- Conversations: run cascade-delete.ps1
+- Specific paths: Remove-Item -Recurse -Force -Confirm:$false
 
-## Step 7: Report
+## Step 6: Report
 
 ```
 OK. Deletion complete.
@@ -261,7 +247,7 @@ HINT: Restart Windsurf for conversation changes to take effect.
 - [ ] Protected locations checked and excluded
 - [ ] Dependencies scanned (except for conversations)
 - [ ] Preview shown with full paths
-- [ ] User confirmed with explicit "yes"
+- [ ] Auto-executed after preview (user runs `/commit` before if backups needed)
 - [ ] Deletion results reported with freed space
 - [ ] References cleaned (for session deletion)
 

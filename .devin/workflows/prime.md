@@ -1,5 +1,5 @@
 ---
-auto_execution_mode: 1
+auto_execution_mode: 3
 description: Prime context with workspace files
 ---
 

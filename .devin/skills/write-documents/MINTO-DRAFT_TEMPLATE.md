@@ -22,7 +22,7 @@
 - **Specificity** ([weight]%): [description - is it precise enough to be falsifiable?]
 
 Default weights: Goal Alignment 30%, Supportability 30%, Impact 25%, Specificity 15%
-Override with article-purpose weights from MINTO_GUIDE.md Section 2.3 if applicable.
+Override with article-purpose weights from MINTO_GUIDES.md Section 2.3 if applicable.
 
 ## Candidate 1 [RECOMMENDED]
 

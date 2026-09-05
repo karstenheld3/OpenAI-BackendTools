@@ -5,7 +5,7 @@ param(
     [Parameter(Mandatory = $true)]
     [string]$Query,
 
-    [string]$WindowTitle = "*Windsurf*",
+    [string]$WindowTitle = "*",
 
     [int]$OpenDelayMs = 400,
     [int]$AfterEnterDelayMs = 300,
@@ -144,12 +144,12 @@ public class Win32 {
 }
 "@
 
-$proc = Get-Process -Name "Windsurf" -ErrorAction SilentlyContinue |
+$proc = Get-Process -Name "Windsurf", "Devin" -ErrorAction SilentlyContinue |
     Where-Object { $_.MainWindowTitle -like $WindowTitle -and $_.MainWindowTitle -ne "" } |
     Select-Object -First 1
 
 if (-not $proc) {
-    Write-Error "No Windsurf window found matching: $WindowTitle"
+    Write-Error "No Windsurf/Devin window found matching: $WindowTitle"
     exit 1
 }
 
@@ -177,9 +177,9 @@ Start-Sleep -Milliseconds 150
 [Win32]::SendEnter()
 Start-Sleep -Milliseconds 500
 
-# Refocus Cascade chat (Ctrl+Shift+A - official Windsurf toggle)
-[Win32]::SendCtrlShiftA()
-Start-Sleep -Milliseconds 200
+# Close any lingering menus
+[Win32]::SendEscape()
+Start-Sleep -Milliseconds 100
 
 Write-Host "Done. Model should be: $Query"
 

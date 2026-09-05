@@ -312,13 +312,13 @@ If all conditions are met, proceed. Otherwise, continue working.
 
 **GOOD:**
 ```markdown
-## Gate Check: IMPLEMENT→REFINE
+## Gate Check: IMPLEMENT→COMPLETE
 
 - [ ] All steps from IMPL plan implemented
 - [ ] Tests pass
 - [ ] No TODO/FIXME left unaddressed
 
-Pass: Run `/refine` | Fail: Continue implementing
+Pass: Run `/verify` | Fail: Continue implementing
 ```
 
 ## Stuck Detection
@@ -456,6 +456,7 @@ Run VCRIV pipeline for quality.
 ```markdown
 Check MUST-NOT-FORGET (MNF) items before completing.
 Run Verify-Critique-Reconcile-Implement-Verify (VCRIV) pipeline for quality.
+Run Fact-check-Reconcile-Implement-Verify (FACRIV) pipeline for factual verification.
 ```
 
 ## Scope Boundary
@@ -608,11 +609,11 @@ Create the output file.
 
 ## GRUC Verification (Guides, Rules, Checks)
 
-GRUC documents are skill resource files consumed by LLMs. They have distinct verification requirements from human-facing documents. Detect by: filename pattern `*_GUIDE.md`, `*_RULES.md`, or `*_CHECKS.md` inside a skill folder.
+GRUC documents are skill resource files consumed by LLMs. They have distinct verification requirements from human-facing documents. Detect by: filename pattern `*_GUIDES.md`, `*_RULES.md`, or `*_CHECKS.md` inside a skill folder.
 
 ### Branching by GRUC Type
 
-**Guide (`*_GUIDE.md`)** - Strategic decision instructions:
+**Guide (`*_GUIDES.md`)** - Strategic decision instructions:
 - Numbered decision steps present (not free prose)
 - No verification checklists (those belong in `*_RULES.md`)
 - Purpose stated in first line (what to read BEFORE doing what)

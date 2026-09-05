@@ -23,7 +23,7 @@ Table of Contents (TC)
 Sections (SN)
 - INFO-SN-01: Content sections use numbered H2 headings
 - INFO-SN-02: Subsections use decimal notation
-- INFO-SN-03: Optional sections positioned per `INFO_GUIDE.md`
+- INFO-SN-03: Optional sections positioned per `INFO_GUIDES.md`
 
 Sources (SC)
 - INFO-SC-01: Source ID format `[TOPIC]-[DOC]-SC-[SOURCE_ID]-[SOURCE_REF]`
@@ -33,7 +33,7 @@ Sources (SC)
 - INFO-SC-05: Inline source links in content sections at first mention of each online source, app, or tool
 
 Format (FT)
-- INFO-FT-01: Standard section order per `INFO_GUIDE.md` Section 2
+- INFO-FT-01: Standard section order per `INFO_GUIDES.md` Section 2
 - INFO-FT-02: Document History present, reverse chronological, with action prefixes
 - INFO-FT-03: Diagrams use Unicode box-drawing characters per `core-conventions.md`
 - INFO-FT-04: Foreign terms always translated into document language at point of use
@@ -104,6 +104,8 @@ These are *research confidence labels* applied during writing. They are distinct
 
 Labels are applied by writing and verification workflows, never pre-filled in templates. Templates use `[LABEL]` as placeholder.
 
+**Related label** (data integrity, not confidence): `[LITERAL]` marks values that must be reproduced character-for-character (addresses, IBANs, reference numbers). See `core-conventions.md` "Authoritative Literals" and AP-PR-13.
+
 **BAD:**
 ```markdown
 - OAuth2 is the industry standard
@@ -172,7 +174,7 @@ Subsections use `### N.M Subtitle` decimal notation.
 
 ## INFO-SN-03: Optional Section Positioning
 
-Optional sections must be positioned per `INFO_GUIDE.md`:
+Optional sections must be positioned per `INFO_GUIDES.md`:
 - Goals, Questions: above TOC, unnumbered
 - Conclusions, Emergent Hypothesis: numbered, before Next Steps
 

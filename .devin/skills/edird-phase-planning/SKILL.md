@@ -7,7 +7,7 @@ description: Apply when doing planning for long-running tasks in sessions on top
 
 ## When to Invoke
 
-- `/build` or `/solve` workflows
+- `/go` workflow (BUILD or SOLVE mode)
 - [PLAN] - creating high-level plans to achieve goals
 - Planning for long agentic runs for features, fixes, or research
 
@@ -19,7 +19,7 @@ description: Apply when doing planning for long-running tasks in sessions on top
 
 ## MUST-NOT-FORGET
 
-- `/build` and `/solve` are the entry workflows
+- `/go` is the entry workflow (BUILD or SOLVE mode)
 - Use `/write-spec`, `/write-impl-plan`, `/write-test-plan`, `/write-tasks-plan` for documents
 - Check gates before phase transitions
 

@@ -1,6 +1,6 @@
 ---
 description: Create purpose-built document templates that produce consistent, comparable instances
-auto_execution_mode: 1
+auto_execution_mode: 3
 ---
 
 # Write Template Workflow
@@ -13,10 +13,13 @@ Create purpose-built document templates that produce consistent, comparable inst
 
 ## Required Skills
 
-- @skills:write-documents for `TEMPLATE_GUIDE.md`, `TEMPLATE_RULES.md`, `APAPALAN_RULES.md`
+- @skills:write-documents for `TEMPLATE_GUIDES.md`, `TEMPLATE_RULES.md`, `APAPALAN_RULES.md`
+- @skills:write-documents for `PROMPTS_GUIDES.md`, `PROMPTS_RULES.md`, `PROMPTS_TEMPLATE.md` (Prompts Template branch only)
 
 ## MUST-NOT-FORGET
 
+- **NEVER modify tracking documents** (PROGRESS.md, PROBLEMS.md, NOTES.md, FAILS.md). Write-* workflows create NEW files only. Tracking docs are session state, not agent operation artifacts.
+- Pre-Write Privacy Gate (`agent-behavior.md`): General-purpose documents → all content generic. ILLUSTRATIVE content in any file → examples generic. Assess context BEFORE writing.
 - Template IS the document skeleton, not a description of one (TMPL-ST-01)
 - All annotations use XML comments only - no italic, bracket, or prose annotations (TMPL-AN-01)
 - Primary and secondary goals must be answerable from every template instance
@@ -24,6 +27,24 @@ Create purpose-built document templates that produce consistent, comparable inst
 - Verify against `TEMPLATE_RULES.md` audit checklist before delivering
 - Repeatable items show ONE instance only (TMPL-ST-04)
 - Complex rules go in companion `*_RULES.md` files, not in the template (TMPL-ST-06)
+- **Prompts Template branch — Rule precedence**: PRMT-CT-04 (objectives not steps) overrides PRMT-CT-05 (precision). See PRMT-CT-04 for details.
+
+## Context Branching
+
+This workflow has two branches. Determine the branch from the user's request:
+
+- **Standard branch** (default) - Create any document template (INFO, SPEC, IMPL, TASKS, etc.)
+  - Trigger: `/write-template [description]`
+  - Rules: TMPL-* only
+  - Output: `[NAME]_TEMPLATE.md`
+
+- **Prompts Template branch** - Create a template for `_PROMPTS_` files
+  - Trigger: `/write-template for a prompts file that [...]` or `/write-template prompts [...]`
+  - Rules: TMPL-* AND PRMT-* (both rule sets apply simultaneously)
+  - Output: `_PROMPTS_[Topic]_TEMPLATE.md`
+  - Additional reads: `PROMPTS_GUIDES.md`, `PROMPTS_RULES.md`, `PROMPTS_TEMPLATE.md`
+
+Prompts Template files are hybrid artifacts: their structure follows TMPL-* rules (XML comments, placeholders, full example), while their content (fenced prompts) follows PRMT-* rules (fence depth, separators, objective/constraints/verify pattern). Both rule sets are verified in Phase 6.
 
 ## Mandatory Re-read
 
@@ -50,7 +71,9 @@ Create purpose-built document templates that produce consistent, comparable inst
 
 ## Phase 3: Decompose Prompt
 
-Read @skills:write-documents `TEMPLATE_GUIDE.md` before this phase.
+Read @skills:write-documents `TEMPLATE_GUIDES.md` before this phase.
+
+**Prompts Template branch**: Also read `PROMPTS_GUIDES.md` and `PROMPTS_RULES.md`. Use `PROMPTS_TEMPLATE.md` as the structural reference for prompt format. Each prompt in the template must follow PRMT-ST-01..05 (objective, constraints, verification, one reasoning mode, density limit).
 
 Answer these design questions:
 
@@ -79,7 +102,7 @@ Answer these design questions:
 
 Read @skills:write-documents `TEMPLATE_RULES.md`.
 
-1. Determine template category per `TEMPLATE_GUIDE.md` Section 3:
+1. Determine template category per `TEMPLATE_GUIDES.md` Section 3:
    - Per-task document → Doc ID, Goal, Timeline, Document History required
    - Other template → these fields do not apply
 2. Build consolidated requirements list from:
@@ -91,7 +114,9 @@ Read @skills:write-documents `TEMPLATE_RULES.md`.
 
 ## Phase 5: Construct Template
 
-Write the template file following the skeleton from `TEMPLATE_GUIDE.md` Section 4.
+Write the template file following the skeleton from `TEMPLATE_GUIDES.md` Section 4.
+
+### Standard branch
 
 1. Write top comment block if template has naming conventions or lifecycle rules
 2. Write title with placeholder: `# [Document Type]: [PLACEHOLDER]`
@@ -106,19 +131,45 @@ Write the template file following the skeleton from `TEMPLATE_GUIDE.md` Section 
 8. Add Document History section if per-task document (TMPL-SN-01)
 9. Add full example at end if template has complex structure (TMPL-ST-05)
 
+### Prompts Template branch
+
+1. Write top comment block with:
+   - Filename convention: `_PROMPTS_[Topic]_TEMPLATE.md`
+   - Instance naming convention: how filled copies should be named
+   - Purpose: what pipeline or process the prompts enforce
+   - Placeholder registry: list ALL placeholders with descriptions and examples
+   - Usage instructions: copy, fill, remove comments, paste into queue
+2. Write each prompt as a fenced block with placeholders:
+   - Each prompt follows PRMT structure: Objective, Context (if needed), Constraints, Verify
+   - End each prompt with `**STOP.**` and report instruction (forces agent to yield)
+   - Use `[PLACEHOLDER]` for case-specific values
+   - Choose fence length per PRMT-FT-02 (outer > deepest inner)
+3. Write `---` separator and commentary between prompts (PRMT-FT-03, PRMT-FT-04):
+   - Commentary documents expected state from prior prompt (PRMT-SQ-03)
+   - XML comments for template instructions (TMPL-AN-01)
+4. Add conditional sections with `<!-- Conditional: ... -->` for prompts with category-dependent content (TMPL-AN-02)
+5. Add full example at end in XML comment showing placeholder resolution (TMPL-ST-05)
+6. No Doc ID, no Document History (not a per-task document per TMPL-HD-02)
+
 ## Phase 6: Verify and Refine
 
 1. Run audit checklist from `TEMPLATE_RULES.md`
-2. **Goal alignment check**:
+2. **Prompts Template branch**: also verify against all PRMT-* rules in `PROMPTS_RULES.md`:
+   - Format (FT): PRMT-FT-01 through PRMT-FT-06 (apply to the filled instance, not the template itself)
+   - Structure (ST): PRMT-ST-01 through PRMT-ST-05
+   - Sequence (SQ): PRMT-SQ-01 through PRMT-SQ-03
+   - Content (CT): PRMT-CT-01 through PRMT-CT-07
+   - PRMT-FT-01 exception: template has XML comment before first fence; after comment removal the first non-empty line must be an opening fence
+3. **Goal alignment check**:
    - Can every instance answer the primary goal? If not → add missing section
    - Can every instance answer the secondary goals? If not → add or adjust
    - Will instances be comparable in structure? If not → standardize section names and order
-3. **Audience walkthrough**: mentally fill in the template as the target audience. At each section:
+4. **Audience walkthrough**: mentally fill in the template as the target audience. At each section:
    - Do I know what to put here? If not → improve XML comment instruction
    - Will I recognize I did it right? If not → add format example or constraint
    - Is there ambiguity about scope or depth? If yes → add precision to instruction
-4. Fix issues and fill gaps
-5. Re-run audit checklist after fixes
+5. Fix issues and fill gaps
+6. Re-run audit checklist(s) after fixes
 
 # FINALIZATION
 
@@ -132,8 +183,18 @@ Write the template file following the skeleton from `TEMPLATE_GUIDE.md` Section 
 - [ ] Audit checklist from `TEMPLATE_RULES.md` passes
 - [ ] No redundancy with existing templates in target domain
 - [ ] Companion `*_RULES.md` created if template has complex verification rules (TMPL-ST-06)
+- [ ] **Prompts Template branch**: All PRMT-* rules pass (post-comment-removal)
+- [ ] **Prompts Template branch**: Each prompt has STOP gate with report instruction
+- [ ] **Prompts Template branch**: Placeholder registry in top comment is complete (every placeholder listed)
 
 ## Output
 
+### Standard branch
+
 - Template file: `[NAME]_TEMPLATE.md` in target skill or workflow folder
 - Companion rules (if needed): `[NAME]_RULES.md` in same folder
+
+### Prompts Template branch
+
+- Template file: `_PROMPTS_[Topic]_TEMPLATE.md` in target location (SOP folder, session, or user-specified)
+- No companion rules needed (rules come from PRMT-* and TMPL-*)

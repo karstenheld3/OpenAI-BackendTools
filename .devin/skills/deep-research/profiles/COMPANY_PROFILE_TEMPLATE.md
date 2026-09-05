@@ -48,7 +48,7 @@
 - **Revenue**: [If publicly available, with fiscal year]
 - **Funding**: [Total raised, last round, valuation if known]
 - **Registration**: [Company register number, jurisdiction]
-- **Website**: [URL]
+- **Website**: [Company Name](https://company-url.com/)
 - **LinkedIn**: [URL]
 - **Other profiles**: [Crunchbase, Glassdoor, etc.]
 

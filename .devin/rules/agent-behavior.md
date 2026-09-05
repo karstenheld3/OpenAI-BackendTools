@@ -61,7 +61,62 @@ Behavioral rules for agent execution patterns.
 - Always repeat the initial / overall goal to yourself to stay focused 
 - Track progress in PROGRESS.md, problems in PROBLEMS.md, make notes in NOTES.md
 - Run `/verify` after significant changes
-- IMPORTANT: Never leak project-specific or private data into workflows, skills, or rules. These are reusable across projects and pushed to public repositories. Use fully generic examples and placeholders only. Examples must not hint at the user's identity, location, profession, family, or any ongoing project. Also avoid nonsensical or humorous examples. LLMs interpret whimsical content as desired quality signal.
+
+## Pre-Write Privacy Gate
+
+**BEFORE every file create or edit**, assess the document's context to determine the privacy boundary. Two independent dimensions trigger the gate - either one is sufficient:
+
+**Dimension 1 - Document purpose:**
+Assess: Is this document general-purpose knowledge, independent of the current project, meant to be reusable or shareable with a broad audience?
+
+If yes → **every value must be generic**. No real identifiers, addresses, names, or project-specific references.
+
+Strong indicators of general-purpose documents:
+- Files in `[AGENT_FOLDER]/rules/`, `[AGENT_FOLDER]/skills/`, `[AGENT_FOLDER]/workflows/`
+- `README.md`, `CONTRIBUTING.md`, `.github/`
+- HOW-TO documents, guides, templates, rule files
+- INFO documents about general topics (not project-specific analysis)
+
+Strong indicators of project-specific documents (real data allowed):
+- Session tracking: NOTES.md, PROBLEMS.md, PROGRESS.md, FAILS.md
+- Project data files recording actual values
+- Conversation files with real correspondence
+- Project-specific analysis (e.g., tax analysis for a specific person)
+
+When in doubt: if the document would make sense to a reader with no knowledge of the current project, it is general-purpose.
+
+**Dimension 2 - Content role (ILLUSTRATIVE vs. OPERATIONAL):**
+Even inside project-specific documents, illustrative content must use generic data. Illustrations demonstrate patterns, not record facts.
+
+Illustrative (must be generic):
+- BAD/GOOD example blocks
+- Code snippets with sample values
+- Template placeholder examples
+- "Here is how X works" demonstrations
+
+Operational (real data allowed in project-specific documents):
+- Recording actual addresses, IBANs, NIFs
+- Quoting official documents
+- Referencing real case numbers, dates, amounts
+- Session tracking entries referencing real values
+
+**Pre-write check (execute mentally before every edit/create):**
+1. Is this document general-purpose or project-specific? If general → all content generic
+2. Is the content I am writing illustrative? If yes → examples generic regardless of document type
+3. Does old_string or new_string contain real identifiers, addresses, postal codes, names, dates linked to a person or project? If yes and gate triggered → replace with generic values
+4. Stranger test: Would someone reading this content learn anything about the user's identity, location, family, finances, or ongoing projects? If yes and gate triggered → rewrite
+
+**Generic replacement examples:**
+- IBAN: `DE89370400440532013000` (Bundesbank test IBAN)
+- Address: `Rua da Liberdade, 42, 3.o Esq.` (fictional)
+- Postal code: `1000-001` (Lisbon generic)
+- Tax ID: `123456789` (sequential placeholder)
+- Name: `Jane Smith` / `Max Mustermann`
+- Date: `2026-01-15` (arbitrary)
+
+Violation = `[CRITICAL]` in FAILS.md.
+
+Also avoid nonsensical or humorous examples. LLMs interpret whimsical content as desired quality signal.
 
 ## File Placement
 

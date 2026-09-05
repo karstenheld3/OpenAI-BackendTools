@@ -1,6 +1,6 @@
 ---
 description: Document synchronization
-auto_execution_mode: 1
+auto_execution_mode: 3
 ---
 
 # Sync Workflow
@@ -209,3 +209,42 @@ When IDs change or documents restructure:
 - Update ID if item was renumbered
 - Remove reference if item was deleted
 - Add note if reference target moved to different document
+
+## Workspace Sync
+
+Detect by: user runs `/sync workspace` or context is workspace-level sync.
+
+Read @skills:workspace-management SKILL.md before syncing.
+
+Sync procedure:
+
+1. Read workspace constants from DevRepo NOTES.md
+2. Resolve sync policy (lookup order):
+   1. Downstream repo NOTES.md (highest priority - local customizations)
+   2. CompanyRepo NOTES.md (central defaults)
+   3. Workspace constants (fallback if no policy found)
+3. For each sync source (Prompt System, Knowledge, Rules):
+   - Read source and target paths from workspace constants
+   - Run workspace_diff_template.ps1 with Source, Target, Filter parameters
+   - Review structured diff report
+   - Mark locally-modified files (modified after .sync-timestamp)
+   - Mark breaking changes (structural changes requiring content migration)
+4. Show preview to user:
+   - Files to add, modify, delete, skip (with reason)
+   - Locally-modified files not in preserve list
+   - Breaking changes requiring content migration
+5. Prompt user for confirmation:
+   - Confirmation keywords: "yes", "go", "confirmed", "execute", "apply"
+   - Non-confirmation keywords: "no", "cancel", "abort", "stop"
+6. If confirmed:
+   - For each sync source: run workspace_sync_template.ps1 with DiffReport, Direction, PreserveList
+   - Verify .sync-timestamp updated in target folder root
+   - Report results per file: added, modified, deleted, skipped, migrated
+   - Summary: X added, Y modified, Z deleted, W skipped
+7. If not confirmed: abort, no changes made
+
+Sync direction:
+- Downstream = sync from source to all targets (distribute content to dependent repos)
+- Upstream = sync from here back to source (push local changes back to origin)
+
+Preserve list: files in preserve list are never overwritten during sync, regardless of source changes.

@@ -1,6 +1,6 @@
 ---
 description: Extract lessons from resolved problems through structured retrospective analysis
-auto_execution_mode: 1
+auto_execution_mode: 3
 ---
 
 # Learn Workflow

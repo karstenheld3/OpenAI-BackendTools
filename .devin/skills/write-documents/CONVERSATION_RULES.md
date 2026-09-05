@@ -63,6 +63,12 @@ Links (LN)
 - CV-LN-04: All links absolute - full clickable paths, never relative paths or `...` abbreviations
 - CV-LN-05: Explicit inline URLs when referencing sources in emails - URL at point of reference, not only in Links section
 
+History Integrity (HY)
+- CV-HY-01: Sent emails are immutable - NEVER edit, correct, or modify emails in History that have already been sent. They are a factual record of what was actually communicated. Corrections go in a NEW follow-up email/message.
+
+Literals (LT)
+- CV-LT-01: Addresses, IBANs, reference numbers, and identifiers in outbound communication (drafts, emails, letters) MUST be copied from `[LITERAL]`-marked values or verified against official source documents (government registration, contract, bank confirmation). Never type from memory or copy from secondary documents. See `core-conventions.md` "Authoritative Literals" and AP-PR-13.
+
 Humanizing (HM) - see [CONVERSATION_HUMANIZING_RULES.md](CONVERSATION_HUMANIZING_RULES.md)
 - CV-HM-01: Override Scope - MECT/APAPALAN baseline + 1-5% humanizing for user-voice drafts
 - CV-HM-02: Consistency Anchoring - extract and replicate user's writing profile from History
